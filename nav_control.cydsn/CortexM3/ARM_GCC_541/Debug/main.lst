@@ -1,0 +1,5287 @@
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 1
+
+
+   1              		.syntax unified
+   2              		.cpu cortex-m3
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 1
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.thumb
+  14              		.syntax unified
+  15              		.file	"main.c"
+  16              		.text
+  17              	.Ltext0:
+  18              		.cfi_sections	.debug_frame
+  19              		.section	.text.Go_Again_Int_ISR,"ax",%progbits
+  20              		.align	2
+  21              		.global	Go_Again_Int_ISR
+  22              		.thumb
+  23              		.thumb_func
+  24              		.type	Go_Again_Int_ISR, %function
+  25              	Go_Again_Int_ISR:
+  26              	.LFB64:
+  27              		.file 1 "main.c"
+   1:main.c        **** /* ========================================
+   2:main.c        ****  * Ryan Thorpe and Will Makinen
+   3:main.c        ****  * Group Number: 
+   4:main.c        ****  * File Description: main.c serves as the software that runs on the PSoC that handles things like c
+   5:main.c        ****  * the XBee, updating the control equation parameters, determining the PWM width, and other behavio
+   6:main.c        ****  * 
+   7:main.c        ****  * ========================================
+   8:main.c        **** */
+   9:main.c        **** #include "project.h"
+  10:main.c        **** #include <stdio.h>
+  11:main.c        **** #include <stdlib.h>
+  12:main.c        **** #include <math.h>
+  13:main.c        **** #include <string.h>
+  14:main.c        **** #include "cyapicallbacks.h"
+  15:main.c        **** #include "nav_control.h"
+  16:main.c        **** #include "balloon.h"
+  17:main.c        **** 
+  18:main.c        **** //Constants
+  19:main.c        **** #define BUF_SIZE 64 // For writing 
+  20:main.c        **** #define CIRCUMFERENCE_FT 0.6477 // circumference of wheel
+  21:main.c        **** #define COUNTER_MAX 65535 // Maximum value of counter
+  22:main.c        **** #define MAGNETS_PER_REV 5.0 // number of magnets on wheel
+  23:main.c        **** #define MAX_PWM 255 // Max duty cycle of PWM
+  24:main.c        **** #define MICRO_S_PER_COUNT 100 // Microseconds of Elapsed time between counter increment 
+  25:main.c        **** #define START_PWM 255 // PWM duty cycle to start car
+  26:main.c        **** #define STOP_PWM 0 // PWM duty cycle to stop car
+  27:main.c        **** 
+  28:main.c        **** 
+  29:main.c        **** 
+  30:main.c        **** //Global variables 
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 2
+
+
+  31:main.c        **** float TARGET_SPEED = 4.0; // Target speed
+  32:main.c        **** float kp = 100; // Proportional constant 
+  33:main.c        **** float ki = 10; // Integral constant 
+  34:main.c        **** float kd = 0; // Derivative constant
+  35:main.c        **** float prev_error = 0; // Error calculated during previous interrupt
+  36:main.c        **** float prev_i_term = 0; // Integral term calculated during previous interrupt 
+  37:main.c        **** float speed = 0; // current speed of the car
+  38:main.c        **** 
+  39:main.c        **** int prevArduinoRunState = 0;
+  40:main.c        **** int arduinoRunState = 0;
+  41:main.c        **** 
+  42:main.c        **** CY_ISR(Go_Again_Int_ISR){
+  28              		.loc 1 42 0
+  29              		.cfi_startproc
+  30              		@ args = 0, pretend = 0, frame = 0
+  31              		@ frame_needed = 0, uses_anonymous_args = 0
+  32              		@ link register save eliminated.
+  33 0000 7047     		bx	lr
+  34              		.cfi_endproc
+  35              	.LFE64:
+  36              		.size	Go_Again_Int_ISR, .-Go_Again_Int_ISR
+  37              		.global	__aeabi_d2f
+  38 0002 00BF     		.section	.text.PID_SetVal,"ax",%progbits
+  39              		.align	2
+  40              		.thumb
+  41              		.thumb_func
+  42              		.type	PID_SetVal, %function
+  43              	PID_SetVal:
+  44              	.LFB68:
+  43:main.c        ****     // PWM_Motor_WriteCompare(START_PWM);
+  44:main.c        **** }
+  45:main.c        **** 
+  46:main.c        **** //Calculate PID output based on target speed and control constants
+  47:main.c        **** uint8 PID_Control(float speed, uint16 count) {
+  48:main.c        ****         float p_term;
+  49:main.c        ****         float i_term;
+  50:main.c        ****         float d_term;
+  51:main.c        ****         float output;
+  52:main.c        ****        
+  53:main.c        ****     
+  54:main.c        ****         float error = TARGET_SPEED - speed;
+  55:main.c        ****         
+  56:main.c        ****         uint16 dt = count * MICRO_S_PER_COUNT;
+  57:main.c        ****         
+  58:main.c        ****         //Proportional Term
+  59:main.c        ****         p_term = kp * error;
+  60:main.c        ****     
+  61:main.c        ****         //Integral Term
+  62:main.c        ****         i_term =  ((ki/1000) * (prev_i_term + (error)*(dt)));
+  63:main.c        ****         
+  64:main.c        ****         //Derivative Term
+  65:main.c        ****         d_term = kd * ((error - prev_error)/dt);
+  66:main.c        ****        
+  67:main.c        ****         output = p_term + i_term + d_term;
+  68:main.c        ****         
+  69:main.c        ****         prev_error = error;
+  70:main.c        ****         prev_i_term = i_term;
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 3
+
+
+  71:main.c        ****         
+  72:main.c        ****         //Don't let the output exceed the maximum PWM width
+  73:main.c        ****         if (output > MAX_PWM) {
+  74:main.c        ****             output = MAX_PWM; 
+  75:main.c        ****         }
+  76:main.c        ****         
+  77:main.c        ****         return (uint8)output;
+  78:main.c        **** }
+  79:main.c        **** 
+  80:main.c        **** //Prepare the LCD screen for printing 
+  81:main.c        **** void LCD_Reset(void) {
+  82:main.c        ****     LCD_ClearDisplay();
+  83:main.c        ****     LCD_Position(0,0);
+  84:main.c        **** }
+  85:main.c        **** 
+  86:main.c        **** //Interrupt handler for the Hall Sensor 
+  87:main.c        **** CY_ISR(inter) {
+  88:main.c        ****     uint16 count;
+  89:main.c        ****     int elapsed_time_micro_s;
+  90:main.c        ****     float elapsed_time_s; 
+  91:main.c        ****     char buf[64];
+  92:main.c        ****     uint8 pwm_value;
+  93:main.c        ****     
+  94:main.c        ****     //print_xbee("In hall interrupt %i \n\r", RUN_STATE);
+  95:main.c        ****     //print_xbee("a r s %i \n\r", arduinoRunState);
+  96:main.c        ****     /* Is program running? */
+  97:main.c        ****     if ((RUN_STATE == 1) && (arduinoRunState == 0)) {
+  98:main.c        ****         //XBEE_PutString("Driving\n\r");
+  99:main.c        ****             
+ 100:main.c        ****         /* Calculate speed and pwm width */
+ 101:main.c        ****         count = Counter_ReadCapture();
+ 102:main.c        ****         Counter_Reset_Write(1);
+ 103:main.c        ****         Counter_Reset_Write(0);
+ 104:main.c        ****         count = 65535 - count;
+ 105:main.c        ****         elapsed_time_micro_s = count * MICRO_S_PER_COUNT;
+ 106:main.c        ****         elapsed_time_s = (float) elapsed_time_micro_s / (float) 1e6;
+ 107:main.c        ****         speed = (float) CIRCUMFERENCE_FT / (elapsed_time_s * (float) MAGNETS_PER_REV);
+ 108:main.c        ****         pwm_value = PID_Control(speed, count);
+ 109:main.c        ****     
+ 110:main.c        ****         To_Pi_Write(1);
+ 111:main.c        ****     
+ 112:main.c        ****     // Only set values if RUN_STATE is 1
+ 113:main.c        ****     } else {
+ 114:main.c        ****         pwm_value = 0;
+ 115:main.c        ****     }
+ 116:main.c        ****     
+ 117:main.c        ****     /* Set PWM Value */
+ 118:main.c        ****     PWM_Motor_WriteCompare(pwm_value);
+ 119:main.c        **** }
+ 120:main.c        **** 
+ 121:main.c        **** //Update the PID constants by converting read buffer to a float
+ 122:main.c        **** static float PID_SetVal(char numBuf[], int numIndex, char readBuf[]) {
+  45              		.loc 1 122 0
+  46              		.cfi_startproc
+  47              		@ args = 0, pretend = 0, frame = 0
+  48              		@ frame_needed = 0, uses_anonymous_args = 0
+  49              	.LVL0:
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 4
+
+
+  50              		.loc 1 122 0
+  51 0000 10B5     		push	{r4, lr}
+  52              		.cfi_def_cfa_offset 8
+  53              		.cfi_offset 4, -8
+  54              		.cfi_offset 14, -4
+  55              	.LVL1:
+ 123:main.c        ****     
+ 124:main.c        ****     int bufIndex = 2;
+ 125:main.c        ****     char readChar = readBuf[bufIndex]; 
+  56              		.loc 1 125 0
+  57 0002 9478     		ldrb	r4, [r2, #2]	@ zero_extendqisi2
+  58              	.LVL2:
+ 124:main.c        ****     char readChar = readBuf[bufIndex]; 
+  59              		.loc 1 124 0
+  60 0004 0223     		movs	r3, #2
+ 126:main.c        ****     
+ 127:main.c        ****     while (readChar != '\r') {
+  61              		.loc 1 127 0
+  62 0006 04E0     		b	.L3
+  63              	.LVL3:
+  64              	.L4:
+ 128:main.c        ****         numBuf[numIndex] = readBuf[bufIndex];
+  65              		.loc 1 128 0
+  66 0008 D45C     		ldrb	r4, [r2, r3]	@ zero_extendqisi2
+  67              	.LVL4:
+  68 000a 4454     		strb	r4, [r0, r1]
+ 129:main.c        ****         numIndex++;
+  69              		.loc 1 129 0
+  70 000c 0131     		adds	r1, r1, #1
+  71              	.LVL5:
+ 130:main.c        ****         bufIndex++;
+  72              		.loc 1 130 0
+  73 000e 0133     		adds	r3, r3, #1
+  74              	.LVL6:
+ 131:main.c        ****         readChar = readBuf[bufIndex];
+  75              		.loc 1 131 0
+  76 0010 D45C     		ldrb	r4, [r2, r3]	@ zero_extendqisi2
+  77              	.LVL7:
+  78              	.L3:
+ 127:main.c        ****         numBuf[numIndex] = readBuf[bufIndex];
+  79              		.loc 1 127 0
+  80 0012 0D2C     		cmp	r4, #13
+  81 0014 F8D1     		bne	.L4
+ 132:main.c        ****     }
+ 133:main.c        **** 
+ 134:main.c        ****     numBuf[numIndex] = '\0';
+  82              		.loc 1 134 0
+  83 0016 0023     		movs	r3, #0
+  84              	.LVL8:
+  85 0018 4354     		strb	r3, [r0, r1]
+ 135:main.c        ****     
+ 136:main.c        ****     return atof(numBuf);
+  86              		.loc 1 136 0
+  87 001a FFF7FEFF 		bl	atof
+  88              	.LVL9:
+  89 001e FFF7FEFF 		bl	__aeabi_d2f
+  90              	.LVL10:
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 5
+
+
+ 137:main.c        **** }
+  91              		.loc 1 137 0
+  92 0022 10BD     		pop	{r4, pc}
+  93              		.cfi_endproc
+  94              	.LFE68:
+  95              		.size	PID_SetVal, .-PID_SetVal
+  96              		.global	__aeabi_fsub
+  97              		.global	__aeabi_fmul
+  98              		.global	__aeabi_fdiv
+  99              		.global	__aeabi_i2f
+ 100              		.global	__aeabi_fadd
+ 101              		.global	__aeabi_fcmpgt
+ 102              		.global	__aeabi_f2uiz
+ 103              		.section	.text.PID_Control,"ax",%progbits
+ 104              		.align	2
+ 105              		.global	PID_Control
+ 106              		.thumb
+ 107              		.thumb_func
+ 108              		.type	PID_Control, %function
+ 109              	PID_Control:
+ 110              	.LFB65:
+  47:main.c        ****         float p_term;
+ 111              		.loc 1 47 0
+ 112              		.cfi_startproc
+ 113              		@ args = 0, pretend = 0, frame = 0
+ 114              		@ frame_needed = 0, uses_anonymous_args = 0
+ 115              	.LVL11:
+ 116 0000 2DE9F041 		push	{r4, r5, r6, r7, r8, lr}
+ 117              		.cfi_def_cfa_offset 24
+ 118              		.cfi_offset 4, -24
+ 119              		.cfi_offset 5, -20
+ 120              		.cfi_offset 6, -16
+ 121              		.cfi_offset 7, -12
+ 122              		.cfi_offset 8, -8
+ 123              		.cfi_offset 14, -4
+ 124 0004 0C46     		mov	r4, r1
+  54:main.c        ****         
+ 125              		.loc 1 54 0
+ 126 0006 234E     		ldr	r6, .L10
+ 127 0008 0146     		mov	r1, r0
+ 128              	.LVL12:
+ 129 000a 3068     		ldr	r0, [r6]	@ float
+ 130              	.LVL13:
+ 131 000c FFF7FEFF 		bl	__aeabi_fsub
+ 132              	.LVL14:
+ 133 0010 0546     		mov	r5, r0
+ 134              	.LVL15:
+  56:main.c        ****         
+ 135              		.loc 1 56 0
+ 136 0012 04EB8404 		add	r4, r4, r4, lsl #2
+ 137 0016 04EB8404 		add	r4, r4, r4, lsl #2
+ 138 001a A300     		lsls	r3, r4, #2
+ 139 001c 9CB2     		uxth	r4, r3
+ 140              	.LVL16:
+  59:main.c        ****     
+ 141              		.loc 1 59 0
+ 142 001e 7168     		ldr	r1, [r6, #4]	@ float
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 6
+
+
+ 143 0020 FFF7FEFF 		bl	__aeabi_fmul
+ 144              	.LVL17:
+ 145 0024 8046     		mov	r8, r0
+ 146              	.LVL18:
+  62:main.c        ****         
+ 147              		.loc 1 62 0
+ 148 0026 1C49     		ldr	r1, .L10+4
+ 149 0028 B068     		ldr	r0, [r6, #8]	@ float
+ 150              	.LVL19:
+ 151 002a FFF7FEFF 		bl	__aeabi_fdiv
+ 152              	.LVL20:
+ 153 002e 0646     		mov	r6, r0
+ 154 0030 2046     		mov	r0, r4
+ 155 0032 FFF7FEFF 		bl	__aeabi_i2f
+ 156              	.LVL21:
+ 157 0036 0746     		mov	r7, r0
+ 158 0038 0146     		mov	r1, r0
+ 159 003a 2846     		mov	r0, r5
+ 160 003c FFF7FEFF 		bl	__aeabi_fmul
+ 161              	.LVL22:
+ 162 0040 164C     		ldr	r4, .L10+8
+ 163              	.LVL23:
+ 164 0042 2168     		ldr	r1, [r4]	@ float
+ 165 0044 FFF7FEFF 		bl	__aeabi_fadd
+ 166              	.LVL24:
+ 167 0048 0146     		mov	r1, r0
+ 168 004a 3046     		mov	r0, r6
+ 169 004c FFF7FEFF 		bl	__aeabi_fmul
+ 170              	.LVL25:
+ 171 0050 0646     		mov	r6, r0
+ 172              	.LVL26:
+  65:main.c        ****        
+ 173              		.loc 1 65 0
+ 174 0052 6168     		ldr	r1, [r4, #4]	@ float
+ 175 0054 2846     		mov	r0, r5
+ 176              	.LVL27:
+ 177 0056 FFF7FEFF 		bl	__aeabi_fsub
+ 178              	.LVL28:
+ 179 005a 3946     		mov	r1, r7
+ 180 005c FFF7FEFF 		bl	__aeabi_fdiv
+ 181              	.LVL29:
+ 182 0060 A168     		ldr	r1, [r4, #8]	@ float
+ 183 0062 FFF7FEFF 		bl	__aeabi_fmul
+ 184              	.LVL30:
+ 185 0066 0746     		mov	r7, r0
+ 186              	.LVL31:
+  67:main.c        ****         
+ 187              		.loc 1 67 0
+ 188 0068 3146     		mov	r1, r6
+ 189 006a 4046     		mov	r0, r8
+ 190              	.LVL32:
+ 191 006c FFF7FEFF 		bl	__aeabi_fadd
+ 192              	.LVL33:
+ 193 0070 0146     		mov	r1, r0
+ 194 0072 3846     		mov	r0, r7
+ 195 0074 FFF7FEFF 		bl	__aeabi_fadd
+ 196              	.LVL34:
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 7
+
+
+ 197 0078 0746     		mov	r7, r0
+ 198              	.LVL35:
+  69:main.c        ****         prev_i_term = i_term;
+ 199              		.loc 1 69 0
+ 200 007a 6560     		str	r5, [r4, #4]	@ float
+  70:main.c        ****         
+ 201              		.loc 1 70 0
+ 202 007c 2660     		str	r6, [r4]	@ float
+  73:main.c        ****             output = MAX_PWM; 
+ 203              		.loc 1 73 0
+ 204 007e 0849     		ldr	r1, .L10+12
+ 205 0080 FFF7FEFF 		bl	__aeabi_fcmpgt
+ 206              	.LVL36:
+ 207 0084 00B1     		cbz	r0, .L7
+  74:main.c        ****         }
+ 208              		.loc 1 74 0
+ 209 0086 064F     		ldr	r7, .L10+12
+ 210              	.LVL37:
+ 211              	.L7:
+  77:main.c        **** }
+ 212              		.loc 1 77 0
+ 213 0088 3846     		mov	r0, r7
+ 214 008a FFF7FEFF 		bl	__aeabi_f2uiz
+ 215              	.LVL38:
+  78:main.c        **** 
+ 216              		.loc 1 78 0
+ 217 008e C0B2     		uxtb	r0, r0
+ 218 0090 BDE8F081 		pop	{r4, r5, r6, r7, r8, pc}
+ 219              	.LVL39:
+ 220              	.L11:
+ 221              		.align	2
+ 222              	.L10:
+ 223 0094 00000000 		.word	.LANCHOR0
+ 224 0098 00007A44 		.word	1148846080
+ 225 009c 00000000 		.word	.LANCHOR1
+ 226 00a0 00007F43 		.word	1132396544
+ 227              		.cfi_endproc
+ 228              	.LFE65:
+ 229              		.size	PID_Control, .-PID_Control
+ 230              		.section	.text.inter,"ax",%progbits
+ 231              		.align	2
+ 232              		.global	inter
+ 233              		.thumb
+ 234              		.thumb_func
+ 235              		.type	inter, %function
+ 236              	inter:
+ 237              	.LFB67:
+  87:main.c        ****     uint16 count;
+ 238              		.loc 1 87 0
+ 239              		.cfi_startproc
+ 240              		@ args = 0, pretend = 0, frame = 0
+ 241              		@ frame_needed = 0, uses_anonymous_args = 0
+ 242 0000 10B5     		push	{r4, lr}
+ 243              		.cfi_def_cfa_offset 8
+ 244              		.cfi_offset 4, -8
+ 245              		.cfi_offset 14, -4
+  97:main.c        ****         //XBEE_PutString("Driving\n\r");
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 8
+
+
+ 246              		.loc 1 97 0
+ 247 0002 194B     		ldr	r3, .L17
+ 248 0004 1B68     		ldr	r3, [r3]
+ 249 0006 012B     		cmp	r3, #1
+ 250 0008 26D1     		bne	.L14
+  97:main.c        ****         //XBEE_PutString("Driving\n\r");
+ 251              		.loc 1 97 0 is_stmt 0 discriminator 1
+ 252 000a 184B     		ldr	r3, .L17+4
+ 253 000c DB68     		ldr	r3, [r3, #12]
+ 254 000e 2BBB     		cbnz	r3, .L15
+ 101:main.c        ****         Counter_Reset_Write(1);
+ 255              		.loc 1 101 0 is_stmt 1
+ 256 0010 FFF7FEFF 		bl	Counter_ReadCapture
+ 257              	.LVL40:
+ 258 0014 0446     		mov	r4, r0
+ 259              	.LVL41:
+ 102:main.c        ****         Counter_Reset_Write(0);
+ 260              		.loc 1 102 0
+ 261 0016 0120     		movs	r0, #1
+ 262 0018 FFF7FEFF 		bl	Counter_Reset_Write
+ 263              	.LVL42:
+ 103:main.c        ****         count = 65535 - count;
+ 264              		.loc 1 103 0
+ 265 001c 0020     		movs	r0, #0
+ 266 001e FFF7FEFF 		bl	Counter_Reset_Write
+ 267              	.LVL43:
+ 104:main.c        ****         elapsed_time_micro_s = count * MICRO_S_PER_COUNT;
+ 268              		.loc 1 104 0
+ 269 0022 E443     		mvns	r4, r4
+ 270              	.LVL44:
+ 271 0024 A4B2     		uxth	r4, r4
+ 272              	.LVL45:
+ 106:main.c        ****         speed = (float) CIRCUMFERENCE_FT / (elapsed_time_s * (float) MAGNETS_PER_REV);
+ 273              		.loc 1 106 0
+ 274 0026 6420     		movs	r0, #100
+ 275 0028 00FB04F0 		mul	r0, r0, r4
+ 276              	.LVL46:
+ 277 002c FFF7FEFF 		bl	__aeabi_i2f
+ 278              	.LVL47:
+ 279 0030 0F49     		ldr	r1, .L17+8
+ 280 0032 FFF7FEFF 		bl	__aeabi_fdiv
+ 281              	.LVL48:
+ 107:main.c        ****         pwm_value = PID_Control(speed, count);
+ 282              		.loc 1 107 0
+ 283 0036 0F49     		ldr	r1, .L17+12
+ 284 0038 FFF7FEFF 		bl	__aeabi_fmul
+ 285              	.LVL49:
+ 286 003c 0146     		mov	r1, r0
+ 287 003e 0E48     		ldr	r0, .L17+16
+ 288 0040 FFF7FEFF 		bl	__aeabi_fdiv
+ 289              	.LVL50:
+ 290 0044 094B     		ldr	r3, .L17+4
+ 291 0046 1861     		str	r0, [r3, #16]	@ float
+ 108:main.c        ****     
+ 292              		.loc 1 108 0
+ 293 0048 2146     		mov	r1, r4
+ 294 004a FFF7FEFF 		bl	PID_Control
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 9
+
+
+ 295              	.LVL51:
+ 296 004e 0446     		mov	r4, r0
+ 297              	.LVL52:
+ 110:main.c        ****     
+ 298              		.loc 1 110 0
+ 299 0050 0120     		movs	r0, #1
+ 300 0052 FFF7FEFF 		bl	To_Pi_Write
+ 301              	.LVL53:
+ 302 0056 02E0     		b	.L13
+ 303              	.LVL54:
+ 304              	.L14:
+ 114:main.c        ****     }
+ 305              		.loc 1 114 0
+ 306 0058 0024     		movs	r4, #0
+ 307 005a 00E0     		b	.L13
+ 308              	.L15:
+ 309 005c 0024     		movs	r4, #0
+ 310              	.L13:
+ 311              	.LVL55:
+ 118:main.c        **** }
+ 312              		.loc 1 118 0
+ 313 005e 2046     		mov	r0, r4
+ 314 0060 FFF7FEFF 		bl	PWM_Motor_WriteCompare
+ 315              	.LVL56:
+ 316 0064 10BD     		pop	{r4, pc}
+ 317              	.LVL57:
+ 318              	.L18:
+ 319 0066 00BF     		.align	2
+ 320              	.L17:
+ 321 0068 00000000 		.word	RUN_STATE
+ 322 006c 00000000 		.word	.LANCHOR1
+ 323 0070 00247449 		.word	1232348160
+ 324 0074 0000A040 		.word	1084227584
+ 325 0078 ABCF253F 		.word	1059442603
+ 326              		.cfi_endproc
+ 327              	.LFE67:
+ 328              		.size	inter, .-inter
+ 329              		.section	.text.LCD_Reset,"ax",%progbits
+ 330              		.align	2
+ 331              		.global	LCD_Reset
+ 332              		.thumb
+ 333              		.thumb_func
+ 334              		.type	LCD_Reset, %function
+ 335              	LCD_Reset:
+ 336              	.LFB66:
+  81:main.c        ****     LCD_ClearDisplay();
+ 337              		.loc 1 81 0
+ 338              		.cfi_startproc
+ 339              		@ args = 0, pretend = 0, frame = 0
+ 340              		@ frame_needed = 0, uses_anonymous_args = 0
+ 341 0000 08B5     		push	{r3, lr}
+ 342              		.cfi_def_cfa_offset 8
+ 343              		.cfi_offset 3, -8
+ 344              		.cfi_offset 14, -4
+  82:main.c        ****     LCD_Position(0,0);
+ 345              		.loc 1 82 0
+ 346 0002 0120     		movs	r0, #1
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 10
+
+
+ 347 0004 FFF7FEFF 		bl	LCD_WriteControl
+ 348              	.LVL58:
+  83:main.c        **** }
+ 349              		.loc 1 83 0
+ 350 0008 0021     		movs	r1, #0
+ 351 000a 0846     		mov	r0, r1
+ 352 000c FFF7FEFF 		bl	LCD_Position
+ 353              	.LVL59:
+ 354 0010 08BD     		pop	{r3, pc}
+ 355              		.cfi_endproc
+ 356              	.LFE66:
+ 357              		.size	LCD_Reset, .-LCD_Reset
+ 358              		.global	__aeabi_f2iz
+ 359 0012 00BF     		.section	.text.main,"ax",%progbits
+ 360              		.align	2
+ 361              		.global	main
+ 362              		.thumb
+ 363              		.thumb_func
+ 364              		.type	main, %function
+ 365              	main:
+ 366              	.LFB69:
+ 138:main.c        **** 
+ 139:main.c        **** //Main method handles setup, new input
+ 140:main.c        **** int main(void)
+ 141:main.c        **** {
+ 367              		.loc 1 141 0
+ 368              		.cfi_startproc
+ 369              		@ args = 0, pretend = 0, frame = 192
+ 370              		@ frame_needed = 0, uses_anonymous_args = 0
+ 371 0000 70B5     		push	{r4, r5, r6, lr}
+ 372              		.cfi_def_cfa_offset 16
+ 373              		.cfi_offset 4, -16
+ 374              		.cfi_offset 5, -12
+ 375              		.cfi_offset 6, -8
+ 376              		.cfi_offset 14, -4
+ 377 0002 B2B0     		sub	sp, sp, #200
+ 378              		.cfi_def_cfa_offset 216
+ 379              	.LVL60:
+ 142:main.c        ****     // Local variable declarations
+ 143:main.c        ****     uint8 readChar;
+ 144:main.c        ****     uint8 readChar_ard;
+ 145:main.c        ****     char arduinoChar;
+ 146:main.c        ****     char readBuf[BUF_SIZE];
+ 147:main.c        ****     char outputBuf[BUF_SIZE];
+ 148:main.c        ****     uint8 bufIndex = 0;
+ 149:main.c        ****     int numIndex = 0;
+ 150:main.c        ****     char numBuf[BUF_SIZE];
+ 151:main.c        ****     int angle;
+ 152:main.c        ****     int newRunState = 0; 
+ 153:main.c        ****     
+ 154:main.c        ****     // Start Components for Speed Control
+ 155:main.c        ****     CyGlobalIntEnable; 
+ 380              		.loc 1 155 0
+ 381              		.syntax unified
+ 382              	@ 155 "main.c" 1
+ 383 0004 62B6     		CPSIE   i
+ 384              	@ 0 "" 2
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 11
+
+
+ 156:main.c        ****     XBEE_Start();
+ 385              		.loc 1 156 0
+ 386              		.thumb
+ 387              		.syntax unified
+ 388 0006 FFF7FEFF 		bl	XBEE_Start
+ 389              	.LVL61:
+ 157:main.c        ****     LCD_Start();
+ 390              		.loc 1 157 0
+ 391 000a FFF7FEFF 		bl	LCD_Start
+ 392              	.LVL62:
+ 158:main.c        ****     Hall_Interrupt_Start();
+ 393              		.loc 1 158 0
+ 394 000e FFF7FEFF 		bl	Hall_Interrupt_Start
+ 395              	.LVL63:
+ 159:main.c        ****     Hall_Interrupt_SetVector(inter);
+ 396              		.loc 1 159 0
+ 397 0012 9848     		ldr	r0, .L45
+ 398 0014 FFF7FEFF 		bl	Hall_Interrupt_SetVector
+ 399              	.LVL64:
+ 160:main.c        ****     Counter_Start();
+ 400              		.loc 1 160 0
+ 401 0018 FFF7FEFF 		bl	Counter_Start
+ 402              	.LVL65:
+ 161:main.c        ****     Counter_Interrupt_Start();
+ 403              		.loc 1 161 0
+ 404 001c FFF7FEFF 		bl	Counter_Interrupt_Start
+ 405              	.LVL66:
+ 162:main.c        ****     PWM_Motor_Start();
+ 406              		.loc 1 162 0
+ 407 0020 FFF7FEFF 		bl	PWM_Motor_Start
+ 408              	.LVL67:
+ 163:main.c        ****     V_Sync_Int_Start();
+ 409              		.loc 1 163 0
+ 410 0024 FFF7FEFF 		bl	V_Sync_Int_Start
+ 411              	.LVL68:
+ 164:main.c        ****     V_Sync_Int_SetVector(V_Sync_ISR);
+ 412              		.loc 1 164 0
+ 413 0028 9348     		ldr	r0, .L45+4
+ 414 002a FFF7FEFF 		bl	V_Sync_Int_SetVector
+ 415              	.LVL69:
+ 165:main.c        ****     H_Sync_Int_Start();
+ 416              		.loc 1 165 0
+ 417 002e FFF7FEFF 		bl	H_Sync_Int_Start
+ 418              	.LVL70:
+ 166:main.c        ****     H_Sync_Int_SetVector(H_Sync_ISR);
+ 419              		.loc 1 166 0
+ 420 0032 9248     		ldr	r0, .L45+8
+ 421 0034 FFF7FEFF 		bl	H_Sync_Int_SetVector
+ 422              	.LVL71:
+ 167:main.c        ****     
+ 168:main.c        ****     
+ 169:main.c        ****     // Start Components for Navigation
+ 170:main.c        ****     Servo_PWM_Start();
+ 423              		.loc 1 170 0
+ 424 0038 FFF7FEFF 		bl	Servo_PWM_Start
+ 425              	.LVL72:
+ 171:main.c        ****     Threshold_Comparator_Start();
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 12
+
+
+ 426              		.loc 1 171 0
+ 427 003c FFF7FEFF 		bl	Threshold_Comparator_Start
+ 428              	.LVL73:
+ 172:main.c        ****     Line_Timer_Start();
+ 429              		.loc 1 172 0
+ 430 0040 FFF7FEFF 		bl	Line_Timer_Start
+ 431              	.LVL74:
+ 173:main.c        ****     Line_Int_Start();
+ 432              		.loc 1 173 0
+ 433 0044 FFF7FEFF 		bl	Line_Int_Start
+ 434              	.LVL75:
+ 174:main.c        ****     Line_Int_SetVector(Line_Int_ISR);
+ 435              		.loc 1 174 0
+ 436 0048 8D48     		ldr	r0, .L45+12
+ 437 004a FFF7FEFF 		bl	Line_Int_SetVector
+ 438              	.LVL76:
+ 175:main.c        ****     Porch_Int_Start();
+ 439              		.loc 1 175 0
+ 440 004e FFF7FEFF 		bl	Porch_Int_Start
+ 441              	.LVL77:
+ 176:main.c        ****     Porch_Int_SetVector(Porch_Int_ISR);
+ 442              		.loc 1 176 0
+ 443 0052 8C48     		ldr	r0, .L45+16
+ 444 0054 FFF7FEFF 		bl	Porch_Int_SetVector
+ 445              	.LVL78:
+ 177:main.c        ****     
+ 178:main.c        ****     // Start Components for Balloon Bot
+ 179:main.c        ****     Go_Again_Int_Start();
+ 446              		.loc 1 179 0
+ 447 0058 FFF7FEFF 		bl	Go_Again_Int_Start
+ 448              	.LVL79:
+ 180:main.c        ****     Go_Again_Int_SetVector(Go_Again_Int_ISR);
+ 449              		.loc 1 180 0
+ 450 005c 8A48     		ldr	r0, .L45+20
+ 451 005e FFF7FEFF 		bl	Go_Again_Int_SetVector
+ 452              	.LVL80:
+ 181:main.c        **** 
+ 182:main.c        ****     Servo_PWM_WriteCompare(Servo_PWM_AngleCalc(CENTER_ANGLE));
+ 453              		.loc 1 182 0
+ 454 0062 8A4B     		ldr	r3, .L45+24
+ 455 0064 1868     		ldr	r0, [r3]
+ 456 0066 FFF7FEFF 		bl	Servo_PWM_AngleCalc
+ 457              	.LVL81:
+ 458 006a FFF7FEFF 		bl	Servo_PWM_WriteCompare
+ 459              	.LVL82:
+ 183:main.c        ****     
+ 184:main.c        ****     // Message to show that PSoC is ready to go
+ 185:main.c        ****     XBEE_PutString("Connection success\n\r");
+ 460              		.loc 1 185 0
+ 461 006e 8848     		ldr	r0, .L45+28
+ 462 0070 FFF7FEFF 		bl	XBEE_PutString
+ 463              	.LVL83:
+ 186:main.c        ****     LCD_PrintString("Initialized.");
+ 464              		.loc 1 186 0
+ 465 0074 8748     		ldr	r0, .L45+32
+ 466 0076 FFF7FEFF 		bl	LCD_PrintString
+ 467              	.LVL84:
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 13
+
+
+ 187:main.c        ****     
+ 188:main.c        ****     To_Pi_Write(0);
+ 468              		.loc 1 188 0
+ 469 007a 0020     		movs	r0, #0
+ 470 007c FFF7FEFF 		bl	To_Pi_Write
+ 471              	.LVL85:
+ 472              	.L40:
+ 141:main.c        ****     // Local variable declarations
+ 473              		.loc 1 141 0
+ 474 0080 0024     		movs	r4, #0
+ 475              	.LVL86:
+ 476              	.L39:
+ 189:main.c        ****     for(;;)
+ 190:main.c        ****     {
+ 191:main.c        ****         /*----------PI HANDLING----------*/
+ 192:main.c        ****         
+ 193:main.c        ****         arduinoRunState = From_Pi_Read();
+ 477              		.loc 1 193 0
+ 478 0082 FFF7FEFF 		bl	From_Pi_Read
+ 479              	.LVL87:
+ 480 0086 844B     		ldr	r3, .L45+36
+ 481 0088 D860     		str	r0, [r3, #12]
+ 194:main.c        ****         //if (prevArduinoRunState == 1) {
+ 195:main.c        ****           //  arduinoRunState = 1;
+ 196:main.c        ****         //}
+ 197:main.c        ****         if (arduinoRunState == 0) {
+ 482              		.loc 1 197 0
+ 483 008a A8B9     		cbnz	r0, .L22
+ 198:main.c        ****             if (prevArduinoRunState == 1) {
+ 484              		.loc 1 198 0
+ 485 008c 5B69     		ldr	r3, [r3, #20]
+ 486 008e 012B     		cmp	r3, #1
+ 487 0090 12D1     		bne	.L22
+ 199:main.c        ****                 PWM_Motor_WriteCompare(START_PWM);
+ 488              		.loc 1 199 0
+ 489 0092 FF20     		movs	r0, #255
+ 490 0094 FFF7FEFF 		bl	PWM_Motor_WriteCompare
+ 491              	.LVL88:
+ 200:main.c        ****                 prev_error = 0;
+ 492              		.loc 1 200 0
+ 493 0098 7F4A     		ldr	r2, .L45+36
+ 494 009a 0023     		movs	r3, #0
+ 495 009c 5360     		str	r3, [r2, #4]	@ float
+ 201:main.c        ****                 prev_i_term = 0;
+ 496              		.loc 1 201 0
+ 497 009e 1360     		str	r3, [r2]	@ float
+ 202:main.c        ****                 prev_error_servo = 0;
+ 498              		.loc 1 202 0
+ 499 00a0 7E49     		ldr	r1, .L45+40
+ 500 00a2 0B60     		str	r3, [r1]	@ float
+ 203:main.c        ****                 prev_i_term_servo = 0;
+ 501              		.loc 1 203 0
+ 502 00a4 7E49     		ldr	r1, .L45+44
+ 503 00a6 0B60     		str	r3, [r1]	@ float
+ 204:main.c        ****                 arduinoRunState = 0;
+ 504              		.loc 1 204 0
+ 505 00a8 0025     		movs	r5, #0
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 14
+
+
+ 506 00aa D560     		str	r5, [r2, #12]
+ 205:main.c        ****                 Counter_Reset_Write(1);
+ 507              		.loc 1 205 0
+ 508 00ac 0120     		movs	r0, #1
+ 509 00ae FFF7FEFF 		bl	Counter_Reset_Write
+ 510              	.LVL89:
+ 206:main.c        ****                 Counter_Reset_Write(0);
+ 511              		.loc 1 206 0
+ 512 00b2 2846     		mov	r0, r5
+ 513 00b4 FFF7FEFF 		bl	Counter_Reset_Write
+ 514              	.LVL90:
+ 515              	.L22:
+ 207:main.c        ****             }
+ 208:main.c        ****         }
+ 209:main.c        ****         prevArduinoRunState = arduinoRunState;
+ 516              		.loc 1 209 0
+ 517 00b8 774B     		ldr	r3, .L45+36
+ 518 00ba DA68     		ldr	r2, [r3, #12]
+ 519 00bc 5A61     		str	r2, [r3, #20]
+ 210:main.c        ****         /*----------END PI HANDLING----------*/
+ 211:main.c        ****         
+ 212:main.c        ****         /*------------------Input Reading------------------*/
+ 213:main.c        ****         readChar = XBEE_GetChar();
+ 520              		.loc 1 213 0
+ 521 00be FFF7FEFF 		bl	XBEE_GetChar
+ 522              	.LVL91:
+ 214:main.c        ****         /* Read a char */
+ 215:main.c        ****         if (readChar > 0u) {
+ 523              		.loc 1 215 0
+ 524 00c2 0546     		mov	r5, r0
+ 525 00c4 0028     		cmp	r0, #0
+ 526 00c6 00F0DC81 		beq	.L23
+ 216:main.c        ****             
+ 217:main.c        ****             
+ 218:main.c        ****             LCD_Reset();
+ 527              		.loc 1 218 0
+ 528 00ca FFF7FEFF 		bl	LCD_Reset
+ 529              	.LVL92:
+ 219:main.c        ****             LCD_PutChar(readChar);
+ 530              		.loc 1 219 0
+ 531 00ce 2846     		mov	r0, r5
+ 532 00d0 FFF7FEFF 		bl	LCD_PutChar
+ 533              	.LVL93:
+ 220:main.c        ****             readBuf[bufIndex] = readChar;
+ 534              		.loc 1 220 0
+ 535 00d4 32AB     		add	r3, sp, #200
+ 536 00d6 2344     		add	r3, r3, r4
+ 537 00d8 03F8405C 		strb	r5, [r3, #-64]
+ 221:main.c        ****             bufIndex++;
+ 538              		.loc 1 221 0
+ 539 00dc 0134     		adds	r4, r4, #1
+ 540              	.LVL94:
+ 541 00de E4B2     		uxtb	r4, r4
+ 542              	.LVL95:
+ 222:main.c        ****             
+ 223:main.c        ****             /* Handle ENTER pressed */
+ 224:main.c        ****             if (readChar == '\r') {
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 15
+
+
+ 543              		.loc 1 224 0
+ 544 00e0 0D2D     		cmp	r5, #13
+ 545 00e2 40F0CE81 		bne	.L23
+ 225:main.c        ****                 LCD_Reset();
+ 546              		.loc 1 225 0
+ 547 00e6 FFF7FEFF 		bl	LCD_Reset
+ 548              	.LVL96:
+ 226:main.c        ****                 LCD_PrintString("Value entered");
+ 549              		.loc 1 226 0
+ 550 00ea 6E48     		ldr	r0, .L45+48
+ 551 00ec FFF7FEFF 		bl	LCD_PrintString
+ 552              	.LVL97:
+ 227:main.c        ****                    
+ 228:main.c        ****                 // Switch case to handle different char inputs
+ 229:main.c        ****                 switch (readBuf[0]) {
+ 553              		.loc 1 229 0
+ 554 00f0 9DF88830 		ldrb	r3, [sp, #136]	@ zero_extendqisi2
+ 555 00f4 613B     		subs	r3, r3, #97
+ 556 00f6 142B     		cmp	r3, #20
+ 557 00f8 00F2B481 		bhi	.L24
+ 558 00fc DFE813F0 		tbh	[pc, r3, lsl #1]
+ 559              	.L26:
+ 560 0100 2901     		.2byte	(.L25-.L26)/2
+ 561 0102 B201     		.2byte	(.L24-.L26)/2
+ 562 0104 8501     		.2byte	(.L27-.L26)/2
+ 563 0106 A400     		.2byte	(.L28-.L26)/2
+ 564 0108 6F01     		.2byte	(.L29-.L26)/2
+ 565 010a B201     		.2byte	(.L24-.L26)/2
+ 566 010c 2D00     		.2byte	(.L30-.L26)/2
+ 567 010e B201     		.2byte	(.L24-.L26)/2
+ 568 0110 8E00     		.2byte	(.L31-.L26)/2
+ 569 0112 B201     		.2byte	(.L24-.L26)/2
+ 570 0114 EC00     		.2byte	(.L32-.L26)/2
+ 571 0116 B201     		.2byte	(.L24-.L26)/2
+ 572 0118 B201     		.2byte	(.L24-.L26)/2
+ 573 011a 5901     		.2byte	(.L33-.L26)/2
+ 574 011c B201     		.2byte	(.L24-.L26)/2
+ 575 011e 7800     		.2byte	(.L34-.L26)/2
+ 576 0120 B201     		.2byte	(.L24-.L26)/2
+ 577 0122 4301     		.2byte	(.L35-.L26)/2
+ 578 0124 5700     		.2byte	(.L36-.L26)/2
+ 579 0126 1500     		.2byte	(.L37-.L26)/2
+ 580 0128 9D01     		.2byte	(.L38-.L26)/2
+ 581              		.p2align 1
+ 582              	.L37:
+ 230:main.c        ****                     
+ 231:main.c        ****                     // If t is pressed, change the target speed
+ 232:main.c        ****                     case 't':
+ 233:main.c        ****                         if (RUN_STATE == 0) {
+ 583              		.loc 1 233 0
+ 584 012a 5F4B     		ldr	r3, .L45+52
+ 585 012c 1B68     		ldr	r3, [r3]
+ 586 012e 002B     		cmp	r3, #0
+ 587 0130 40F0A281 		bne	.L41
+ 234:main.c        ****                             TARGET_SPEED = PID_SetVal(numBuf, numIndex, readBuf);
+ 588              		.loc 1 234 0
+ 589 0134 22AA     		add	r2, sp, #136
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 16
+
+
+ 590 0136 0021     		movs	r1, #0
+ 591 0138 02A8     		add	r0, sp, #8
+ 592 013a FFF7FEFF 		bl	PID_SetVal
+ 593              	.LVL98:
+ 594 013e 5B4B     		ldr	r3, .L45+56
+ 595 0140 1860     		str	r0, [r3]	@ float
+ 235:main.c        ****                             sprintf(outputBuf, "Target speed set to %i\n\r", (int)TARGET_SPEED);
+ 596              		.loc 1 235 0
+ 597 0142 FFF7FEFF 		bl	__aeabi_f2iz
+ 598              	.LVL99:
+ 599 0146 0246     		mov	r2, r0
+ 600 0148 5949     		ldr	r1, .L45+60
+ 601 014a 12A8     		add	r0, sp, #72
+ 602 014c FFF7FEFF 		bl	sprintf
+ 603              	.LVL100:
+ 236:main.c        ****                             XBEE_PutString(outputBuf);
+ 604              		.loc 1 236 0
+ 605 0150 12A8     		add	r0, sp, #72
+ 606 0152 FFF7FEFF 		bl	XBEE_PutString
+ 607              	.LVL101:
+ 237:main.c        ****                         }
+ 238:main.c        ****                         break;
+ 239:main.c        ****                    
+ 240:main.c        ****                     // If g is pressed, start the car
+ 241:main.c        ****                     case 'g': 
+ 242:main.c        ****                         To_Pi_Write(1);
+ 243:main.c        ****                         if (RUN_STATE == 0) {
+ 244:main.c        ****                             RUN_STATE = 1;
+ 245:main.c        ****                             STEER_STATE = 1;
+ 246:main.c        ****                             BALLOON_STATE = 1;
+ 247:main.c        ****                             LCD_Reset();
+ 248:main.c        ****                             LCD_PrintString("----GO----");
+ 249:main.c        ****                             XBEE_PutString("----GO----\n\r");
+ 250:main.c        ****                             prev_error = 0;
+ 251:main.c        ****                             prev_i_term = 0;
+ 252:main.c        ****                             prev_error_servo = 0;
+ 253:main.c        ****                             prev_i_term_servo = 0;
+ 254:main.c        ****                             PWM_Motor_WriteCompare(START_PWM);
+ 255:main.c        ****                             Counter_Reset_Write(1);
+ 256:main.c        ****                             Counter_Reset_Write(0);
+ 257:main.c        ****                         }
+ 258:main.c        ****                         break;
+ 259:main.c        ****                         
+ 260:main.c        ****                         
+ 261:main.c        ****                     // If s is pressed, stop the car 
+ 262:main.c        ****                     case 's':
+ 263:main.c        ****                         To_Pi_Write(0);
+ 264:main.c        ****                         if (RUN_STATE == 1) {
+ 265:main.c        ****                             RUN_STATE = 0;
+ 266:main.c        ****                             BALLOON_STATE = 0;
+ 267:main.c        ****                             LCD_Reset();
+ 268:main.c        ****                             LCD_PrintString("----STOP----");
+ 269:main.c        ****                             PWM_Motor_WriteCompare(STOP_PWM);
+ 270:main.c        ****                             XBEE_PutString("----STOP----\n\r");
+ 271:main.c        ****                             prev_error = 0;
+ 272:main.c        ****                             prev_i_term = 0;
+ 273:main.c        ****                             prev_error_servo = 0;
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 17
+
+
+ 274:main.c        ****                             prev_i_term_servo = 0;
+ 275:main.c        ****                         }
+ 276:main.c        ****                         break;
+ 277:main.c        ****                         
+ 278:main.c        ****                      // If p is pressed, update the proportional constant 
+ 279:main.c        ****                     case 'p':
+ 280:main.c        ****                         LCD_Reset();
+ 281:main.c        ****                         kp = PID_SetVal(numBuf, numIndex,readBuf);
+ 282:main.c        ****                         sprintf(outputBuf, "kp=%s\n\r", numBuf);
+ 283:main.c        ****                         XBEE_PutString(outputBuf);
+ 284:main.c        ****                         LCD_PrintString(outputBuf);
+ 285:main.c        ****                         break;
+ 286:main.c        ****                        
+ 287:main.c        ****                     // If i is pressed, update the integral constant     
+ 288:main.c        ****                     case 'i': 
+ 289:main.c        ****                         LCD_Reset();
+ 290:main.c        ****                         ki = PID_SetVal(numBuf, numIndex,readBuf);
+ 291:main.c        ****                         sprintf(outputBuf, "ki=%s\n\r", numBuf);
+ 292:main.c        ****                         XBEE_PutString(outputBuf);
+ 293:main.c        ****                         LCD_PrintString(outputBuf);
+ 294:main.c        ****                         break;
+ 295:main.c        ****                     
+ 296:main.c        ****                     // If d is pressed, update the derivative constant 
+ 297:main.c        ****                     case 'd': 
+ 298:main.c        ****                         LCD_Reset();
+ 299:main.c        ****                         kd = PID_SetVal(numBuf, numIndex,readBuf);
+ 300:main.c        ****                         sprintf(outputBuf, "kd=%s\n\r", numBuf);
+ 301:main.c        ****                         XBEE_PutString(outputBuf);
+ 302:main.c        ****                         LCD_PrintString(outputBuf);
+ 303:main.c        ****                         break;
+ 304:main.c        ****                      
+ 305:main.c        ****                     // If k is pressed, print out the current constants and target speed    
+ 306:main.c        ****                     case 'k':
+ 307:main.c        ****                         LCD_Reset();
+ 308:main.c        ****                         sprintf(outputBuf, "kp=%i\n\rki=%i\n\rkd=%i\n\rtarget_speed=%i\n\r", (int)k
+ 309:main.c        ****                         XBEE_PutString(outputBuf);
+ 310:main.c        ****                         sprintf(outputBuf, "kp_servo=%i\n\rki_servo=%i\n\rkd_servo=%i\n\rcenter_ang
+ 311:main.c        ****                         XBEE_PutString(outputBuf);
+ 312:main.c        ****                         LCD_PrintString(outputBuf);
+ 313:main.c        ****                         break;
+ 314:main.c        ****                         
+ 315:main.c        ****                     // If a is pressed, turn 90
+ 316:main.c        ****                     case 'a':
+ 317:main.c        ****                         angle = (int)PID_SetVal(numBuf, numIndex, readBuf);
+ 318:main.c        ****                         sprintf(outputBuf, "a=%s\n\r", numBuf);
+ 319:main.c        ****                         XBEE_PutString(outputBuf);
+ 320:main.c        ****                         LCD_PrintString(outputBuf);
+ 321:main.c        ****                         Servo_PWM_WriteCompare(Servo_PWM_AngleCalc(angle));
+ 322:main.c        ****                         break;
+ 323:main.c        ****                         
+ 324:main.c        ****                      // If p is pressed, update the proportional constant 
+ 325:main.c        ****                     case 'r':
+ 326:main.c        ****                         LCD_Reset();
+ 327:main.c        ****                         kp_servo = PID_SetVal(numBuf, numIndex, readBuf);
+ 328:main.c        ****                         sprintf(outputBuf, "servo kp=%s\n\r", numBuf);
+ 329:main.c        ****                         XBEE_PutString(outputBuf);
+ 330:main.c        ****                         LCD_PrintString(outputBuf);
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 18
+
+
+ 331:main.c        ****                         break;
+ 332:main.c        ****                        
+ 333:main.c        ****                     // If i is pressed, update the integral constant     
+ 334:main.c        ****                     case 'n': 
+ 335:main.c        ****                         LCD_Reset();
+ 336:main.c        ****                         ki_servo = PID_SetVal(numBuf, numIndex,readBuf);
+ 337:main.c        ****                         sprintf(outputBuf, "servo ki=%s\n\r", numBuf);
+ 338:main.c        ****                         XBEE_PutString(outputBuf);
+ 339:main.c        ****                         LCD_PrintString(outputBuf);
+ 340:main.c        ****                         break;
+ 341:main.c        ****                     
+ 342:main.c        ****                     // If d is pressed, update the derivative constant 
+ 343:main.c        ****                     case 'e': 
+ 344:main.c        ****                         LCD_Reset();
+ 345:main.c        ****                         kd_servo = PID_SetVal(numBuf, numIndex,readBuf);
+ 346:main.c        ****                         sprintf(outputBuf, "servo kd=%s\n\r", numBuf);
+ 347:main.c        ****                         XBEE_PutString(outputBuf);
+ 348:main.c        ****                         LCD_PrintString(outputBuf);
+ 349:main.c        ****                         break;
+ 350:main.c        ****                         
+ 351:main.c        ****                     // If c is pressed, update the center angle   
+ 352:main.c        ****                     case 'c':
+ 353:main.c        ****                         LCD_Reset();
+ 354:main.c        ****                         CENTER_ANGLE = PID_SetVal(numBuf, numIndex,readBuf);
+ 355:main.c        ****                         sprintf(outputBuf, "center angle=%s\n\r", numBuf);
+ 356:main.c        ****                         XBEE_PutString(outputBuf);
+ 357:main.c        ****                         LCD_PrintString(outputBuf);
+ 358:main.c        ****                         break;
+ 359:main.c        ****                        
+ 360:main.c        ****                     case 'u':
+ 361:main.c        ****                         STEER_STATE = 0;
+ 362:main.c        ****                         LCD_Reset();
+ 363:main.c        ****                         sprintf(outputBuf, "steering stopped lol\n\r");
+ 364:main.c        ****                         XBEE_PutString(outputBuf);
+ 365:main.c        ****                         break;
+ 366:main.c        ****                         
+ 367:main.c        ****                     
+ 368:main.c        ****                     // Handle invalid input case
+ 369:main.c        ****                     default:
+ 370:main.c        ****                         LCD_Reset();
+ 371:main.c        ****                         LCD_PrintString("Invalid input.\n\r");
+ 372:main.c        ****                         XBEE_PutString("Sending data to arduino\n\r");
+ 373:main.c        ****                         break;
+ 374:main.c        ****                         
+ 375:main.c        ****                 }
+ 376:main.c        ****                 bufIndex = 0;
+ 608              		.loc 1 376 0
+ 609 0156 0024     		movs	r4, #0
+ 610              	.LVL102:
+ 611 0158 93E1     		b	.L23
+ 612              	.LVL103:
+ 613              	.L30:
+ 242:main.c        ****                         if (RUN_STATE == 0) {
+ 614              		.loc 1 242 0
+ 615 015a 0120     		movs	r0, #1
+ 616 015c FFF7FEFF 		bl	To_Pi_Write
+ 617              	.LVL104:
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 19
+
+
+ 243:main.c        ****                             RUN_STATE = 1;
+ 618              		.loc 1 243 0
+ 619 0160 514B     		ldr	r3, .L45+52
+ 620 0162 1B68     		ldr	r3, [r3]
+ 621 0164 002B     		cmp	r3, #0
+ 622 0166 40F08981 		bne	.L42
+ 244:main.c        ****                             STEER_STATE = 1;
+ 623              		.loc 1 244 0
+ 624 016a 0124     		movs	r4, #1
+ 625              	.LVL105:
+ 626 016c 4E4B     		ldr	r3, .L45+52
+ 627 016e 1C60     		str	r4, [r3]
+ 245:main.c        ****                             BALLOON_STATE = 1;
+ 628              		.loc 1 245 0
+ 629 0170 504B     		ldr	r3, .L45+64
+ 630 0172 1C60     		str	r4, [r3]
+ 246:main.c        ****                             LCD_Reset();
+ 631              		.loc 1 246 0
+ 632 0174 504B     		ldr	r3, .L45+68
+ 633 0176 1C60     		str	r4, [r3]
+ 247:main.c        ****                             LCD_PrintString("----GO----");
+ 634              		.loc 1 247 0
+ 635 0178 FFF7FEFF 		bl	LCD_Reset
+ 636              	.LVL106:
+ 248:main.c        ****                             XBEE_PutString("----GO----\n\r");
+ 637              		.loc 1 248 0
+ 638 017c 4F48     		ldr	r0, .L45+72
+ 639 017e FFF7FEFF 		bl	LCD_PrintString
+ 640              	.LVL107:
+ 249:main.c        ****                             prev_error = 0;
+ 641              		.loc 1 249 0
+ 642 0182 4F48     		ldr	r0, .L45+76
+ 643 0184 FFF7FEFF 		bl	XBEE_PutString
+ 644              	.LVL108:
+ 250:main.c        ****                             prev_i_term = 0;
+ 645              		.loc 1 250 0
+ 646 0188 434A     		ldr	r2, .L45+36
+ 647 018a 0023     		movs	r3, #0
+ 648 018c 5360     		str	r3, [r2, #4]	@ float
+ 251:main.c        ****                             prev_error_servo = 0;
+ 649              		.loc 1 251 0
+ 650 018e 1360     		str	r3, [r2]	@ float
+ 252:main.c        ****                             prev_i_term_servo = 0;
+ 651              		.loc 1 252 0
+ 652 0190 424A     		ldr	r2, .L45+40
+ 653 0192 1360     		str	r3, [r2]	@ float
+ 253:main.c        ****                             PWM_Motor_WriteCompare(START_PWM);
+ 654              		.loc 1 253 0
+ 655 0194 424A     		ldr	r2, .L45+44
+ 656 0196 1360     		str	r3, [r2]	@ float
+ 254:main.c        ****                             Counter_Reset_Write(1);
+ 657              		.loc 1 254 0
+ 658 0198 FF20     		movs	r0, #255
+ 659 019a FFF7FEFF 		bl	PWM_Motor_WriteCompare
+ 660              	.LVL109:
+ 255:main.c        ****                             Counter_Reset_Write(0);
+ 661              		.loc 1 255 0
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 20
+
+
+ 662 019e 2046     		mov	r0, r4
+ 663 01a0 FFF7FEFF 		bl	Counter_Reset_Write
+ 664              	.LVL110:
+ 256:main.c        ****                         }
+ 665              		.loc 1 256 0
+ 666 01a4 0020     		movs	r0, #0
+ 667 01a6 FFF7FEFF 		bl	Counter_Reset_Write
+ 668              	.LVL111:
+ 669              		.loc 1 376 0
+ 670 01aa 0024     		movs	r4, #0
+ 671 01ac 69E1     		b	.L23
+ 672              	.LVL112:
+ 673              	.L36:
+ 263:main.c        ****                         if (RUN_STATE == 1) {
+ 674              		.loc 1 263 0
+ 675 01ae 0020     		movs	r0, #0
+ 676 01b0 FFF7FEFF 		bl	To_Pi_Write
+ 677              	.LVL113:
+ 264:main.c        ****                             RUN_STATE = 0;
+ 678              		.loc 1 264 0
+ 679 01b4 3C4B     		ldr	r3, .L45+52
+ 680 01b6 1B68     		ldr	r3, [r3]
+ 681 01b8 012B     		cmp	r3, #1
+ 682 01ba 40F06181 		bne	.L43
+ 265:main.c        ****                             BALLOON_STATE = 0;
+ 683              		.loc 1 265 0
+ 684 01be 0024     		movs	r4, #0
+ 685              	.LVL114:
+ 686 01c0 394B     		ldr	r3, .L45+52
+ 687 01c2 1C60     		str	r4, [r3]
+ 266:main.c        ****                             LCD_Reset();
+ 688              		.loc 1 266 0
+ 689 01c4 3C4B     		ldr	r3, .L45+68
+ 690 01c6 1C60     		str	r4, [r3]
+ 267:main.c        ****                             LCD_PrintString("----STOP----");
+ 691              		.loc 1 267 0
+ 692 01c8 FFF7FEFF 		bl	LCD_Reset
+ 693              	.LVL115:
+ 268:main.c        ****                             PWM_Motor_WriteCompare(STOP_PWM);
+ 694              		.loc 1 268 0
+ 695 01cc 3D48     		ldr	r0, .L45+80
+ 696 01ce FFF7FEFF 		bl	LCD_PrintString
+ 697              	.LVL116:
+ 269:main.c        ****                             XBEE_PutString("----STOP----\n\r");
+ 698              		.loc 1 269 0
+ 699 01d2 2046     		mov	r0, r4
+ 700 01d4 FFF7FEFF 		bl	PWM_Motor_WriteCompare
+ 701              	.LVL117:
+ 270:main.c        ****                             prev_error = 0;
+ 702              		.loc 1 270 0
+ 703 01d8 3B48     		ldr	r0, .L45+84
+ 704 01da FFF7FEFF 		bl	XBEE_PutString
+ 705              	.LVL118:
+ 271:main.c        ****                             prev_i_term = 0;
+ 706              		.loc 1 271 0
+ 707 01de 2E4A     		ldr	r2, .L45+36
+ 708 01e0 0023     		movs	r3, #0
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 21
+
+
+ 709 01e2 5360     		str	r3, [r2, #4]	@ float
+ 272:main.c        ****                             prev_error_servo = 0;
+ 710              		.loc 1 272 0
+ 711 01e4 1360     		str	r3, [r2]	@ float
+ 273:main.c        ****                             prev_i_term_servo = 0;
+ 712              		.loc 1 273 0
+ 713 01e6 2D4A     		ldr	r2, .L45+40
+ 714 01e8 1360     		str	r3, [r2]	@ float
+ 274:main.c        ****                         }
+ 715              		.loc 1 274 0
+ 716 01ea 2D4A     		ldr	r2, .L45+44
+ 717 01ec 1360     		str	r3, [r2]	@ float
+ 718 01ee 48E1     		b	.L23
+ 719              	.LVL119:
+ 720              	.L34:
+ 280:main.c        ****                         kp = PID_SetVal(numBuf, numIndex,readBuf);
+ 721              		.loc 1 280 0
+ 722 01f0 FFF7FEFF 		bl	LCD_Reset
+ 723              	.LVL120:
+ 281:main.c        ****                         sprintf(outputBuf, "kp=%s\n\r", numBuf);
+ 724              		.loc 1 281 0
+ 725 01f4 22AA     		add	r2, sp, #136
+ 726 01f6 0021     		movs	r1, #0
+ 727 01f8 02A8     		add	r0, sp, #8
+ 728 01fa FFF7FEFF 		bl	PID_SetVal
+ 729              	.LVL121:
+ 730 01fe 2B4B     		ldr	r3, .L45+56
+ 731 0200 5860     		str	r0, [r3, #4]	@ float
+ 282:main.c        ****                         XBEE_PutString(outputBuf);
+ 732              		.loc 1 282 0
+ 733 0202 02AA     		add	r2, sp, #8
+ 734 0204 3149     		ldr	r1, .L45+88
+ 735 0206 12A8     		add	r0, sp, #72
+ 736 0208 FFF7FEFF 		bl	sprintf
+ 737              	.LVL122:
+ 283:main.c        ****                         LCD_PrintString(outputBuf);
+ 738              		.loc 1 283 0
+ 739 020c 12A8     		add	r0, sp, #72
+ 740 020e FFF7FEFF 		bl	XBEE_PutString
+ 741              	.LVL123:
+ 284:main.c        ****                         break;
+ 742              		.loc 1 284 0
+ 743 0212 12A8     		add	r0, sp, #72
+ 744 0214 FFF7FEFF 		bl	LCD_PrintString
+ 745              	.LVL124:
+ 746              		.loc 1 376 0
+ 747 0218 0024     		movs	r4, #0
+ 748              	.LVL125:
+ 285:main.c        ****                        
+ 749              		.loc 1 285 0
+ 750 021a 32E1     		b	.L23
+ 751              	.LVL126:
+ 752              	.L31:
+ 289:main.c        ****                         ki = PID_SetVal(numBuf, numIndex,readBuf);
+ 753              		.loc 1 289 0
+ 754 021c FFF7FEFF 		bl	LCD_Reset
+ 755              	.LVL127:
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 22
+
+
+ 290:main.c        ****                         sprintf(outputBuf, "ki=%s\n\r", numBuf);
+ 756              		.loc 1 290 0
+ 757 0220 22AA     		add	r2, sp, #136
+ 758 0222 0021     		movs	r1, #0
+ 759 0224 02A8     		add	r0, sp, #8
+ 760 0226 FFF7FEFF 		bl	PID_SetVal
+ 761              	.LVL128:
+ 762 022a 204B     		ldr	r3, .L45+56
+ 763 022c 9860     		str	r0, [r3, #8]	@ float
+ 291:main.c        ****                         XBEE_PutString(outputBuf);
+ 764              		.loc 1 291 0
+ 765 022e 02AA     		add	r2, sp, #8
+ 766 0230 2749     		ldr	r1, .L45+92
+ 767 0232 12A8     		add	r0, sp, #72
+ 768 0234 FFF7FEFF 		bl	sprintf
+ 769              	.LVL129:
+ 292:main.c        ****                         LCD_PrintString(outputBuf);
+ 770              		.loc 1 292 0
+ 771 0238 12A8     		add	r0, sp, #72
+ 772 023a FFF7FEFF 		bl	XBEE_PutString
+ 773              	.LVL130:
+ 293:main.c        ****                         break;
+ 774              		.loc 1 293 0
+ 775 023e 12A8     		add	r0, sp, #72
+ 776 0240 FFF7FEFF 		bl	LCD_PrintString
+ 777              	.LVL131:
+ 778              		.loc 1 376 0
+ 779 0244 0024     		movs	r4, #0
+ 780              	.LVL132:
+ 294:main.c        ****                     
+ 781              		.loc 1 294 0
+ 782 0246 1CE1     		b	.L23
+ 783              	.LVL133:
+ 784              	.L28:
+ 298:main.c        ****                         kd = PID_SetVal(numBuf, numIndex,readBuf);
+ 785              		.loc 1 298 0
+ 786 0248 FFF7FEFF 		bl	LCD_Reset
+ 787              	.LVL134:
+ 299:main.c        ****                         sprintf(outputBuf, "kd=%s\n\r", numBuf);
+ 788              		.loc 1 299 0
+ 789 024c 22AA     		add	r2, sp, #136
+ 790 024e 0021     		movs	r1, #0
+ 791 0250 02A8     		add	r0, sp, #8
+ 792 0252 FFF7FEFF 		bl	PID_SetVal
+ 793              	.LVL135:
+ 794 0256 104B     		ldr	r3, .L45+36
+ 795 0258 9860     		str	r0, [r3, #8]	@ float
+ 300:main.c        ****                         XBEE_PutString(outputBuf);
+ 796              		.loc 1 300 0
+ 797 025a 02AA     		add	r2, sp, #8
+ 798 025c 1D49     		ldr	r1, .L45+96
+ 799 025e 12A8     		add	r0, sp, #72
+ 800 0260 FFF7FEFF 		bl	sprintf
+ 801              	.LVL136:
+ 301:main.c        ****                         LCD_PrintString(outputBuf);
+ 802              		.loc 1 301 0
+ 803 0264 12A8     		add	r0, sp, #72
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 23
+
+
+ 804 0266 FFF7FEFF 		bl	XBEE_PutString
+ 805              	.LVL137:
+ 302:main.c        ****                         break;
+ 806              		.loc 1 302 0
+ 807 026a 12A8     		add	r0, sp, #72
+ 808 026c FFF7FEFF 		bl	LCD_PrintString
+ 809              	.LVL138:
+ 810              		.loc 1 376 0
+ 811 0270 0024     		movs	r4, #0
+ 812              	.LVL139:
+ 303:main.c        ****                      
+ 813              		.loc 1 303 0
+ 814 0272 06E1     		b	.L23
+ 815              	.L46:
+ 816              		.align	2
+ 817              	.L45:
+ 818 0274 00000000 		.word	inter
+ 819 0278 00000000 		.word	V_Sync_ISR
+ 820 027c 00000000 		.word	H_Sync_ISR
+ 821 0280 00000000 		.word	Line_Int_ISR
+ 822 0284 00000000 		.word	Porch_Int_ISR
+ 823 0288 00000000 		.word	Go_Again_Int_ISR
+ 824 028c 00000000 		.word	CENTER_ANGLE
+ 825 0290 00000000 		.word	.LC0
+ 826 0294 18000000 		.word	.LC1
+ 827 0298 00000000 		.word	.LANCHOR1
+ 828 029c 00000000 		.word	prev_error_servo
+ 829 02a0 00000000 		.word	prev_i_term_servo
+ 830 02a4 28000000 		.word	.LC2
+ 831 02a8 00000000 		.word	RUN_STATE
+ 832 02ac 00000000 		.word	.LANCHOR0
+ 833 02b0 38000000 		.word	.LC3
+ 834 02b4 00000000 		.word	STEER_STATE
+ 835 02b8 00000000 		.word	BALLOON_STATE
+ 836 02bc 54000000 		.word	.LC4
+ 837 02c0 60000000 		.word	.LC5
+ 838 02c4 70000000 		.word	.LC6
+ 839 02c8 80000000 		.word	.LC7
+ 840 02cc 90000000 		.word	.LC8
+ 841 02d0 98000000 		.word	.LC9
+ 842 02d4 A0000000 		.word	.LC10
+ 843              	.LVL140:
+ 844              	.L32:
+ 307:main.c        ****                         sprintf(outputBuf, "kp=%i\n\rki=%i\n\rkd=%i\n\rtarget_speed=%i\n\r", (int)k
+ 845              		.loc 1 307 0
+ 846 02d8 FFF7FEFF 		bl	LCD_Reset
+ 847              	.LVL141:
+ 308:main.c        ****                         XBEE_PutString(outputBuf);
+ 848              		.loc 1 308 0
+ 849 02dc 6F4C     		ldr	r4, .L47
+ 850              	.LVL142:
+ 851 02de A068     		ldr	r0, [r4, #8]	@ float
+ 852 02e0 FFF7FEFF 		bl	__aeabi_f2iz
+ 853              	.LVL143:
+ 854 02e4 0646     		mov	r6, r0
+ 855 02e6 6068     		ldr	r0, [r4, #4]	@ float
+ 856 02e8 FFF7FEFF 		bl	__aeabi_f2iz
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 24
+
+
+ 857              	.LVL144:
+ 858 02ec 0546     		mov	r5, r0
+ 859 02ee 2068     		ldr	r0, [r4]	@ float
+ 860 02f0 FFF7FEFF 		bl	__aeabi_f2iz
+ 861              	.LVL145:
+ 862 02f4 0190     		str	r0, [sp, #4]
+ 863 02f6 6A4B     		ldr	r3, .L47+4
+ 864 02f8 9868     		ldr	r0, [r3, #8]	@ float
+ 865 02fa FFF7FEFF 		bl	__aeabi_f2iz
+ 866              	.LVL146:
+ 867 02fe 0090     		str	r0, [sp]
+ 868 0300 3346     		mov	r3, r6
+ 869 0302 2A46     		mov	r2, r5
+ 870 0304 6749     		ldr	r1, .L47+8
+ 871 0306 12A8     		add	r0, sp, #72
+ 872 0308 FFF7FEFF 		bl	sprintf
+ 873              	.LVL147:
+ 309:main.c        ****                         sprintf(outputBuf, "kp_servo=%i\n\rki_servo=%i\n\rkd_servo=%i\n\rcenter_ang
+ 874              		.loc 1 309 0
+ 875 030c 12A8     		add	r0, sp, #72
+ 876 030e FFF7FEFF 		bl	XBEE_PutString
+ 877              	.LVL148:
+ 310:main.c        ****                         XBEE_PutString(outputBuf);
+ 878              		.loc 1 310 0
+ 879 0312 654B     		ldr	r3, .L47+12
+ 880 0314 1868     		ldr	r0, [r3]	@ float
+ 881 0316 FFF7FEFF 		bl	__aeabi_f2iz
+ 882              	.LVL149:
+ 883 031a 0546     		mov	r5, r0
+ 884 031c 634B     		ldr	r3, .L47+16
+ 885 031e 1868     		ldr	r0, [r3]	@ float
+ 886 0320 FFF7FEFF 		bl	__aeabi_f2iz
+ 887              	.LVL150:
+ 888 0324 0446     		mov	r4, r0
+ 889 0326 624B     		ldr	r3, .L47+20
+ 890 0328 1B68     		ldr	r3, [r3]
+ 891 032a 0193     		str	r3, [sp, #4]
+ 892 032c 614B     		ldr	r3, .L47+24
+ 893 032e 1868     		ldr	r0, [r3]	@ float
+ 894 0330 FFF7FEFF 		bl	__aeabi_f2iz
+ 895              	.LVL151:
+ 896 0334 0090     		str	r0, [sp]
+ 897 0336 2B46     		mov	r3, r5
+ 898 0338 2246     		mov	r2, r4
+ 899 033a 5F49     		ldr	r1, .L47+28
+ 900 033c 12A8     		add	r0, sp, #72
+ 901 033e FFF7FEFF 		bl	sprintf
+ 902              	.LVL152:
+ 311:main.c        ****                         LCD_PrintString(outputBuf);
+ 903              		.loc 1 311 0
+ 904 0342 12A8     		add	r0, sp, #72
+ 905 0344 FFF7FEFF 		bl	XBEE_PutString
+ 906              	.LVL153:
+ 312:main.c        ****                         break;
+ 907              		.loc 1 312 0
+ 908 0348 12A8     		add	r0, sp, #72
+ 909 034a FFF7FEFF 		bl	LCD_PrintString
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 25
+
+
+ 910              	.LVL154:
+ 911              		.loc 1 376 0
+ 912 034e 0024     		movs	r4, #0
+ 313:main.c        ****                         
+ 913              		.loc 1 313 0
+ 914 0350 97E0     		b	.L23
+ 915              	.LVL155:
+ 916              	.L25:
+ 317:main.c        ****                         sprintf(outputBuf, "a=%s\n\r", numBuf);
+ 917              		.loc 1 317 0
+ 918 0352 22AA     		add	r2, sp, #136
+ 919 0354 0021     		movs	r1, #0
+ 920 0356 02A8     		add	r0, sp, #8
+ 921 0358 FFF7FEFF 		bl	PID_SetVal
+ 922              	.LVL156:
+ 923 035c FFF7FEFF 		bl	__aeabi_f2iz
+ 924              	.LVL157:
+ 925 0360 0446     		mov	r4, r0
+ 926              	.LVL158:
+ 318:main.c        ****                         XBEE_PutString(outputBuf);
+ 927              		.loc 1 318 0
+ 928 0362 02AA     		add	r2, sp, #8
+ 929 0364 5549     		ldr	r1, .L47+32
+ 930 0366 12A8     		add	r0, sp, #72
+ 931              	.LVL159:
+ 932 0368 FFF7FEFF 		bl	sprintf
+ 933              	.LVL160:
+ 319:main.c        ****                         LCD_PrintString(outputBuf);
+ 934              		.loc 1 319 0
+ 935 036c 12A8     		add	r0, sp, #72
+ 936 036e FFF7FEFF 		bl	XBEE_PutString
+ 937              	.LVL161:
+ 320:main.c        ****                         Servo_PWM_WriteCompare(Servo_PWM_AngleCalc(angle));
+ 938              		.loc 1 320 0
+ 939 0372 12A8     		add	r0, sp, #72
+ 940 0374 FFF7FEFF 		bl	LCD_PrintString
+ 941              	.LVL162:
+ 321:main.c        ****                         break;
+ 942              		.loc 1 321 0
+ 943 0378 2046     		mov	r0, r4
+ 944 037a FFF7FEFF 		bl	Servo_PWM_AngleCalc
+ 945              	.LVL163:
+ 946 037e FFF7FEFF 		bl	Servo_PWM_WriteCompare
+ 947              	.LVL164:
+ 948              		.loc 1 376 0
+ 949 0382 0024     		movs	r4, #0
+ 950              	.LVL165:
+ 322:main.c        ****                         
+ 951              		.loc 1 322 0
+ 952 0384 7DE0     		b	.L23
+ 953              	.LVL166:
+ 954              	.L35:
+ 326:main.c        ****                         kp_servo = PID_SetVal(numBuf, numIndex, readBuf);
+ 955              		.loc 1 326 0
+ 956 0386 FFF7FEFF 		bl	LCD_Reset
+ 957              	.LVL167:
+ 327:main.c        ****                         sprintf(outputBuf, "servo kp=%s\n\r", numBuf);
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 26
+
+
+ 958              		.loc 1 327 0
+ 959 038a 22AA     		add	r2, sp, #136
+ 960 038c 0021     		movs	r1, #0
+ 961 038e 02A8     		add	r0, sp, #8
+ 962 0390 FFF7FEFF 		bl	PID_SetVal
+ 963              	.LVL168:
+ 964 0394 454B     		ldr	r3, .L47+16
+ 965 0396 1860     		str	r0, [r3]	@ float
+ 328:main.c        ****                         XBEE_PutString(outputBuf);
+ 966              		.loc 1 328 0
+ 967 0398 02AA     		add	r2, sp, #8
+ 968 039a 4949     		ldr	r1, .L47+36
+ 969 039c 12A8     		add	r0, sp, #72
+ 970 039e FFF7FEFF 		bl	sprintf
+ 971              	.LVL169:
+ 329:main.c        ****                         LCD_PrintString(outputBuf);
+ 972              		.loc 1 329 0
+ 973 03a2 12A8     		add	r0, sp, #72
+ 974 03a4 FFF7FEFF 		bl	XBEE_PutString
+ 975              	.LVL170:
+ 330:main.c        ****                         break;
+ 976              		.loc 1 330 0
+ 977 03a8 12A8     		add	r0, sp, #72
+ 978 03aa FFF7FEFF 		bl	LCD_PrintString
+ 979              	.LVL171:
+ 980              		.loc 1 376 0
+ 981 03ae 0024     		movs	r4, #0
+ 982              	.LVL172:
+ 331:main.c        ****                        
+ 983              		.loc 1 331 0
+ 984 03b0 67E0     		b	.L23
+ 985              	.LVL173:
+ 986              	.L33:
+ 335:main.c        ****                         ki_servo = PID_SetVal(numBuf, numIndex,readBuf);
+ 987              		.loc 1 335 0
+ 988 03b2 FFF7FEFF 		bl	LCD_Reset
+ 989              	.LVL174:
+ 336:main.c        ****                         sprintf(outputBuf, "servo ki=%s\n\r", numBuf);
+ 990              		.loc 1 336 0
+ 991 03b6 22AA     		add	r2, sp, #136
+ 992 03b8 0021     		movs	r1, #0
+ 993 03ba 02A8     		add	r0, sp, #8
+ 994 03bc FFF7FEFF 		bl	PID_SetVal
+ 995              	.LVL175:
+ 996 03c0 394B     		ldr	r3, .L47+12
+ 997 03c2 1860     		str	r0, [r3]	@ float
+ 337:main.c        ****                         XBEE_PutString(outputBuf);
+ 998              		.loc 1 337 0
+ 999 03c4 02AA     		add	r2, sp, #8
+ 1000 03c6 3F49     		ldr	r1, .L47+40
+ 1001 03c8 12A8     		add	r0, sp, #72
+ 1002 03ca FFF7FEFF 		bl	sprintf
+ 1003              	.LVL176:
+ 338:main.c        ****                         LCD_PrintString(outputBuf);
+ 1004              		.loc 1 338 0
+ 1005 03ce 12A8     		add	r0, sp, #72
+ 1006 03d0 FFF7FEFF 		bl	XBEE_PutString
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 27
+
+
+ 1007              	.LVL177:
+ 339:main.c        ****                         break;
+ 1008              		.loc 1 339 0
+ 1009 03d4 12A8     		add	r0, sp, #72
+ 1010 03d6 FFF7FEFF 		bl	LCD_PrintString
+ 1011              	.LVL178:
+ 1012              		.loc 1 376 0
+ 1013 03da 0024     		movs	r4, #0
+ 1014              	.LVL179:
+ 340:main.c        ****                     
+ 1015              		.loc 1 340 0
+ 1016 03dc 51E0     		b	.L23
+ 1017              	.LVL180:
+ 1018              	.L29:
+ 344:main.c        ****                         kd_servo = PID_SetVal(numBuf, numIndex,readBuf);
+ 1019              		.loc 1 344 0
+ 1020 03de FFF7FEFF 		bl	LCD_Reset
+ 1021              	.LVL181:
+ 345:main.c        ****                         sprintf(outputBuf, "servo kd=%s\n\r", numBuf);
+ 1022              		.loc 1 345 0
+ 1023 03e2 22AA     		add	r2, sp, #136
+ 1024 03e4 0021     		movs	r1, #0
+ 1025 03e6 02A8     		add	r0, sp, #8
+ 1026 03e8 FFF7FEFF 		bl	PID_SetVal
+ 1027              	.LVL182:
+ 1028 03ec 314B     		ldr	r3, .L47+24
+ 1029 03ee 1860     		str	r0, [r3]	@ float
+ 346:main.c        ****                         XBEE_PutString(outputBuf);
+ 1030              		.loc 1 346 0
+ 1031 03f0 02AA     		add	r2, sp, #8
+ 1032 03f2 3549     		ldr	r1, .L47+44
+ 1033 03f4 12A8     		add	r0, sp, #72
+ 1034 03f6 FFF7FEFF 		bl	sprintf
+ 1035              	.LVL183:
+ 347:main.c        ****                         LCD_PrintString(outputBuf);
+ 1036              		.loc 1 347 0
+ 1037 03fa 12A8     		add	r0, sp, #72
+ 1038 03fc FFF7FEFF 		bl	XBEE_PutString
+ 1039              	.LVL184:
+ 348:main.c        ****                         break;
+ 1040              		.loc 1 348 0
+ 1041 0400 12A8     		add	r0, sp, #72
+ 1042 0402 FFF7FEFF 		bl	LCD_PrintString
+ 1043              	.LVL185:
+ 1044              		.loc 1 376 0
+ 1045 0406 0024     		movs	r4, #0
+ 1046              	.LVL186:
+ 349:main.c        ****                         
+ 1047              		.loc 1 349 0
+ 1048 0408 3BE0     		b	.L23
+ 1049              	.LVL187:
+ 1050              	.L27:
+ 353:main.c        ****                         CENTER_ANGLE = PID_SetVal(numBuf, numIndex,readBuf);
+ 1051              		.loc 1 353 0
+ 1052 040a FFF7FEFF 		bl	LCD_Reset
+ 1053              	.LVL188:
+ 354:main.c        ****                         sprintf(outputBuf, "center angle=%s\n\r", numBuf);
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 28
+
+
+ 1054              		.loc 1 354 0
+ 1055 040e 22AA     		add	r2, sp, #136
+ 1056 0410 0021     		movs	r1, #0
+ 1057 0412 02A8     		add	r0, sp, #8
+ 1058 0414 FFF7FEFF 		bl	PID_SetVal
+ 1059              	.LVL189:
+ 1060 0418 FFF7FEFF 		bl	__aeabi_f2iz
+ 1061              	.LVL190:
+ 1062 041c 244B     		ldr	r3, .L47+20
+ 1063 041e 1860     		str	r0, [r3]
+ 355:main.c        ****                         XBEE_PutString(outputBuf);
+ 1064              		.loc 1 355 0
+ 1065 0420 02AA     		add	r2, sp, #8
+ 1066 0422 2A49     		ldr	r1, .L47+48
+ 1067 0424 12A8     		add	r0, sp, #72
+ 1068 0426 FFF7FEFF 		bl	sprintf
+ 1069              	.LVL191:
+ 356:main.c        ****                         LCD_PrintString(outputBuf);
+ 1070              		.loc 1 356 0
+ 1071 042a 12A8     		add	r0, sp, #72
+ 1072 042c FFF7FEFF 		bl	XBEE_PutString
+ 1073              	.LVL192:
+ 357:main.c        ****                         break;
+ 1074              		.loc 1 357 0
+ 1075 0430 12A8     		add	r0, sp, #72
+ 1076 0432 FFF7FEFF 		bl	LCD_PrintString
+ 1077              	.LVL193:
+ 1078              		.loc 1 376 0
+ 1079 0436 0024     		movs	r4, #0
+ 1080              	.LVL194:
+ 358:main.c        ****                        
+ 1081              		.loc 1 358 0
+ 1082 0438 23E0     		b	.L23
+ 1083              	.LVL195:
+ 1084              	.L38:
+ 361:main.c        ****                         LCD_Reset();
+ 1085              		.loc 1 361 0
+ 1086 043a 0024     		movs	r4, #0
+ 1087              	.LVL196:
+ 1088 043c 244B     		ldr	r3, .L47+52
+ 1089 043e 1C60     		str	r4, [r3]
+ 362:main.c        ****                         sprintf(outputBuf, "steering stopped lol\n\r");
+ 1090              		.loc 1 362 0
+ 1091 0440 FFF7FEFF 		bl	LCD_Reset
+ 1092              	.LVL197:
+ 363:main.c        ****                         XBEE_PutString(outputBuf);
+ 1093              		.loc 1 363 0
+ 1094 0444 12AD     		add	r5, sp, #72
+ 1095 0446 234E     		ldr	r6, .L47+56
+ 1096 0448 0FCE     		ldmia	r6!, {r0, r1, r2, r3}
+ 1097 044a 0FC5     		stmia	r5!, {r0, r1, r2, r3}
+ 1098 044c 96E80300 		ldmia	r6, {r0, r1}
+ 1099 0450 45F8040B 		str	r0, [r5], #4
+ 1100 0454 25F8021B 		strh	r1, [r5], #2	@ movhi
+ 1101 0458 090C     		lsrs	r1, r1, #16
+ 1102 045a 2970     		strb	r1, [r5]
+ 364:main.c        ****                         break;
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 29
+
+
+ 1103              		.loc 1 364 0
+ 1104 045c 12A8     		add	r0, sp, #72
+ 1105 045e FFF7FEFF 		bl	XBEE_PutString
+ 1106              	.LVL198:
+ 365:main.c        ****                         
+ 1107              		.loc 1 365 0
+ 1108 0462 0EE0     		b	.L23
+ 1109              	.LVL199:
+ 1110              	.L24:
+ 370:main.c        ****                         LCD_PrintString("Invalid input.\n\r");
+ 1111              		.loc 1 370 0
+ 1112 0464 FFF7FEFF 		bl	LCD_Reset
+ 1113              	.LVL200:
+ 371:main.c        ****                         XBEE_PutString("Sending data to arduino\n\r");
+ 1114              		.loc 1 371 0
+ 1115 0468 1B48     		ldr	r0, .L47+60
+ 1116 046a FFF7FEFF 		bl	LCD_PrintString
+ 1117              	.LVL201:
+ 372:main.c        ****                         break;
+ 1118              		.loc 1 372 0
+ 1119 046e 1B48     		ldr	r0, .L47+64
+ 1120 0470 FFF7FEFF 		bl	XBEE_PutString
+ 1121              	.LVL202:
+ 1122              		.loc 1 376 0
+ 1123 0474 0024     		movs	r4, #0
+ 1124              	.LVL203:
+ 373:main.c        ****                         
+ 1125              		.loc 1 373 0
+ 1126 0476 04E0     		b	.L23
+ 1127              	.LVL204:
+ 1128              	.L41:
+ 1129              		.loc 1 376 0
+ 1130 0478 0024     		movs	r4, #0
+ 1131              	.LVL205:
+ 1132 047a 02E0     		b	.L23
+ 1133              	.LVL206:
+ 1134              	.L42:
+ 1135 047c 0024     		movs	r4, #0
+ 1136              	.LVL207:
+ 1137 047e 00E0     		b	.L23
+ 1138              	.LVL208:
+ 1139              	.L43:
+ 1140 0480 0024     		movs	r4, #0
+ 1141              	.LVL209:
+ 1142              	.L23:
+ 377:main.c        ****             }
+ 378:main.c        ****             
+ 379:main.c        ****         }
+ 380:main.c        ****         
+ 381:main.c        ****         /* Clear the BUF */
+ 382:main.c        ****         if (bufIndex == BUF_SIZE) {
+ 1143              		.loc 1 382 0
+ 1144 0482 402C     		cmp	r4, #64
+ 1145 0484 7FF4FDAD 		bne	.L39
+ 383:main.c        ****             LCD_Reset();
+ 1146              		.loc 1 383 0
+ 1147 0488 FFF7FEFF 		bl	LCD_Reset
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 30
+
+
+ 1148              	.LVL210:
+ 384:main.c        ****             XBEE_PutString(readBuf);
+ 1149              		.loc 1 384 0
+ 1150 048c 22A8     		add	r0, sp, #136
+ 1151 048e FFF7FEFF 		bl	XBEE_PutString
+ 1152              	.LVL211:
+ 385:main.c        ****             LCD_PrintString(readBuf);
+ 1153              		.loc 1 385 0
+ 1154 0492 22A8     		add	r0, sp, #136
+ 1155 0494 FFF7FEFF 		bl	LCD_PrintString
+ 1156              	.LVL212:
+ 1157 0498 F2E5     		b	.L40
+ 1158              	.L48:
+ 1159 049a 00BF     		.align	2
+ 1160              	.L47:
+ 1161 049c 00000000 		.word	.LANCHOR0
+ 1162 04a0 00000000 		.word	.LANCHOR1
+ 1163 04a4 A8000000 		.word	.LC11
+ 1164 04a8 00000000 		.word	ki_servo
+ 1165 04ac 00000000 		.word	kp_servo
+ 1166 04b0 00000000 		.word	CENTER_ANGLE
+ 1167 04b4 00000000 		.word	kd_servo
+ 1168 04b8 D0000000 		.word	.LC12
+ 1169 04bc 0C010000 		.word	.LC13
+ 1170 04c0 14010000 		.word	.LC14
+ 1171 04c4 24010000 		.word	.LC15
+ 1172 04c8 34010000 		.word	.LC16
+ 1173 04cc 44010000 		.word	.LC17
+ 1174 04d0 00000000 		.word	STEER_STATE
+ 1175 04d4 58010000 		.word	.LC18
+ 1176 04d8 70010000 		.word	.LC19
+ 1177 04dc 84010000 		.word	.LC20
+ 1178              		.cfi_endproc
+ 1179              	.LFE69:
+ 1180              		.size	main, .-main
+ 1181              		.global	arduinoRunState
+ 1182              		.global	prevArduinoRunState
+ 1183              		.global	speed
+ 1184              		.global	prev_i_term
+ 1185              		.global	prev_error
+ 1186              		.global	kd
+ 1187              		.global	ki
+ 1188              		.global	kp
+ 1189              		.global	TARGET_SPEED
+ 1190              		.comm	BALLOON_STATE,4,4
+ 1191              		.comm	RUN_STATE,4,4
+ 1192              		.comm	CENTER_ANGLE,4,4
+ 1193              		.comm	STEER_STATE,4,4
+ 1194              		.comm	prev_i_term_servo,4,4
+ 1195              		.comm	prev_error_servo,4,4
+ 1196              		.comm	kd_servo,4,4
+ 1197              		.comm	ki_servo,4,4
+ 1198              		.comm	kp_servo,4,4
+ 1199              		.data
+ 1200              		.align	2
+ 1201              		.set	.LANCHOR0,. + 0
+ 1202              		.type	TARGET_SPEED, %object
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 31
+
+
+ 1203              		.size	TARGET_SPEED, 4
+ 1204              	TARGET_SPEED:
+ 1205 0000 00008040 		.word	1082130432
+ 1206              		.type	kp, %object
+ 1207              		.size	kp, 4
+ 1208              	kp:
+ 1209 0004 0000C842 		.word	1120403456
+ 1210              		.type	ki, %object
+ 1211              		.size	ki, 4
+ 1212              	ki:
+ 1213 0008 00002041 		.word	1092616192
+ 1214              		.section	.rodata.str1.4,"aMS",%progbits,1
+ 1215              		.align	2
+ 1216              	.LC0:
+ 1217 0000 436F6E6E 		.ascii	"Connection success\012\015\000"
+ 1217      65637469 
+ 1217      6F6E2073 
+ 1217      75636365 
+ 1217      73730A0D 
+ 1218 0015 000000   		.space	3
+ 1219              	.LC1:
+ 1220 0018 496E6974 		.ascii	"Initialized.\000"
+ 1220      69616C69 
+ 1220      7A65642E 
+ 1220      00
+ 1221 0025 000000   		.space	3
+ 1222              	.LC2:
+ 1223 0028 56616C75 		.ascii	"Value entered\000"
+ 1223      6520656E 
+ 1223      74657265 
+ 1223      6400
+ 1224 0036 0000     		.space	2
+ 1225              	.LC3:
+ 1226 0038 54617267 		.ascii	"Target speed set to %i\012\015\000"
+ 1226      65742073 
+ 1226      70656564 
+ 1226      20736574 
+ 1226      20746F20 
+ 1227 0051 000000   		.space	3
+ 1228              	.LC4:
+ 1229 0054 2D2D2D2D 		.ascii	"----GO----\000"
+ 1229      474F2D2D 
+ 1229      2D2D00
+ 1230 005f 00       		.space	1
+ 1231              	.LC5:
+ 1232 0060 2D2D2D2D 		.ascii	"----GO----\012\015\000"
+ 1232      474F2D2D 
+ 1232      2D2D0A0D 
+ 1232      00
+ 1233 006d 000000   		.space	3
+ 1234              	.LC6:
+ 1235 0070 2D2D2D2D 		.ascii	"----STOP----\000"
+ 1235      53544F50 
+ 1235      2D2D2D2D 
+ 1235      00
+ 1236 007d 000000   		.space	3
+ 1237              	.LC7:
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 32
+
+
+ 1238 0080 2D2D2D2D 		.ascii	"----STOP----\012\015\000"
+ 1238      53544F50 
+ 1238      2D2D2D2D 
+ 1238      0A0D00
+ 1239 008f 00       		.space	1
+ 1240              	.LC8:
+ 1241 0090 6B703D25 		.ascii	"kp=%s\012\015\000"
+ 1241      730A0D00 
+ 1242              	.LC9:
+ 1243 0098 6B693D25 		.ascii	"ki=%s\012\015\000"
+ 1243      730A0D00 
+ 1244              	.LC10:
+ 1245 00a0 6B643D25 		.ascii	"kd=%s\012\015\000"
+ 1245      730A0D00 
+ 1246              	.LC11:
+ 1247 00a8 6B703D25 		.ascii	"kp=%i\012\015ki=%i\012\015kd=%i\012\015target_speed"
+ 1247      690A0D6B 
+ 1247      693D2569 
+ 1247      0A0D6B64 
+ 1247      3D25690A 
+ 1248 00c9 3D25690A 		.ascii	"=%i\012\015\000"
+ 1248      0D00
+ 1249 00cf 00       		.space	1
+ 1250              	.LC12:
+ 1251 00d0 6B705F73 		.ascii	"kp_servo=%i\012\015ki_servo=%i\012\015kd_servo=%i\012"
+ 1251      6572766F 
+ 1251      3D25690A 
+ 1251      0D6B695F 
+ 1251      73657276 
+ 1252 00f6 0D63656E 		.ascii	"\015center_angle=%i\012\015\000"
+ 1252      7465725F 
+ 1252      616E676C 
+ 1252      653D2569 
+ 1252      0A0D00
+ 1253 0109 000000   		.space	3
+ 1254              	.LC13:
+ 1255 010c 613D2573 		.ascii	"a=%s\012\015\000"
+ 1255      0A0D00
+ 1256 0113 00       		.space	1
+ 1257              	.LC14:
+ 1258 0114 73657276 		.ascii	"servo kp=%s\012\015\000"
+ 1258      6F206B70 
+ 1258      3D25730A 
+ 1258      0D00
+ 1259 0122 0000     		.space	2
+ 1260              	.LC15:
+ 1261 0124 73657276 		.ascii	"servo ki=%s\012\015\000"
+ 1261      6F206B69 
+ 1261      3D25730A 
+ 1261      0D00
+ 1262 0132 0000     		.space	2
+ 1263              	.LC16:
+ 1264 0134 73657276 		.ascii	"servo kd=%s\012\015\000"
+ 1264      6F206B64 
+ 1264      3D25730A 
+ 1264      0D00
+ 1265 0142 0000     		.space	2
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 33
+
+
+ 1266              	.LC17:
+ 1267 0144 63656E74 		.ascii	"center angle=%s\012\015\000"
+ 1267      65722061 
+ 1267      6E676C65 
+ 1267      3D25730A 
+ 1267      0D00
+ 1268 0156 0000     		.space	2
+ 1269              	.LC18:
+ 1270 0158 73746565 		.ascii	"steering stopped lol\012\015\000"
+ 1270      72696E67 
+ 1270      2073746F 
+ 1270      70706564 
+ 1270      206C6F6C 
+ 1271 016f 00       		.space	1
+ 1272              	.LC19:
+ 1273 0170 496E7661 		.ascii	"Invalid input.\012\015\000"
+ 1273      6C696420 
+ 1273      696E7075 
+ 1273      742E0A0D 
+ 1273      00
+ 1274 0181 000000   		.space	3
+ 1275              	.LC20:
+ 1276 0184 53656E64 		.ascii	"Sending data to arduino\012\015\000"
+ 1276      696E6720 
+ 1276      64617461 
+ 1276      20746F20 
+ 1276      61726475 
+ 1277              		.bss
+ 1278              		.align	2
+ 1279              		.set	.LANCHOR1,. + 0
+ 1280              		.type	prev_i_term, %object
+ 1281              		.size	prev_i_term, 4
+ 1282              	prev_i_term:
+ 1283 0000 00000000 		.space	4
+ 1284              		.type	prev_error, %object
+ 1285              		.size	prev_error, 4
+ 1286              	prev_error:
+ 1287 0004 00000000 		.space	4
+ 1288              		.type	kd, %object
+ 1289              		.size	kd, 4
+ 1290              	kd:
+ 1291 0008 00000000 		.space	4
+ 1292              		.type	arduinoRunState, %object
+ 1293              		.size	arduinoRunState, 4
+ 1294              	arduinoRunState:
+ 1295 000c 00000000 		.space	4
+ 1296              		.type	speed, %object
+ 1297              		.size	speed, 4
+ 1298              	speed:
+ 1299 0010 00000000 		.space	4
+ 1300              		.type	prevArduinoRunState, %object
+ 1301              		.size	prevArduinoRunState, 4
+ 1302              	prevArduinoRunState:
+ 1303 0014 00000000 		.space	4
+ 1304              		.text
+ 1305              	.Letext0:
+ 1306              		.file 2 "c:\\program files (x86)\\cypress\\psoc creator\\4.2\\psoc creator\\import\\gnu\\arm\\5.4.
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 34
+
+
+ 1307              		.file 3 "c:\\program files (x86)\\cypress\\psoc creator\\4.2\\psoc creator\\import\\gnu\\arm\\5.4.
+ 1308              		.file 4 "Generated_Source\\PSoC5/cytypes.h"
+ 1309              		.file 5 "Generated_Source\\PSoC5/core_cm3.h"
+ 1310              		.file 6 "nav_control.h"
+ 1311              		.file 7 "balloon.h"
+ 1312              		.file 8 "c:\\program files (x86)\\cypress\\psoc creator\\4.2\\psoc creator\\import\\gnu\\arm\\5.4.
+ 1313              		.file 9 "Generated_Source\\PSoC5/Counter.h"
+ 1314              		.file 10 "Generated_Source\\PSoC5/Counter_Reset.h"
+ 1315              		.file 11 "Generated_Source\\PSoC5/To_Pi.h"
+ 1316              		.file 12 "Generated_Source\\PSoC5/PWM_Motor.h"
+ 1317              		.file 13 "Generated_Source\\PSoC5/LCD.h"
+ 1318              		.file 14 "Generated_Source\\PSoC5/XBEE.h"
+ 1319              		.file 15 "Generated_Source\\PSoC5/Hall_Interrupt.h"
+ 1320              		.file 16 "Generated_Source\\PSoC5/Counter_Interrupt.h"
+ 1321              		.file 17 "Generated_Source\\PSoC5/V_Sync_Int.h"
+ 1322              		.file 18 "Generated_Source\\PSoC5/H_Sync_Int.h"
+ 1323              		.file 19 "Generated_Source\\PSoC5/Servo_PWM.h"
+ 1324              		.file 20 "Generated_Source\\PSoC5/Threshold_Comparator.h"
+ 1325              		.file 21 "Generated_Source\\PSoC5/Line_Timer.h"
+ 1326              		.file 22 "Generated_Source\\PSoC5/Line_Int.h"
+ 1327              		.file 23 "Generated_Source\\PSoC5/Porch_Int.h"
+ 1328              		.file 24 "Generated_Source\\PSoC5/Go_Again_Int.h"
+ 1329              		.file 25 "Generated_Source\\PSoC5/From_Pi.h"
+ 1330              		.file 26 "c:\\program files (x86)\\cypress\\psoc creator\\4.2\\psoc creator\\import\\gnu\\arm\\5.4
+ 1331              		.section	.debug_info,"",%progbits
+ 1332              	.Ldebug_info0:
+ 1333 0000 290E0000 		.4byte	0xe29
+ 1334 0004 0400     		.2byte	0x4
+ 1335 0006 00000000 		.4byte	.Ldebug_abbrev0
+ 1336 000a 04       		.byte	0x4
+ 1337 000b 01       		.uleb128 0x1
+ 1338 000c 86030000 		.4byte	.LASF90
+ 1339 0010 0C       		.byte	0xc
+ 1340 0011 8E040000 		.4byte	.LASF91
+ 1341 0015 09000000 		.4byte	.LASF92
+ 1342 0019 00000000 		.4byte	.Ldebug_ranges0+0
+ 1343 001d 00000000 		.4byte	0
+ 1344 0021 00000000 		.4byte	.Ldebug_line0
+ 1345 0025 02       		.uleb128 0x2
+ 1346 0026 04       		.byte	0x4
+ 1347 0027 04       		.byte	0x4
+ 1348 0028 E9010000 		.4byte	.LASF0
+ 1349 002c 02       		.uleb128 0x2
+ 1350 002d 01       		.byte	0x1
+ 1351 002e 06       		.byte	0x6
+ 1352 002f F1020000 		.4byte	.LASF1
+ 1353 0033 02       		.uleb128 0x2
+ 1354 0034 01       		.byte	0x1
+ 1355 0035 08       		.byte	0x8
+ 1356 0036 61020000 		.4byte	.LASF2
+ 1357 003a 02       		.uleb128 0x2
+ 1358 003b 02       		.byte	0x2
+ 1359 003c 05       		.byte	0x5
+ 1360 003d BF000000 		.4byte	.LASF3
+ 1361 0041 02       		.uleb128 0x2
+ 1362 0042 02       		.byte	0x2
+ 1363 0043 07       		.byte	0x7
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 35
+
+
+ 1364 0044 73030000 		.4byte	.LASF4
+ 1365 0048 03       		.uleb128 0x3
+ 1366 0049 0D050000 		.4byte	.LASF10
+ 1367 004d 02       		.byte	0x2
+ 1368 004e 3F       		.byte	0x3f
+ 1369 004f 53000000 		.4byte	0x53
+ 1370 0053 02       		.uleb128 0x2
+ 1371 0054 04       		.byte	0x4
+ 1372 0055 05       		.byte	0x5
+ 1373 0056 39020000 		.4byte	.LASF5
+ 1374 005a 02       		.uleb128 0x2
+ 1375 005b 04       		.byte	0x4
+ 1376 005c 07       		.byte	0x7
+ 1377 005d 95040000 		.4byte	.LASF6
+ 1378 0061 02       		.uleb128 0x2
+ 1379 0062 08       		.byte	0x8
+ 1380 0063 05       		.byte	0x5
+ 1381 0064 28010000 		.4byte	.LASF7
+ 1382 0068 02       		.uleb128 0x2
+ 1383 0069 08       		.byte	0x8
+ 1384 006a 07       		.byte	0x7
+ 1385 006b FD020000 		.4byte	.LASF8
+ 1386 006f 04       		.uleb128 0x4
+ 1387 0070 04       		.byte	0x4
+ 1388 0071 05       		.byte	0x5
+ 1389 0072 696E7400 		.ascii	"int\000"
+ 1390 0076 02       		.uleb128 0x2
+ 1391 0077 04       		.byte	0x4
+ 1392 0078 07       		.byte	0x7
+ 1393 0079 28030000 		.4byte	.LASF9
+ 1394 007d 03       		.uleb128 0x3
+ 1395 007e 3A040000 		.4byte	.LASF11
+ 1396 0082 03       		.byte	0x3
+ 1397 0083 2C       		.byte	0x2c
+ 1398 0084 48000000 		.4byte	0x48
+ 1399 0088 05       		.uleb128 0x5
+ 1400 0089 C8010000 		.4byte	.LASF12
+ 1401 008d 04       		.byte	0x4
+ 1402 008e E401     		.2byte	0x1e4
+ 1403 0090 33000000 		.4byte	0x33
+ 1404 0094 05       		.uleb128 0x5
+ 1405 0095 B8010000 		.4byte	.LASF13
+ 1406 0099 04       		.byte	0x4
+ 1407 009a E501     		.2byte	0x1e5
+ 1408 009c 41000000 		.4byte	0x41
+ 1409 00a0 02       		.uleb128 0x2
+ 1410 00a1 08       		.byte	0x8
+ 1411 00a2 04       		.byte	0x4
+ 1412 00a3 BB040000 		.4byte	.LASF14
+ 1413 00a7 02       		.uleb128 0x2
+ 1414 00a8 01       		.byte	0x1
+ 1415 00a9 08       		.byte	0x8
+ 1416 00aa 14040000 		.4byte	.LASF15
+ 1417 00ae 02       		.uleb128 0x2
+ 1418 00af 08       		.byte	0x8
+ 1419 00b0 04       		.byte	0x4
+ 1420 00b1 AB020000 		.4byte	.LASF16
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 36
+
+
+ 1421 00b5 02       		.uleb128 0x2
+ 1422 00b6 04       		.byte	0x4
+ 1423 00b7 07       		.byte	0x7
+ 1424 00b8 50050000 		.4byte	.LASF17
+ 1425 00bc 06       		.uleb128 0x6
+ 1426 00bd 04       		.byte	0x4
+ 1427 00be A7000000 		.4byte	0xa7
+ 1428 00c2 07       		.uleb128 0x7
+ 1429 00c3 79050000 		.4byte	.LASF93
+ 1430 00c7 01       		.byte	0x1
+ 1431 00c8 2A       		.byte	0x2a
+ 1432 00c9 00000000 		.4byte	.LFB64
+ 1433 00cd 02000000 		.4byte	.LFE64-.LFB64
+ 1434 00d1 01       		.uleb128 0x1
+ 1435 00d2 9C       		.byte	0x9c
+ 1436 00d3 08       		.uleb128 0x8
+ 1437 00d4 4C040000 		.4byte	.LASF94
+ 1438 00d8 01       		.byte	0x1
+ 1439 00d9 7A       		.byte	0x7a
+ 1440 00da 25000000 		.4byte	0x25
+ 1441 00de 00000000 		.4byte	.LFB68
+ 1442 00e2 24000000 		.4byte	.LFE68-.LFB68
+ 1443 00e6 01       		.uleb128 0x1
+ 1444 00e7 9C       		.byte	0x9c
+ 1445 00e8 49010000 		.4byte	0x149
+ 1446 00ec 09       		.uleb128 0x9
+ 1447 00ed 26050000 		.4byte	.LASF18
+ 1448 00f1 01       		.byte	0x1
+ 1449 00f2 7A       		.byte	0x7a
+ 1450 00f3 BC000000 		.4byte	0xbc
+ 1451 00f7 00000000 		.4byte	.LLST0
+ 1452 00fb 09       		.uleb128 0x9
+ 1453 00fc 57040000 		.4byte	.LASF19
+ 1454 0100 01       		.byte	0x1
+ 1455 0101 7A       		.byte	0x7a
+ 1456 0102 6F000000 		.4byte	0x6f
+ 1457 0106 21000000 		.4byte	.LLST1
+ 1458 010a 09       		.uleb128 0x9
+ 1459 010b C9000000 		.4byte	.LASF20
+ 1460 010f 01       		.byte	0x1
+ 1461 0110 7A       		.byte	0x7a
+ 1462 0111 BC000000 		.4byte	0xbc
+ 1463 0115 3F000000 		.4byte	.LLST2
+ 1464 0119 0A       		.uleb128 0xa
+ 1465 011a D1000000 		.4byte	.LASF21
+ 1466 011e 01       		.byte	0x1
+ 1467 011f 7C       		.byte	0x7c
+ 1468 0120 6F000000 		.4byte	0x6f
+ 1469 0124 60000000 		.4byte	.LLST3
+ 1470 0128 0A       		.uleb128 0xa
+ 1471 0129 BF010000 		.4byte	.LASF22
+ 1472 012d 01       		.byte	0x1
+ 1473 012e 7D       		.byte	0x7d
+ 1474 012f A7000000 		.4byte	0xa7
+ 1475 0133 7F000000 		.4byte	.LLST4
+ 1476 0137 0B       		.uleb128 0xb
+ 1477 0138 1E000000 		.4byte	.LVL9
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 37
+
+
+ 1478 013c AB0C0000 		.4byte	0xcab
+ 1479 0140 0C       		.uleb128 0xc
+ 1480 0141 01       		.uleb128 0x1
+ 1481 0142 50       		.byte	0x50
+ 1482 0143 03       		.uleb128 0x3
+ 1483 0144 F3       		.byte	0xf3
+ 1484 0145 01       		.uleb128 0x1
+ 1485 0146 50       		.byte	0x50
+ 1486 0147 00       		.byte	0
+ 1487 0148 00       		.byte	0
+ 1488 0149 0D       		.uleb128 0xd
+ 1489 014a 97050000 		.4byte	.LASF95
+ 1490 014e 01       		.byte	0x1
+ 1491 014f 2F       		.byte	0x2f
+ 1492 0150 88000000 		.4byte	0x88
+ 1493 0154 00000000 		.4byte	.LFB65
+ 1494 0158 A4000000 		.4byte	.LFE65-.LFB65
+ 1495 015c 01       		.uleb128 0x1
+ 1496 015d 9C       		.byte	0x9c
+ 1497 015e DA010000 		.4byte	0x1da
+ 1498 0162 09       		.uleb128 0x9
+ 1499 0163 45030000 		.4byte	.LASF23
+ 1500 0167 01       		.byte	0x1
+ 1501 0168 2F       		.byte	0x2f
+ 1502 0169 25000000 		.4byte	0x25
+ 1503 016d 9D000000 		.4byte	.LLST5
+ 1504 0171 09       		.uleb128 0x9
+ 1505 0172 FE040000 		.4byte	.LASF24
+ 1506 0176 01       		.byte	0x1
+ 1507 0177 2F       		.byte	0x2f
+ 1508 0178 94000000 		.4byte	0x94
+ 1509 017c CB000000 		.4byte	.LLST6
+ 1510 0180 0A       		.uleb128 0xa
+ 1511 0181 60030000 		.4byte	.LASF25
+ 1512 0185 01       		.byte	0x1
+ 1513 0186 30       		.byte	0x30
+ 1514 0187 25000000 		.4byte	0x25
+ 1515 018b EC000000 		.4byte	.LLST7
+ 1516 018f 0A       		.uleb128 0xa
+ 1517 0190 33040000 		.4byte	.LASF26
+ 1518 0194 01       		.byte	0x1
+ 1519 0195 31       		.byte	0x31
+ 1520 0196 25000000 		.4byte	0x25
+ 1521 019a 0A010000 		.4byte	.LLST8
+ 1522 019e 0A       		.uleb128 0xa
+ 1523 019f 71010000 		.4byte	.LASF27
+ 1524 01a3 01       		.byte	0x1
+ 1525 01a4 32       		.byte	0x32
+ 1526 01a5 25000000 		.4byte	0x25
+ 1527 01a9 28010000 		.4byte	.LLST9
+ 1528 01ad 0A       		.uleb128 0xa
+ 1529 01ae 6C050000 		.4byte	.LASF28
+ 1530 01b2 01       		.byte	0x1
+ 1531 01b3 33       		.byte	0x33
+ 1532 01b4 25000000 		.4byte	0x25
+ 1533 01b8 46010000 		.4byte	.LLST10
+ 1534 01bc 0A       		.uleb128 0xa
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 38
+
+
+ 1535 01bd 73050000 		.4byte	.LASF29
+ 1536 01c1 01       		.byte	0x1
+ 1537 01c2 36       		.byte	0x36
+ 1538 01c3 25000000 		.4byte	0x25
+ 1539 01c7 64010000 		.4byte	.LLST11
+ 1540 01cb 0E       		.uleb128 0xe
+ 1541 01cc 647400   		.ascii	"dt\000"
+ 1542 01cf 01       		.byte	0x1
+ 1543 01d0 38       		.byte	0x38
+ 1544 01d1 94000000 		.4byte	0x94
+ 1545 01d5 82010000 		.4byte	.LLST12
+ 1546 01d9 00       		.byte	0
+ 1547 01da 0F       		.uleb128 0xf
+ 1548 01db 33020000 		.4byte	.LASF33
+ 1549 01df 01       		.byte	0x1
+ 1550 01e0 57       		.byte	0x57
+ 1551 01e1 00000000 		.4byte	.LFB67
+ 1552 01e5 7C000000 		.4byte	.LFE67-.LFB67
+ 1553 01e9 01       		.uleb128 0x1
+ 1554 01ea 9C       		.byte	0x9c
+ 1555 01eb 9D020000 		.4byte	0x29d
+ 1556 01ef 0A       		.uleb128 0xa
+ 1557 01f0 FE040000 		.4byte	.LASF24
+ 1558 01f4 01       		.byte	0x1
+ 1559 01f5 58       		.byte	0x58
+ 1560 01f6 94000000 		.4byte	0x94
+ 1561 01fa 95010000 		.4byte	.LLST13
+ 1562 01fe 0A       		.uleb128 0xa
+ 1563 01ff 19040000 		.4byte	.LASF30
+ 1564 0203 01       		.byte	0x1
+ 1565 0204 59       		.byte	0x59
+ 1566 0205 6F000000 		.4byte	0x6f
+ 1567 0209 B3010000 		.4byte	.LLST14
+ 1568 020d 0A       		.uleb128 0xa
+ 1569 020e 17050000 		.4byte	.LASF31
+ 1570 0212 01       		.byte	0x1
+ 1571 0213 5A       		.byte	0x5a
+ 1572 0214 25000000 		.4byte	0x25
+ 1573 0218 E6010000 		.4byte	.LLST15
+ 1574 021c 10       		.uleb128 0x10
+ 1575 021d 62756600 		.ascii	"buf\000"
+ 1576 0221 01       		.byte	0x1
+ 1577 0222 5B       		.byte	0x5b
+ 1578 0223 9D020000 		.4byte	0x29d
+ 1579 0227 0A       		.uleb128 0xa
+ 1580 0228 67010000 		.4byte	.LASF32
+ 1581 022c 01       		.byte	0x1
+ 1582 022d 5C       		.byte	0x5c
+ 1583 022e 88000000 		.4byte	0x88
+ 1584 0232 F9010000 		.4byte	.LLST16
+ 1585 0236 11       		.uleb128 0x11
+ 1586 0237 14000000 		.4byte	.LVL40
+ 1587 023b B60C0000 		.4byte	0xcb6
+ 1588 023f 12       		.uleb128 0x12
+ 1589 0240 1C000000 		.4byte	.LVL42
+ 1590 0244 C10C0000 		.4byte	0xcc1
+ 1591 0248 52020000 		.4byte	0x252
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 39
+
+
+ 1592 024c 0C       		.uleb128 0xc
+ 1593 024d 01       		.uleb128 0x1
+ 1594 024e 50       		.byte	0x50
+ 1595 024f 01       		.uleb128 0x1
+ 1596 0250 31       		.byte	0x31
+ 1597 0251 00       		.byte	0
+ 1598 0252 12       		.uleb128 0x12
+ 1599 0253 22000000 		.4byte	.LVL43
+ 1600 0257 C10C0000 		.4byte	0xcc1
+ 1601 025b 65020000 		.4byte	0x265
+ 1602 025f 0C       		.uleb128 0xc
+ 1603 0260 01       		.uleb128 0x1
+ 1604 0261 50       		.byte	0x50
+ 1605 0262 01       		.uleb128 0x1
+ 1606 0263 30       		.byte	0x30
+ 1607 0264 00       		.byte	0
+ 1608 0265 12       		.uleb128 0x12
+ 1609 0266 4E000000 		.4byte	.LVL51
+ 1610 026a 49010000 		.4byte	0x149
+ 1611 026e 79020000 		.4byte	0x279
+ 1612 0272 0C       		.uleb128 0xc
+ 1613 0273 01       		.uleb128 0x1
+ 1614 0274 51       		.byte	0x51
+ 1615 0275 02       		.uleb128 0x2
+ 1616 0276 74       		.byte	0x74
+ 1617 0277 00       		.sleb128 0
+ 1618 0278 00       		.byte	0
+ 1619 0279 12       		.uleb128 0x12
+ 1620 027a 56000000 		.4byte	.LVL53
+ 1621 027e CC0C0000 		.4byte	0xccc
+ 1622 0282 8C020000 		.4byte	0x28c
+ 1623 0286 0C       		.uleb128 0xc
+ 1624 0287 01       		.uleb128 0x1
+ 1625 0288 50       		.byte	0x50
+ 1626 0289 01       		.uleb128 0x1
+ 1627 028a 31       		.byte	0x31
+ 1628 028b 00       		.byte	0
+ 1629 028c 0B       		.uleb128 0xb
+ 1630 028d 64000000 		.4byte	.LVL56
+ 1631 0291 D70C0000 		.4byte	0xcd7
+ 1632 0295 0C       		.uleb128 0xc
+ 1633 0296 01       		.uleb128 0x1
+ 1634 0297 50       		.byte	0x50
+ 1635 0298 02       		.uleb128 0x2
+ 1636 0299 74       		.byte	0x74
+ 1637 029a 00       		.sleb128 0
+ 1638 029b 00       		.byte	0
+ 1639 029c 00       		.byte	0
+ 1640 029d 13       		.uleb128 0x13
+ 1641 029e A7000000 		.4byte	0xa7
+ 1642 02a2 AD020000 		.4byte	0x2ad
+ 1643 02a6 14       		.uleb128 0x14
+ 1644 02a7 B5000000 		.4byte	0xb5
+ 1645 02ab 3F       		.byte	0x3f
+ 1646 02ac 00       		.byte	0
+ 1647 02ad 15       		.uleb128 0x15
+ 1648 02ae 42040000 		.4byte	.LASF34
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 40
+
+
+ 1649 02b2 01       		.byte	0x1
+ 1650 02b3 51       		.byte	0x51
+ 1651 02b4 00000000 		.4byte	.LFB66
+ 1652 02b8 12000000 		.4byte	.LFE66-.LFB66
+ 1653 02bc 01       		.uleb128 0x1
+ 1654 02bd 9C       		.byte	0x9c
+ 1655 02be EA020000 		.4byte	0x2ea
+ 1656 02c2 12       		.uleb128 0x12
+ 1657 02c3 08000000 		.4byte	.LVL58
+ 1658 02c7 E20C0000 		.4byte	0xce2
+ 1659 02cb D5020000 		.4byte	0x2d5
+ 1660 02cf 0C       		.uleb128 0xc
+ 1661 02d0 01       		.uleb128 0x1
+ 1662 02d1 50       		.byte	0x50
+ 1663 02d2 01       		.uleb128 0x1
+ 1664 02d3 31       		.byte	0x31
+ 1665 02d4 00       		.byte	0
+ 1666 02d5 0B       		.uleb128 0xb
+ 1667 02d6 10000000 		.4byte	.LVL59
+ 1668 02da ED0C0000 		.4byte	0xced
+ 1669 02de 0C       		.uleb128 0xc
+ 1670 02df 01       		.uleb128 0x1
+ 1671 02e0 50       		.byte	0x50
+ 1672 02e1 01       		.uleb128 0x1
+ 1673 02e2 30       		.byte	0x30
+ 1674 02e3 0C       		.uleb128 0xc
+ 1675 02e4 01       		.uleb128 0x1
+ 1676 02e5 51       		.byte	0x51
+ 1677 02e6 01       		.uleb128 0x1
+ 1678 02e7 30       		.byte	0x30
+ 1679 02e8 00       		.byte	0
+ 1680 02e9 00       		.byte	0
+ 1681 02ea 16       		.uleb128 0x16
+ 1682 02eb 2E040000 		.4byte	.LASF96
+ 1683 02ef 01       		.byte	0x1
+ 1684 02f0 8C       		.byte	0x8c
+ 1685 02f1 6F000000 		.4byte	0x6f
+ 1686 02f5 00000000 		.4byte	.LFB69
+ 1687 02f9 E0040000 		.4byte	.LFE69-.LFB69
+ 1688 02fd 01       		.uleb128 0x1
+ 1689 02fe 9C       		.byte	0x9c
+ 1690 02ff 6B0B0000 		.4byte	0xb6b
+ 1691 0303 0A       		.uleb128 0xa
+ 1692 0304 BF010000 		.4byte	.LASF22
+ 1693 0308 01       		.byte	0x1
+ 1694 0309 8F       		.byte	0x8f
+ 1695 030a 88000000 		.4byte	0x88
+ 1696 030e 17020000 		.4byte	.LLST17
+ 1697 0312 17       		.uleb128 0x17
+ 1698 0313 9E020000 		.4byte	.LASF35
+ 1699 0317 01       		.byte	0x1
+ 1700 0318 90       		.byte	0x90
+ 1701 0319 88000000 		.4byte	0x88
+ 1702 031d 17       		.uleb128 0x17
+ 1703 031e 12020000 		.4byte	.LASF36
+ 1704 0322 01       		.byte	0x1
+ 1705 0323 91       		.byte	0x91
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 41
+
+
+ 1706 0324 A7000000 		.4byte	0xa7
+ 1707 0328 18       		.uleb128 0x18
+ 1708 0329 C9000000 		.4byte	.LASF20
+ 1709 032d 01       		.byte	0x1
+ 1710 032e 92       		.byte	0x92
+ 1711 032f 9D020000 		.4byte	0x29d
+ 1712 0333 03       		.uleb128 0x3
+ 1713 0334 91       		.byte	0x91
+ 1714 0335 B07F     		.sleb128 -80
+ 1715 0337 18       		.uleb128 0x18
+ 1716 0338 8E000000 		.4byte	.LASF37
+ 1717 033c 01       		.byte	0x1
+ 1718 033d 93       		.byte	0x93
+ 1719 033e 9D020000 		.4byte	0x29d
+ 1720 0342 03       		.uleb128 0x3
+ 1721 0343 91       		.byte	0x91
+ 1722 0344 F07E     		.sleb128 -144
+ 1723 0346 0A       		.uleb128 0xa
+ 1724 0347 D1000000 		.4byte	.LASF21
+ 1725 034b 01       		.byte	0x1
+ 1726 034c 94       		.byte	0x94
+ 1727 034d 88000000 		.4byte	0x88
+ 1728 0351 2A020000 		.4byte	.LLST18
+ 1729 0355 19       		.uleb128 0x19
+ 1730 0356 57040000 		.4byte	.LASF19
+ 1731 035a 01       		.byte	0x1
+ 1732 035b 95       		.byte	0x95
+ 1733 035c 6F000000 		.4byte	0x6f
+ 1734 0360 00       		.byte	0
+ 1735 0361 18       		.uleb128 0x18
+ 1736 0362 26050000 		.4byte	.LASF18
+ 1737 0366 01       		.byte	0x1
+ 1738 0367 96       		.byte	0x96
+ 1739 0368 9D020000 		.4byte	0x29d
+ 1740 036c 03       		.uleb128 0x3
+ 1741 036d 91       		.byte	0x91
+ 1742 036e B07E     		.sleb128 -208
+ 1743 0370 0A       		.uleb128 0xa
+ 1744 0371 66050000 		.4byte	.LASF38
+ 1745 0375 01       		.byte	0x1
+ 1746 0376 97       		.byte	0x97
+ 1747 0377 6F000000 		.4byte	0x6f
+ 1748 037b 10030000 		.4byte	.LLST19
+ 1749 037f 19       		.uleb128 0x19
+ 1750 0380 98000000 		.4byte	.LASF39
+ 1751 0384 01       		.byte	0x1
+ 1752 0385 98       		.byte	0x98
+ 1753 0386 6F000000 		.4byte	0x6f
+ 1754 038a 00       		.byte	0
+ 1755 038b 11       		.uleb128 0x11
+ 1756 038c 0A000000 		.4byte	.LVL61
+ 1757 0390 F80C0000 		.4byte	0xcf8
+ 1758 0394 11       		.uleb128 0x11
+ 1759 0395 0E000000 		.4byte	.LVL62
+ 1760 0399 030D0000 		.4byte	0xd03
+ 1761 039d 11       		.uleb128 0x11
+ 1762 039e 12000000 		.4byte	.LVL63
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 42
+
+
+ 1763 03a2 0E0D0000 		.4byte	0xd0e
+ 1764 03a6 12       		.uleb128 0x12
+ 1765 03a7 18000000 		.4byte	.LVL64
+ 1766 03ab 190D0000 		.4byte	0xd19
+ 1767 03af BD030000 		.4byte	0x3bd
+ 1768 03b3 0C       		.uleb128 0xc
+ 1769 03b4 01       		.uleb128 0x1
+ 1770 03b5 50       		.byte	0x50
+ 1771 03b6 05       		.uleb128 0x5
+ 1772 03b7 03       		.byte	0x3
+ 1773 03b8 00000000 		.4byte	inter
+ 1774 03bc 00       		.byte	0
+ 1775 03bd 11       		.uleb128 0x11
+ 1776 03be 1C000000 		.4byte	.LVL65
+ 1777 03c2 240D0000 		.4byte	0xd24
+ 1778 03c6 11       		.uleb128 0x11
+ 1779 03c7 20000000 		.4byte	.LVL66
+ 1780 03cb 2F0D0000 		.4byte	0xd2f
+ 1781 03cf 11       		.uleb128 0x11
+ 1782 03d0 24000000 		.4byte	.LVL67
+ 1783 03d4 3A0D0000 		.4byte	0xd3a
+ 1784 03d8 11       		.uleb128 0x11
+ 1785 03d9 28000000 		.4byte	.LVL68
+ 1786 03dd 450D0000 		.4byte	0xd45
+ 1787 03e1 11       		.uleb128 0x11
+ 1788 03e2 2E000000 		.4byte	.LVL69
+ 1789 03e6 500D0000 		.4byte	0xd50
+ 1790 03ea 11       		.uleb128 0x11
+ 1791 03eb 32000000 		.4byte	.LVL70
+ 1792 03ef 5B0D0000 		.4byte	0xd5b
+ 1793 03f3 11       		.uleb128 0x11
+ 1794 03f4 38000000 		.4byte	.LVL71
+ 1795 03f8 660D0000 		.4byte	0xd66
+ 1796 03fc 11       		.uleb128 0x11
+ 1797 03fd 3C000000 		.4byte	.LVL72
+ 1798 0401 710D0000 		.4byte	0xd71
+ 1799 0405 11       		.uleb128 0x11
+ 1800 0406 40000000 		.4byte	.LVL73
+ 1801 040a 7C0D0000 		.4byte	0xd7c
+ 1802 040e 11       		.uleb128 0x11
+ 1803 040f 44000000 		.4byte	.LVL74
+ 1804 0413 870D0000 		.4byte	0xd87
+ 1805 0417 11       		.uleb128 0x11
+ 1806 0418 48000000 		.4byte	.LVL75
+ 1807 041c 920D0000 		.4byte	0xd92
+ 1808 0420 11       		.uleb128 0x11
+ 1809 0421 4E000000 		.4byte	.LVL76
+ 1810 0425 9D0D0000 		.4byte	0xd9d
+ 1811 0429 11       		.uleb128 0x11
+ 1812 042a 52000000 		.4byte	.LVL77
+ 1813 042e A80D0000 		.4byte	0xda8
+ 1814 0432 11       		.uleb128 0x11
+ 1815 0433 58000000 		.4byte	.LVL78
+ 1816 0437 B30D0000 		.4byte	0xdb3
+ 1817 043b 11       		.uleb128 0x11
+ 1818 043c 5C000000 		.4byte	.LVL79
+ 1819 0440 BE0D0000 		.4byte	0xdbe
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 43
+
+
+ 1820 0444 12       		.uleb128 0x12
+ 1821 0445 62000000 		.4byte	.LVL80
+ 1822 0449 C90D0000 		.4byte	0xdc9
+ 1823 044d 5B040000 		.4byte	0x45b
+ 1824 0451 0C       		.uleb128 0xc
+ 1825 0452 01       		.uleb128 0x1
+ 1826 0453 50       		.byte	0x50
+ 1827 0454 05       		.uleb128 0x5
+ 1828 0455 03       		.byte	0x3
+ 1829 0456 00000000 		.4byte	Go_Again_Int_ISR
+ 1830 045a 00       		.byte	0
+ 1831 045b 11       		.uleb128 0x11
+ 1832 045c 6A000000 		.4byte	.LVL81
+ 1833 0460 D40D0000 		.4byte	0xdd4
+ 1834 0464 11       		.uleb128 0x11
+ 1835 0465 6E000000 		.4byte	.LVL82
+ 1836 0469 DF0D0000 		.4byte	0xddf
+ 1837 046d 12       		.uleb128 0x12
+ 1838 046e 74000000 		.4byte	.LVL83
+ 1839 0472 EA0D0000 		.4byte	0xdea
+ 1840 0476 84040000 		.4byte	0x484
+ 1841 047a 0C       		.uleb128 0xc
+ 1842 047b 01       		.uleb128 0x1
+ 1843 047c 50       		.byte	0x50
+ 1844 047d 05       		.uleb128 0x5
+ 1845 047e 03       		.byte	0x3
+ 1846 047f 00000000 		.4byte	.LC0
+ 1847 0483 00       		.byte	0
+ 1848 0484 12       		.uleb128 0x12
+ 1849 0485 7A000000 		.4byte	.LVL84
+ 1850 0489 F50D0000 		.4byte	0xdf5
+ 1851 048d 9B040000 		.4byte	0x49b
+ 1852 0491 0C       		.uleb128 0xc
+ 1853 0492 01       		.uleb128 0x1
+ 1854 0493 50       		.byte	0x50
+ 1855 0494 05       		.uleb128 0x5
+ 1856 0495 03       		.byte	0x3
+ 1857 0496 18000000 		.4byte	.LC1
+ 1858 049a 00       		.byte	0
+ 1859 049b 12       		.uleb128 0x12
+ 1860 049c 80000000 		.4byte	.LVL85
+ 1861 04a0 CC0C0000 		.4byte	0xccc
+ 1862 04a4 AE040000 		.4byte	0x4ae
+ 1863 04a8 0C       		.uleb128 0xc
+ 1864 04a9 01       		.uleb128 0x1
+ 1865 04aa 50       		.byte	0x50
+ 1866 04ab 01       		.uleb128 0x1
+ 1867 04ac 30       		.byte	0x30
+ 1868 04ad 00       		.byte	0
+ 1869 04ae 11       		.uleb128 0x11
+ 1870 04af 86000000 		.4byte	.LVL87
+ 1871 04b3 000E0000 		.4byte	0xe00
+ 1872 04b7 12       		.uleb128 0x12
+ 1873 04b8 98000000 		.4byte	.LVL88
+ 1874 04bc D70C0000 		.4byte	0xcd7
+ 1875 04c0 CB040000 		.4byte	0x4cb
+ 1876 04c4 0C       		.uleb128 0xc
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 44
+
+
+ 1877 04c5 01       		.uleb128 0x1
+ 1878 04c6 50       		.byte	0x50
+ 1879 04c7 02       		.uleb128 0x2
+ 1880 04c8 09       		.byte	0x9
+ 1881 04c9 FF       		.byte	0xff
+ 1882 04ca 00       		.byte	0
+ 1883 04cb 12       		.uleb128 0x12
+ 1884 04cc B2000000 		.4byte	.LVL89
+ 1885 04d0 C10C0000 		.4byte	0xcc1
+ 1886 04d4 DE040000 		.4byte	0x4de
+ 1887 04d8 0C       		.uleb128 0xc
+ 1888 04d9 01       		.uleb128 0x1
+ 1889 04da 50       		.byte	0x50
+ 1890 04db 01       		.uleb128 0x1
+ 1891 04dc 31       		.byte	0x31
+ 1892 04dd 00       		.byte	0
+ 1893 04de 12       		.uleb128 0x12
+ 1894 04df B8000000 		.4byte	.LVL90
+ 1895 04e3 C10C0000 		.4byte	0xcc1
+ 1896 04e7 F2040000 		.4byte	0x4f2
+ 1897 04eb 0C       		.uleb128 0xc
+ 1898 04ec 01       		.uleb128 0x1
+ 1899 04ed 50       		.byte	0x50
+ 1900 04ee 02       		.uleb128 0x2
+ 1901 04ef 75       		.byte	0x75
+ 1902 04f0 00       		.sleb128 0
+ 1903 04f1 00       		.byte	0
+ 1904 04f2 11       		.uleb128 0x11
+ 1905 04f3 C2000000 		.4byte	.LVL91
+ 1906 04f7 0B0E0000 		.4byte	0xe0b
+ 1907 04fb 11       		.uleb128 0x11
+ 1908 04fc CE000000 		.4byte	.LVL92
+ 1909 0500 AD020000 		.4byte	0x2ad
+ 1910 0504 12       		.uleb128 0x12
+ 1911 0505 D4000000 		.4byte	.LVL93
+ 1912 0509 160E0000 		.4byte	0xe16
+ 1913 050d 18050000 		.4byte	0x518
+ 1914 0511 0C       		.uleb128 0xc
+ 1915 0512 01       		.uleb128 0x1
+ 1916 0513 50       		.byte	0x50
+ 1917 0514 02       		.uleb128 0x2
+ 1918 0515 75       		.byte	0x75
+ 1919 0516 00       		.sleb128 0
+ 1920 0517 00       		.byte	0
+ 1921 0518 11       		.uleb128 0x11
+ 1922 0519 EA000000 		.4byte	.LVL96
+ 1923 051d AD020000 		.4byte	0x2ad
+ 1924 0521 12       		.uleb128 0x12
+ 1925 0522 F0000000 		.4byte	.LVL97
+ 1926 0526 F50D0000 		.4byte	0xdf5
+ 1927 052a 38050000 		.4byte	0x538
+ 1928 052e 0C       		.uleb128 0xc
+ 1929 052f 01       		.uleb128 0x1
+ 1930 0530 50       		.byte	0x50
+ 1931 0531 05       		.uleb128 0x5
+ 1932 0532 03       		.byte	0x3
+ 1933 0533 28000000 		.4byte	.LC2
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 45
+
+
+ 1934 0537 00       		.byte	0
+ 1935 0538 12       		.uleb128 0x12
+ 1936 0539 3E010000 		.4byte	.LVL98
+ 1937 053d D3000000 		.4byte	0xd3
+ 1938 0541 59050000 		.4byte	0x559
+ 1939 0545 0C       		.uleb128 0xc
+ 1940 0546 01       		.uleb128 0x1
+ 1941 0547 50       		.byte	0x50
+ 1942 0548 03       		.uleb128 0x3
+ 1943 0549 91       		.byte	0x91
+ 1944 054a B07E     		.sleb128 -208
+ 1945 054c 0C       		.uleb128 0xc
+ 1946 054d 01       		.uleb128 0x1
+ 1947 054e 51       		.byte	0x51
+ 1948 054f 01       		.uleb128 0x1
+ 1949 0550 30       		.byte	0x30
+ 1950 0551 0C       		.uleb128 0xc
+ 1951 0552 01       		.uleb128 0x1
+ 1952 0553 52       		.byte	0x52
+ 1953 0554 03       		.uleb128 0x3
+ 1954 0555 91       		.byte	0x91
+ 1955 0556 B07F     		.sleb128 -80
+ 1956 0558 00       		.byte	0
+ 1957 0559 12       		.uleb128 0x12
+ 1958 055a 50010000 		.4byte	.LVL100
+ 1959 055e 210E0000 		.4byte	0xe21
+ 1960 0562 77050000 		.4byte	0x577
+ 1961 0566 0C       		.uleb128 0xc
+ 1962 0567 01       		.uleb128 0x1
+ 1963 0568 50       		.byte	0x50
+ 1964 0569 03       		.uleb128 0x3
+ 1965 056a 91       		.byte	0x91
+ 1966 056b F07E     		.sleb128 -144
+ 1967 056d 0C       		.uleb128 0xc
+ 1968 056e 01       		.uleb128 0x1
+ 1969 056f 51       		.byte	0x51
+ 1970 0570 05       		.uleb128 0x5
+ 1971 0571 03       		.byte	0x3
+ 1972 0572 38000000 		.4byte	.LC3
+ 1973 0576 00       		.byte	0
+ 1974 0577 12       		.uleb128 0x12
+ 1975 0578 56010000 		.4byte	.LVL101
+ 1976 057c EA0D0000 		.4byte	0xdea
+ 1977 0580 8C050000 		.4byte	0x58c
+ 1978 0584 0C       		.uleb128 0xc
+ 1979 0585 01       		.uleb128 0x1
+ 1980 0586 50       		.byte	0x50
+ 1981 0587 03       		.uleb128 0x3
+ 1982 0588 91       		.byte	0x91
+ 1983 0589 F07E     		.sleb128 -144
+ 1984 058b 00       		.byte	0
+ 1985 058c 12       		.uleb128 0x12
+ 1986 058d 60010000 		.4byte	.LVL104
+ 1987 0591 CC0C0000 		.4byte	0xccc
+ 1988 0595 9F050000 		.4byte	0x59f
+ 1989 0599 0C       		.uleb128 0xc
+ 1990 059a 01       		.uleb128 0x1
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 46
+
+
+ 1991 059b 50       		.byte	0x50
+ 1992 059c 01       		.uleb128 0x1
+ 1993 059d 31       		.byte	0x31
+ 1994 059e 00       		.byte	0
+ 1995 059f 11       		.uleb128 0x11
+ 1996 05a0 7C010000 		.4byte	.LVL106
+ 1997 05a4 AD020000 		.4byte	0x2ad
+ 1998 05a8 12       		.uleb128 0x12
+ 1999 05a9 82010000 		.4byte	.LVL107
+ 2000 05ad F50D0000 		.4byte	0xdf5
+ 2001 05b1 BF050000 		.4byte	0x5bf
+ 2002 05b5 0C       		.uleb128 0xc
+ 2003 05b6 01       		.uleb128 0x1
+ 2004 05b7 50       		.byte	0x50
+ 2005 05b8 05       		.uleb128 0x5
+ 2006 05b9 03       		.byte	0x3
+ 2007 05ba 54000000 		.4byte	.LC4
+ 2008 05be 00       		.byte	0
+ 2009 05bf 12       		.uleb128 0x12
+ 2010 05c0 88010000 		.4byte	.LVL108
+ 2011 05c4 EA0D0000 		.4byte	0xdea
+ 2012 05c8 D6050000 		.4byte	0x5d6
+ 2013 05cc 0C       		.uleb128 0xc
+ 2014 05cd 01       		.uleb128 0x1
+ 2015 05ce 50       		.byte	0x50
+ 2016 05cf 05       		.uleb128 0x5
+ 2017 05d0 03       		.byte	0x3
+ 2018 05d1 60000000 		.4byte	.LC5
+ 2019 05d5 00       		.byte	0
+ 2020 05d6 12       		.uleb128 0x12
+ 2021 05d7 9E010000 		.4byte	.LVL109
+ 2022 05db D70C0000 		.4byte	0xcd7
+ 2023 05df EA050000 		.4byte	0x5ea
+ 2024 05e3 0C       		.uleb128 0xc
+ 2025 05e4 01       		.uleb128 0x1
+ 2026 05e5 50       		.byte	0x50
+ 2027 05e6 02       		.uleb128 0x2
+ 2028 05e7 09       		.byte	0x9
+ 2029 05e8 FF       		.byte	0xff
+ 2030 05e9 00       		.byte	0
+ 2031 05ea 12       		.uleb128 0x12
+ 2032 05eb A4010000 		.4byte	.LVL110
+ 2033 05ef C10C0000 		.4byte	0xcc1
+ 2034 05f3 FE050000 		.4byte	0x5fe
+ 2035 05f7 0C       		.uleb128 0xc
+ 2036 05f8 01       		.uleb128 0x1
+ 2037 05f9 50       		.byte	0x50
+ 2038 05fa 02       		.uleb128 0x2
+ 2039 05fb 74       		.byte	0x74
+ 2040 05fc 00       		.sleb128 0
+ 2041 05fd 00       		.byte	0
+ 2042 05fe 12       		.uleb128 0x12
+ 2043 05ff AA010000 		.4byte	.LVL111
+ 2044 0603 C10C0000 		.4byte	0xcc1
+ 2045 0607 11060000 		.4byte	0x611
+ 2046 060b 0C       		.uleb128 0xc
+ 2047 060c 01       		.uleb128 0x1
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 47
+
+
+ 2048 060d 50       		.byte	0x50
+ 2049 060e 01       		.uleb128 0x1
+ 2050 060f 30       		.byte	0x30
+ 2051 0610 00       		.byte	0
+ 2052 0611 12       		.uleb128 0x12
+ 2053 0612 B4010000 		.4byte	.LVL113
+ 2054 0616 CC0C0000 		.4byte	0xccc
+ 2055 061a 24060000 		.4byte	0x624
+ 2056 061e 0C       		.uleb128 0xc
+ 2057 061f 01       		.uleb128 0x1
+ 2058 0620 50       		.byte	0x50
+ 2059 0621 01       		.uleb128 0x1
+ 2060 0622 30       		.byte	0x30
+ 2061 0623 00       		.byte	0
+ 2062 0624 11       		.uleb128 0x11
+ 2063 0625 CC010000 		.4byte	.LVL115
+ 2064 0629 AD020000 		.4byte	0x2ad
+ 2065 062d 12       		.uleb128 0x12
+ 2066 062e D2010000 		.4byte	.LVL116
+ 2067 0632 F50D0000 		.4byte	0xdf5
+ 2068 0636 44060000 		.4byte	0x644
+ 2069 063a 0C       		.uleb128 0xc
+ 2070 063b 01       		.uleb128 0x1
+ 2071 063c 50       		.byte	0x50
+ 2072 063d 05       		.uleb128 0x5
+ 2073 063e 03       		.byte	0x3
+ 2074 063f 70000000 		.4byte	.LC6
+ 2075 0643 00       		.byte	0
+ 2076 0644 12       		.uleb128 0x12
+ 2077 0645 D8010000 		.4byte	.LVL117
+ 2078 0649 D70C0000 		.4byte	0xcd7
+ 2079 064d 58060000 		.4byte	0x658
+ 2080 0651 0C       		.uleb128 0xc
+ 2081 0652 01       		.uleb128 0x1
+ 2082 0653 50       		.byte	0x50
+ 2083 0654 02       		.uleb128 0x2
+ 2084 0655 74       		.byte	0x74
+ 2085 0656 00       		.sleb128 0
+ 2086 0657 00       		.byte	0
+ 2087 0658 12       		.uleb128 0x12
+ 2088 0659 DE010000 		.4byte	.LVL118
+ 2089 065d EA0D0000 		.4byte	0xdea
+ 2090 0661 6F060000 		.4byte	0x66f
+ 2091 0665 0C       		.uleb128 0xc
+ 2092 0666 01       		.uleb128 0x1
+ 2093 0667 50       		.byte	0x50
+ 2094 0668 05       		.uleb128 0x5
+ 2095 0669 03       		.byte	0x3
+ 2096 066a 80000000 		.4byte	.LC7
+ 2097 066e 00       		.byte	0
+ 2098 066f 11       		.uleb128 0x11
+ 2099 0670 F4010000 		.4byte	.LVL120
+ 2100 0674 AD020000 		.4byte	0x2ad
+ 2101 0678 12       		.uleb128 0x12
+ 2102 0679 FE010000 		.4byte	.LVL121
+ 2103 067d D3000000 		.4byte	0xd3
+ 2104 0681 99060000 		.4byte	0x699
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 48
+
+
+ 2105 0685 0C       		.uleb128 0xc
+ 2106 0686 01       		.uleb128 0x1
+ 2107 0687 50       		.byte	0x50
+ 2108 0688 03       		.uleb128 0x3
+ 2109 0689 91       		.byte	0x91
+ 2110 068a B07E     		.sleb128 -208
+ 2111 068c 0C       		.uleb128 0xc
+ 2112 068d 01       		.uleb128 0x1
+ 2113 068e 51       		.byte	0x51
+ 2114 068f 01       		.uleb128 0x1
+ 2115 0690 30       		.byte	0x30
+ 2116 0691 0C       		.uleb128 0xc
+ 2117 0692 01       		.uleb128 0x1
+ 2118 0693 52       		.byte	0x52
+ 2119 0694 03       		.uleb128 0x3
+ 2120 0695 91       		.byte	0x91
+ 2121 0696 B07F     		.sleb128 -80
+ 2122 0698 00       		.byte	0
+ 2123 0699 12       		.uleb128 0x12
+ 2124 069a 0C020000 		.4byte	.LVL122
+ 2125 069e 210E0000 		.4byte	0xe21
+ 2126 06a2 BE060000 		.4byte	0x6be
+ 2127 06a6 0C       		.uleb128 0xc
+ 2128 06a7 01       		.uleb128 0x1
+ 2129 06a8 50       		.byte	0x50
+ 2130 06a9 03       		.uleb128 0x3
+ 2131 06aa 91       		.byte	0x91
+ 2132 06ab F07E     		.sleb128 -144
+ 2133 06ad 0C       		.uleb128 0xc
+ 2134 06ae 01       		.uleb128 0x1
+ 2135 06af 51       		.byte	0x51
+ 2136 06b0 05       		.uleb128 0x5
+ 2137 06b1 03       		.byte	0x3
+ 2138 06b2 90000000 		.4byte	.LC8
+ 2139 06b6 0C       		.uleb128 0xc
+ 2140 06b7 01       		.uleb128 0x1
+ 2141 06b8 52       		.byte	0x52
+ 2142 06b9 03       		.uleb128 0x3
+ 2143 06ba 91       		.byte	0x91
+ 2144 06bb B07E     		.sleb128 -208
+ 2145 06bd 00       		.byte	0
+ 2146 06be 12       		.uleb128 0x12
+ 2147 06bf 12020000 		.4byte	.LVL123
+ 2148 06c3 EA0D0000 		.4byte	0xdea
+ 2149 06c7 D3060000 		.4byte	0x6d3
+ 2150 06cb 0C       		.uleb128 0xc
+ 2151 06cc 01       		.uleb128 0x1
+ 2152 06cd 50       		.byte	0x50
+ 2153 06ce 03       		.uleb128 0x3
+ 2154 06cf 91       		.byte	0x91
+ 2155 06d0 F07E     		.sleb128 -144
+ 2156 06d2 00       		.byte	0
+ 2157 06d3 12       		.uleb128 0x12
+ 2158 06d4 18020000 		.4byte	.LVL124
+ 2159 06d8 F50D0000 		.4byte	0xdf5
+ 2160 06dc E8060000 		.4byte	0x6e8
+ 2161 06e0 0C       		.uleb128 0xc
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 49
+
+
+ 2162 06e1 01       		.uleb128 0x1
+ 2163 06e2 50       		.byte	0x50
+ 2164 06e3 03       		.uleb128 0x3
+ 2165 06e4 91       		.byte	0x91
+ 2166 06e5 F07E     		.sleb128 -144
+ 2167 06e7 00       		.byte	0
+ 2168 06e8 11       		.uleb128 0x11
+ 2169 06e9 20020000 		.4byte	.LVL127
+ 2170 06ed AD020000 		.4byte	0x2ad
+ 2171 06f1 12       		.uleb128 0x12
+ 2172 06f2 2A020000 		.4byte	.LVL128
+ 2173 06f6 D3000000 		.4byte	0xd3
+ 2174 06fa 12070000 		.4byte	0x712
+ 2175 06fe 0C       		.uleb128 0xc
+ 2176 06ff 01       		.uleb128 0x1
+ 2177 0700 50       		.byte	0x50
+ 2178 0701 03       		.uleb128 0x3
+ 2179 0702 91       		.byte	0x91
+ 2180 0703 B07E     		.sleb128 -208
+ 2181 0705 0C       		.uleb128 0xc
+ 2182 0706 01       		.uleb128 0x1
+ 2183 0707 51       		.byte	0x51
+ 2184 0708 01       		.uleb128 0x1
+ 2185 0709 30       		.byte	0x30
+ 2186 070a 0C       		.uleb128 0xc
+ 2187 070b 01       		.uleb128 0x1
+ 2188 070c 52       		.byte	0x52
+ 2189 070d 03       		.uleb128 0x3
+ 2190 070e 91       		.byte	0x91
+ 2191 070f B07F     		.sleb128 -80
+ 2192 0711 00       		.byte	0
+ 2193 0712 12       		.uleb128 0x12
+ 2194 0713 38020000 		.4byte	.LVL129
+ 2195 0717 210E0000 		.4byte	0xe21
+ 2196 071b 37070000 		.4byte	0x737
+ 2197 071f 0C       		.uleb128 0xc
+ 2198 0720 01       		.uleb128 0x1
+ 2199 0721 50       		.byte	0x50
+ 2200 0722 03       		.uleb128 0x3
+ 2201 0723 91       		.byte	0x91
+ 2202 0724 F07E     		.sleb128 -144
+ 2203 0726 0C       		.uleb128 0xc
+ 2204 0727 01       		.uleb128 0x1
+ 2205 0728 51       		.byte	0x51
+ 2206 0729 05       		.uleb128 0x5
+ 2207 072a 03       		.byte	0x3
+ 2208 072b 98000000 		.4byte	.LC9
+ 2209 072f 0C       		.uleb128 0xc
+ 2210 0730 01       		.uleb128 0x1
+ 2211 0731 52       		.byte	0x52
+ 2212 0732 03       		.uleb128 0x3
+ 2213 0733 91       		.byte	0x91
+ 2214 0734 B07E     		.sleb128 -208
+ 2215 0736 00       		.byte	0
+ 2216 0737 12       		.uleb128 0x12
+ 2217 0738 3E020000 		.4byte	.LVL130
+ 2218 073c EA0D0000 		.4byte	0xdea
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 50
+
+
+ 2219 0740 4C070000 		.4byte	0x74c
+ 2220 0744 0C       		.uleb128 0xc
+ 2221 0745 01       		.uleb128 0x1
+ 2222 0746 50       		.byte	0x50
+ 2223 0747 03       		.uleb128 0x3
+ 2224 0748 91       		.byte	0x91
+ 2225 0749 F07E     		.sleb128 -144
+ 2226 074b 00       		.byte	0
+ 2227 074c 12       		.uleb128 0x12
+ 2228 074d 44020000 		.4byte	.LVL131
+ 2229 0751 F50D0000 		.4byte	0xdf5
+ 2230 0755 61070000 		.4byte	0x761
+ 2231 0759 0C       		.uleb128 0xc
+ 2232 075a 01       		.uleb128 0x1
+ 2233 075b 50       		.byte	0x50
+ 2234 075c 03       		.uleb128 0x3
+ 2235 075d 91       		.byte	0x91
+ 2236 075e F07E     		.sleb128 -144
+ 2237 0760 00       		.byte	0
+ 2238 0761 11       		.uleb128 0x11
+ 2239 0762 4C020000 		.4byte	.LVL134
+ 2240 0766 AD020000 		.4byte	0x2ad
+ 2241 076a 12       		.uleb128 0x12
+ 2242 076b 56020000 		.4byte	.LVL135
+ 2243 076f D3000000 		.4byte	0xd3
+ 2244 0773 8B070000 		.4byte	0x78b
+ 2245 0777 0C       		.uleb128 0xc
+ 2246 0778 01       		.uleb128 0x1
+ 2247 0779 50       		.byte	0x50
+ 2248 077a 03       		.uleb128 0x3
+ 2249 077b 91       		.byte	0x91
+ 2250 077c B07E     		.sleb128 -208
+ 2251 077e 0C       		.uleb128 0xc
+ 2252 077f 01       		.uleb128 0x1
+ 2253 0780 51       		.byte	0x51
+ 2254 0781 01       		.uleb128 0x1
+ 2255 0782 30       		.byte	0x30
+ 2256 0783 0C       		.uleb128 0xc
+ 2257 0784 01       		.uleb128 0x1
+ 2258 0785 52       		.byte	0x52
+ 2259 0786 03       		.uleb128 0x3
+ 2260 0787 91       		.byte	0x91
+ 2261 0788 B07F     		.sleb128 -80
+ 2262 078a 00       		.byte	0
+ 2263 078b 12       		.uleb128 0x12
+ 2264 078c 64020000 		.4byte	.LVL136
+ 2265 0790 210E0000 		.4byte	0xe21
+ 2266 0794 B0070000 		.4byte	0x7b0
+ 2267 0798 0C       		.uleb128 0xc
+ 2268 0799 01       		.uleb128 0x1
+ 2269 079a 50       		.byte	0x50
+ 2270 079b 03       		.uleb128 0x3
+ 2271 079c 91       		.byte	0x91
+ 2272 079d F07E     		.sleb128 -144
+ 2273 079f 0C       		.uleb128 0xc
+ 2274 07a0 01       		.uleb128 0x1
+ 2275 07a1 51       		.byte	0x51
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 51
+
+
+ 2276 07a2 05       		.uleb128 0x5
+ 2277 07a3 03       		.byte	0x3
+ 2278 07a4 A0000000 		.4byte	.LC10
+ 2279 07a8 0C       		.uleb128 0xc
+ 2280 07a9 01       		.uleb128 0x1
+ 2281 07aa 52       		.byte	0x52
+ 2282 07ab 03       		.uleb128 0x3
+ 2283 07ac 91       		.byte	0x91
+ 2284 07ad B07E     		.sleb128 -208
+ 2285 07af 00       		.byte	0
+ 2286 07b0 12       		.uleb128 0x12
+ 2287 07b1 6A020000 		.4byte	.LVL137
+ 2288 07b5 EA0D0000 		.4byte	0xdea
+ 2289 07b9 C5070000 		.4byte	0x7c5
+ 2290 07bd 0C       		.uleb128 0xc
+ 2291 07be 01       		.uleb128 0x1
+ 2292 07bf 50       		.byte	0x50
+ 2293 07c0 03       		.uleb128 0x3
+ 2294 07c1 91       		.byte	0x91
+ 2295 07c2 F07E     		.sleb128 -144
+ 2296 07c4 00       		.byte	0
+ 2297 07c5 12       		.uleb128 0x12
+ 2298 07c6 70020000 		.4byte	.LVL138
+ 2299 07ca F50D0000 		.4byte	0xdf5
+ 2300 07ce DA070000 		.4byte	0x7da
+ 2301 07d2 0C       		.uleb128 0xc
+ 2302 07d3 01       		.uleb128 0x1
+ 2303 07d4 50       		.byte	0x50
+ 2304 07d5 03       		.uleb128 0x3
+ 2305 07d6 91       		.byte	0x91
+ 2306 07d7 F07E     		.sleb128 -144
+ 2307 07d9 00       		.byte	0
+ 2308 07da 11       		.uleb128 0x11
+ 2309 07db DC020000 		.4byte	.LVL141
+ 2310 07df AD020000 		.4byte	0x2ad
+ 2311 07e3 12       		.uleb128 0x12
+ 2312 07e4 0C030000 		.4byte	.LVL147
+ 2313 07e8 210E0000 		.4byte	0xe21
+ 2314 07ec 0D080000 		.4byte	0x80d
+ 2315 07f0 0C       		.uleb128 0xc
+ 2316 07f1 01       		.uleb128 0x1
+ 2317 07f2 50       		.byte	0x50
+ 2318 07f3 03       		.uleb128 0x3
+ 2319 07f4 91       		.byte	0x91
+ 2320 07f5 F07E     		.sleb128 -144
+ 2321 07f7 0C       		.uleb128 0xc
+ 2322 07f8 01       		.uleb128 0x1
+ 2323 07f9 51       		.byte	0x51
+ 2324 07fa 05       		.uleb128 0x5
+ 2325 07fb 03       		.byte	0x3
+ 2326 07fc A8000000 		.4byte	.LC11
+ 2327 0800 0C       		.uleb128 0xc
+ 2328 0801 01       		.uleb128 0x1
+ 2329 0802 52       		.byte	0x52
+ 2330 0803 02       		.uleb128 0x2
+ 2331 0804 75       		.byte	0x75
+ 2332 0805 00       		.sleb128 0
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 52
+
+
+ 2333 0806 0C       		.uleb128 0xc
+ 2334 0807 01       		.uleb128 0x1
+ 2335 0808 53       		.byte	0x53
+ 2336 0809 02       		.uleb128 0x2
+ 2337 080a 76       		.byte	0x76
+ 2338 080b 00       		.sleb128 0
+ 2339 080c 00       		.byte	0
+ 2340 080d 12       		.uleb128 0x12
+ 2341 080e 12030000 		.4byte	.LVL148
+ 2342 0812 EA0D0000 		.4byte	0xdea
+ 2343 0816 22080000 		.4byte	0x822
+ 2344 081a 0C       		.uleb128 0xc
+ 2345 081b 01       		.uleb128 0x1
+ 2346 081c 50       		.byte	0x50
+ 2347 081d 03       		.uleb128 0x3
+ 2348 081e 91       		.byte	0x91
+ 2349 081f F07E     		.sleb128 -144
+ 2350 0821 00       		.byte	0
+ 2351 0822 12       		.uleb128 0x12
+ 2352 0823 42030000 		.4byte	.LVL152
+ 2353 0827 210E0000 		.4byte	0xe21
+ 2354 082b 4C080000 		.4byte	0x84c
+ 2355 082f 0C       		.uleb128 0xc
+ 2356 0830 01       		.uleb128 0x1
+ 2357 0831 50       		.byte	0x50
+ 2358 0832 03       		.uleb128 0x3
+ 2359 0833 91       		.byte	0x91
+ 2360 0834 F07E     		.sleb128 -144
+ 2361 0836 0C       		.uleb128 0xc
+ 2362 0837 01       		.uleb128 0x1
+ 2363 0838 51       		.byte	0x51
+ 2364 0839 05       		.uleb128 0x5
+ 2365 083a 03       		.byte	0x3
+ 2366 083b D0000000 		.4byte	.LC12
+ 2367 083f 0C       		.uleb128 0xc
+ 2368 0840 01       		.uleb128 0x1
+ 2369 0841 52       		.byte	0x52
+ 2370 0842 02       		.uleb128 0x2
+ 2371 0843 74       		.byte	0x74
+ 2372 0844 00       		.sleb128 0
+ 2373 0845 0C       		.uleb128 0xc
+ 2374 0846 01       		.uleb128 0x1
+ 2375 0847 53       		.byte	0x53
+ 2376 0848 02       		.uleb128 0x2
+ 2377 0849 75       		.byte	0x75
+ 2378 084a 00       		.sleb128 0
+ 2379 084b 00       		.byte	0
+ 2380 084c 12       		.uleb128 0x12
+ 2381 084d 48030000 		.4byte	.LVL153
+ 2382 0851 EA0D0000 		.4byte	0xdea
+ 2383 0855 61080000 		.4byte	0x861
+ 2384 0859 0C       		.uleb128 0xc
+ 2385 085a 01       		.uleb128 0x1
+ 2386 085b 50       		.byte	0x50
+ 2387 085c 03       		.uleb128 0x3
+ 2388 085d 91       		.byte	0x91
+ 2389 085e F07E     		.sleb128 -144
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 53
+
+
+ 2390 0860 00       		.byte	0
+ 2391 0861 12       		.uleb128 0x12
+ 2392 0862 4E030000 		.4byte	.LVL154
+ 2393 0866 F50D0000 		.4byte	0xdf5
+ 2394 086a 76080000 		.4byte	0x876
+ 2395 086e 0C       		.uleb128 0xc
+ 2396 086f 01       		.uleb128 0x1
+ 2397 0870 50       		.byte	0x50
+ 2398 0871 03       		.uleb128 0x3
+ 2399 0872 91       		.byte	0x91
+ 2400 0873 F07E     		.sleb128 -144
+ 2401 0875 00       		.byte	0
+ 2402 0876 12       		.uleb128 0x12
+ 2403 0877 5C030000 		.4byte	.LVL156
+ 2404 087b D3000000 		.4byte	0xd3
+ 2405 087f 97080000 		.4byte	0x897
+ 2406 0883 0C       		.uleb128 0xc
+ 2407 0884 01       		.uleb128 0x1
+ 2408 0885 50       		.byte	0x50
+ 2409 0886 03       		.uleb128 0x3
+ 2410 0887 91       		.byte	0x91
+ 2411 0888 B07E     		.sleb128 -208
+ 2412 088a 0C       		.uleb128 0xc
+ 2413 088b 01       		.uleb128 0x1
+ 2414 088c 51       		.byte	0x51
+ 2415 088d 01       		.uleb128 0x1
+ 2416 088e 30       		.byte	0x30
+ 2417 088f 0C       		.uleb128 0xc
+ 2418 0890 01       		.uleb128 0x1
+ 2419 0891 52       		.byte	0x52
+ 2420 0892 03       		.uleb128 0x3
+ 2421 0893 91       		.byte	0x91
+ 2422 0894 B07F     		.sleb128 -80
+ 2423 0896 00       		.byte	0
+ 2424 0897 12       		.uleb128 0x12
+ 2425 0898 6C030000 		.4byte	.LVL160
+ 2426 089c 210E0000 		.4byte	0xe21
+ 2427 08a0 BC080000 		.4byte	0x8bc
+ 2428 08a4 0C       		.uleb128 0xc
+ 2429 08a5 01       		.uleb128 0x1
+ 2430 08a6 50       		.byte	0x50
+ 2431 08a7 03       		.uleb128 0x3
+ 2432 08a8 91       		.byte	0x91
+ 2433 08a9 F07E     		.sleb128 -144
+ 2434 08ab 0C       		.uleb128 0xc
+ 2435 08ac 01       		.uleb128 0x1
+ 2436 08ad 51       		.byte	0x51
+ 2437 08ae 05       		.uleb128 0x5
+ 2438 08af 03       		.byte	0x3
+ 2439 08b0 0C010000 		.4byte	.LC13
+ 2440 08b4 0C       		.uleb128 0xc
+ 2441 08b5 01       		.uleb128 0x1
+ 2442 08b6 52       		.byte	0x52
+ 2443 08b7 03       		.uleb128 0x3
+ 2444 08b8 91       		.byte	0x91
+ 2445 08b9 B07E     		.sleb128 -208
+ 2446 08bb 00       		.byte	0
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 54
+
+
+ 2447 08bc 12       		.uleb128 0x12
+ 2448 08bd 72030000 		.4byte	.LVL161
+ 2449 08c1 EA0D0000 		.4byte	0xdea
+ 2450 08c5 D1080000 		.4byte	0x8d1
+ 2451 08c9 0C       		.uleb128 0xc
+ 2452 08ca 01       		.uleb128 0x1
+ 2453 08cb 50       		.byte	0x50
+ 2454 08cc 03       		.uleb128 0x3
+ 2455 08cd 91       		.byte	0x91
+ 2456 08ce F07E     		.sleb128 -144
+ 2457 08d0 00       		.byte	0
+ 2458 08d1 12       		.uleb128 0x12
+ 2459 08d2 78030000 		.4byte	.LVL162
+ 2460 08d6 F50D0000 		.4byte	0xdf5
+ 2461 08da E6080000 		.4byte	0x8e6
+ 2462 08de 0C       		.uleb128 0xc
+ 2463 08df 01       		.uleb128 0x1
+ 2464 08e0 50       		.byte	0x50
+ 2465 08e1 03       		.uleb128 0x3
+ 2466 08e2 91       		.byte	0x91
+ 2467 08e3 F07E     		.sleb128 -144
+ 2468 08e5 00       		.byte	0
+ 2469 08e6 12       		.uleb128 0x12
+ 2470 08e7 7E030000 		.4byte	.LVL163
+ 2471 08eb D40D0000 		.4byte	0xdd4
+ 2472 08ef FA080000 		.4byte	0x8fa
+ 2473 08f3 0C       		.uleb128 0xc
+ 2474 08f4 01       		.uleb128 0x1
+ 2475 08f5 50       		.byte	0x50
+ 2476 08f6 02       		.uleb128 0x2
+ 2477 08f7 74       		.byte	0x74
+ 2478 08f8 00       		.sleb128 0
+ 2479 08f9 00       		.byte	0
+ 2480 08fa 11       		.uleb128 0x11
+ 2481 08fb 82030000 		.4byte	.LVL164
+ 2482 08ff DF0D0000 		.4byte	0xddf
+ 2483 0903 11       		.uleb128 0x11
+ 2484 0904 8A030000 		.4byte	.LVL167
+ 2485 0908 AD020000 		.4byte	0x2ad
+ 2486 090c 12       		.uleb128 0x12
+ 2487 090d 94030000 		.4byte	.LVL168
+ 2488 0911 D3000000 		.4byte	0xd3
+ 2489 0915 2D090000 		.4byte	0x92d
+ 2490 0919 0C       		.uleb128 0xc
+ 2491 091a 01       		.uleb128 0x1
+ 2492 091b 50       		.byte	0x50
+ 2493 091c 03       		.uleb128 0x3
+ 2494 091d 91       		.byte	0x91
+ 2495 091e B07E     		.sleb128 -208
+ 2496 0920 0C       		.uleb128 0xc
+ 2497 0921 01       		.uleb128 0x1
+ 2498 0922 51       		.byte	0x51
+ 2499 0923 01       		.uleb128 0x1
+ 2500 0924 30       		.byte	0x30
+ 2501 0925 0C       		.uleb128 0xc
+ 2502 0926 01       		.uleb128 0x1
+ 2503 0927 52       		.byte	0x52
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 55
+
+
+ 2504 0928 03       		.uleb128 0x3
+ 2505 0929 91       		.byte	0x91
+ 2506 092a B07F     		.sleb128 -80
+ 2507 092c 00       		.byte	0
+ 2508 092d 12       		.uleb128 0x12
+ 2509 092e A2030000 		.4byte	.LVL169
+ 2510 0932 210E0000 		.4byte	0xe21
+ 2511 0936 52090000 		.4byte	0x952
+ 2512 093a 0C       		.uleb128 0xc
+ 2513 093b 01       		.uleb128 0x1
+ 2514 093c 50       		.byte	0x50
+ 2515 093d 03       		.uleb128 0x3
+ 2516 093e 91       		.byte	0x91
+ 2517 093f F07E     		.sleb128 -144
+ 2518 0941 0C       		.uleb128 0xc
+ 2519 0942 01       		.uleb128 0x1
+ 2520 0943 51       		.byte	0x51
+ 2521 0944 05       		.uleb128 0x5
+ 2522 0945 03       		.byte	0x3
+ 2523 0946 14010000 		.4byte	.LC14
+ 2524 094a 0C       		.uleb128 0xc
+ 2525 094b 01       		.uleb128 0x1
+ 2526 094c 52       		.byte	0x52
+ 2527 094d 03       		.uleb128 0x3
+ 2528 094e 91       		.byte	0x91
+ 2529 094f B07E     		.sleb128 -208
+ 2530 0951 00       		.byte	0
+ 2531 0952 12       		.uleb128 0x12
+ 2532 0953 A8030000 		.4byte	.LVL170
+ 2533 0957 EA0D0000 		.4byte	0xdea
+ 2534 095b 67090000 		.4byte	0x967
+ 2535 095f 0C       		.uleb128 0xc
+ 2536 0960 01       		.uleb128 0x1
+ 2537 0961 50       		.byte	0x50
+ 2538 0962 03       		.uleb128 0x3
+ 2539 0963 91       		.byte	0x91
+ 2540 0964 F07E     		.sleb128 -144
+ 2541 0966 00       		.byte	0
+ 2542 0967 12       		.uleb128 0x12
+ 2543 0968 AE030000 		.4byte	.LVL171
+ 2544 096c F50D0000 		.4byte	0xdf5
+ 2545 0970 7C090000 		.4byte	0x97c
+ 2546 0974 0C       		.uleb128 0xc
+ 2547 0975 01       		.uleb128 0x1
+ 2548 0976 50       		.byte	0x50
+ 2549 0977 03       		.uleb128 0x3
+ 2550 0978 91       		.byte	0x91
+ 2551 0979 F07E     		.sleb128 -144
+ 2552 097b 00       		.byte	0
+ 2553 097c 11       		.uleb128 0x11
+ 2554 097d B6030000 		.4byte	.LVL174
+ 2555 0981 AD020000 		.4byte	0x2ad
+ 2556 0985 12       		.uleb128 0x12
+ 2557 0986 C0030000 		.4byte	.LVL175
+ 2558 098a D3000000 		.4byte	0xd3
+ 2559 098e A6090000 		.4byte	0x9a6
+ 2560 0992 0C       		.uleb128 0xc
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 56
+
+
+ 2561 0993 01       		.uleb128 0x1
+ 2562 0994 50       		.byte	0x50
+ 2563 0995 03       		.uleb128 0x3
+ 2564 0996 91       		.byte	0x91
+ 2565 0997 B07E     		.sleb128 -208
+ 2566 0999 0C       		.uleb128 0xc
+ 2567 099a 01       		.uleb128 0x1
+ 2568 099b 51       		.byte	0x51
+ 2569 099c 01       		.uleb128 0x1
+ 2570 099d 30       		.byte	0x30
+ 2571 099e 0C       		.uleb128 0xc
+ 2572 099f 01       		.uleb128 0x1
+ 2573 09a0 52       		.byte	0x52
+ 2574 09a1 03       		.uleb128 0x3
+ 2575 09a2 91       		.byte	0x91
+ 2576 09a3 B07F     		.sleb128 -80
+ 2577 09a5 00       		.byte	0
+ 2578 09a6 12       		.uleb128 0x12
+ 2579 09a7 CE030000 		.4byte	.LVL176
+ 2580 09ab 210E0000 		.4byte	0xe21
+ 2581 09af CB090000 		.4byte	0x9cb
+ 2582 09b3 0C       		.uleb128 0xc
+ 2583 09b4 01       		.uleb128 0x1
+ 2584 09b5 50       		.byte	0x50
+ 2585 09b6 03       		.uleb128 0x3
+ 2586 09b7 91       		.byte	0x91
+ 2587 09b8 F07E     		.sleb128 -144
+ 2588 09ba 0C       		.uleb128 0xc
+ 2589 09bb 01       		.uleb128 0x1
+ 2590 09bc 51       		.byte	0x51
+ 2591 09bd 05       		.uleb128 0x5
+ 2592 09be 03       		.byte	0x3
+ 2593 09bf 24010000 		.4byte	.LC15
+ 2594 09c3 0C       		.uleb128 0xc
+ 2595 09c4 01       		.uleb128 0x1
+ 2596 09c5 52       		.byte	0x52
+ 2597 09c6 03       		.uleb128 0x3
+ 2598 09c7 91       		.byte	0x91
+ 2599 09c8 B07E     		.sleb128 -208
+ 2600 09ca 00       		.byte	0
+ 2601 09cb 12       		.uleb128 0x12
+ 2602 09cc D4030000 		.4byte	.LVL177
+ 2603 09d0 EA0D0000 		.4byte	0xdea
+ 2604 09d4 E0090000 		.4byte	0x9e0
+ 2605 09d8 0C       		.uleb128 0xc
+ 2606 09d9 01       		.uleb128 0x1
+ 2607 09da 50       		.byte	0x50
+ 2608 09db 03       		.uleb128 0x3
+ 2609 09dc 91       		.byte	0x91
+ 2610 09dd F07E     		.sleb128 -144
+ 2611 09df 00       		.byte	0
+ 2612 09e0 12       		.uleb128 0x12
+ 2613 09e1 DA030000 		.4byte	.LVL178
+ 2614 09e5 F50D0000 		.4byte	0xdf5
+ 2615 09e9 F5090000 		.4byte	0x9f5
+ 2616 09ed 0C       		.uleb128 0xc
+ 2617 09ee 01       		.uleb128 0x1
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 57
+
+
+ 2618 09ef 50       		.byte	0x50
+ 2619 09f0 03       		.uleb128 0x3
+ 2620 09f1 91       		.byte	0x91
+ 2621 09f2 F07E     		.sleb128 -144
+ 2622 09f4 00       		.byte	0
+ 2623 09f5 11       		.uleb128 0x11
+ 2624 09f6 E2030000 		.4byte	.LVL181
+ 2625 09fa AD020000 		.4byte	0x2ad
+ 2626 09fe 12       		.uleb128 0x12
+ 2627 09ff EC030000 		.4byte	.LVL182
+ 2628 0a03 D3000000 		.4byte	0xd3
+ 2629 0a07 1F0A0000 		.4byte	0xa1f
+ 2630 0a0b 0C       		.uleb128 0xc
+ 2631 0a0c 01       		.uleb128 0x1
+ 2632 0a0d 50       		.byte	0x50
+ 2633 0a0e 03       		.uleb128 0x3
+ 2634 0a0f 91       		.byte	0x91
+ 2635 0a10 B07E     		.sleb128 -208
+ 2636 0a12 0C       		.uleb128 0xc
+ 2637 0a13 01       		.uleb128 0x1
+ 2638 0a14 51       		.byte	0x51
+ 2639 0a15 01       		.uleb128 0x1
+ 2640 0a16 30       		.byte	0x30
+ 2641 0a17 0C       		.uleb128 0xc
+ 2642 0a18 01       		.uleb128 0x1
+ 2643 0a19 52       		.byte	0x52
+ 2644 0a1a 03       		.uleb128 0x3
+ 2645 0a1b 91       		.byte	0x91
+ 2646 0a1c B07F     		.sleb128 -80
+ 2647 0a1e 00       		.byte	0
+ 2648 0a1f 12       		.uleb128 0x12
+ 2649 0a20 FA030000 		.4byte	.LVL183
+ 2650 0a24 210E0000 		.4byte	0xe21
+ 2651 0a28 440A0000 		.4byte	0xa44
+ 2652 0a2c 0C       		.uleb128 0xc
+ 2653 0a2d 01       		.uleb128 0x1
+ 2654 0a2e 50       		.byte	0x50
+ 2655 0a2f 03       		.uleb128 0x3
+ 2656 0a30 91       		.byte	0x91
+ 2657 0a31 F07E     		.sleb128 -144
+ 2658 0a33 0C       		.uleb128 0xc
+ 2659 0a34 01       		.uleb128 0x1
+ 2660 0a35 51       		.byte	0x51
+ 2661 0a36 05       		.uleb128 0x5
+ 2662 0a37 03       		.byte	0x3
+ 2663 0a38 34010000 		.4byte	.LC16
+ 2664 0a3c 0C       		.uleb128 0xc
+ 2665 0a3d 01       		.uleb128 0x1
+ 2666 0a3e 52       		.byte	0x52
+ 2667 0a3f 03       		.uleb128 0x3
+ 2668 0a40 91       		.byte	0x91
+ 2669 0a41 B07E     		.sleb128 -208
+ 2670 0a43 00       		.byte	0
+ 2671 0a44 12       		.uleb128 0x12
+ 2672 0a45 00040000 		.4byte	.LVL184
+ 2673 0a49 EA0D0000 		.4byte	0xdea
+ 2674 0a4d 590A0000 		.4byte	0xa59
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 58
+
+
+ 2675 0a51 0C       		.uleb128 0xc
+ 2676 0a52 01       		.uleb128 0x1
+ 2677 0a53 50       		.byte	0x50
+ 2678 0a54 03       		.uleb128 0x3
+ 2679 0a55 91       		.byte	0x91
+ 2680 0a56 F07E     		.sleb128 -144
+ 2681 0a58 00       		.byte	0
+ 2682 0a59 12       		.uleb128 0x12
+ 2683 0a5a 06040000 		.4byte	.LVL185
+ 2684 0a5e F50D0000 		.4byte	0xdf5
+ 2685 0a62 6E0A0000 		.4byte	0xa6e
+ 2686 0a66 0C       		.uleb128 0xc
+ 2687 0a67 01       		.uleb128 0x1
+ 2688 0a68 50       		.byte	0x50
+ 2689 0a69 03       		.uleb128 0x3
+ 2690 0a6a 91       		.byte	0x91
+ 2691 0a6b F07E     		.sleb128 -144
+ 2692 0a6d 00       		.byte	0
+ 2693 0a6e 11       		.uleb128 0x11
+ 2694 0a6f 0E040000 		.4byte	.LVL188
+ 2695 0a73 AD020000 		.4byte	0x2ad
+ 2696 0a77 12       		.uleb128 0x12
+ 2697 0a78 18040000 		.4byte	.LVL189
+ 2698 0a7c D3000000 		.4byte	0xd3
+ 2699 0a80 980A0000 		.4byte	0xa98
+ 2700 0a84 0C       		.uleb128 0xc
+ 2701 0a85 01       		.uleb128 0x1
+ 2702 0a86 50       		.byte	0x50
+ 2703 0a87 03       		.uleb128 0x3
+ 2704 0a88 91       		.byte	0x91
+ 2705 0a89 B07E     		.sleb128 -208
+ 2706 0a8b 0C       		.uleb128 0xc
+ 2707 0a8c 01       		.uleb128 0x1
+ 2708 0a8d 51       		.byte	0x51
+ 2709 0a8e 01       		.uleb128 0x1
+ 2710 0a8f 30       		.byte	0x30
+ 2711 0a90 0C       		.uleb128 0xc
+ 2712 0a91 01       		.uleb128 0x1
+ 2713 0a92 52       		.byte	0x52
+ 2714 0a93 03       		.uleb128 0x3
+ 2715 0a94 91       		.byte	0x91
+ 2716 0a95 B07F     		.sleb128 -80
+ 2717 0a97 00       		.byte	0
+ 2718 0a98 12       		.uleb128 0x12
+ 2719 0a99 2A040000 		.4byte	.LVL191
+ 2720 0a9d 210E0000 		.4byte	0xe21
+ 2721 0aa1 BD0A0000 		.4byte	0xabd
+ 2722 0aa5 0C       		.uleb128 0xc
+ 2723 0aa6 01       		.uleb128 0x1
+ 2724 0aa7 50       		.byte	0x50
+ 2725 0aa8 03       		.uleb128 0x3
+ 2726 0aa9 91       		.byte	0x91
+ 2727 0aaa F07E     		.sleb128 -144
+ 2728 0aac 0C       		.uleb128 0xc
+ 2729 0aad 01       		.uleb128 0x1
+ 2730 0aae 51       		.byte	0x51
+ 2731 0aaf 05       		.uleb128 0x5
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 59
+
+
+ 2732 0ab0 03       		.byte	0x3
+ 2733 0ab1 44010000 		.4byte	.LC17
+ 2734 0ab5 0C       		.uleb128 0xc
+ 2735 0ab6 01       		.uleb128 0x1
+ 2736 0ab7 52       		.byte	0x52
+ 2737 0ab8 03       		.uleb128 0x3
+ 2738 0ab9 91       		.byte	0x91
+ 2739 0aba B07E     		.sleb128 -208
+ 2740 0abc 00       		.byte	0
+ 2741 0abd 12       		.uleb128 0x12
+ 2742 0abe 30040000 		.4byte	.LVL192
+ 2743 0ac2 EA0D0000 		.4byte	0xdea
+ 2744 0ac6 D20A0000 		.4byte	0xad2
+ 2745 0aca 0C       		.uleb128 0xc
+ 2746 0acb 01       		.uleb128 0x1
+ 2747 0acc 50       		.byte	0x50
+ 2748 0acd 03       		.uleb128 0x3
+ 2749 0ace 91       		.byte	0x91
+ 2750 0acf F07E     		.sleb128 -144
+ 2751 0ad1 00       		.byte	0
+ 2752 0ad2 12       		.uleb128 0x12
+ 2753 0ad3 36040000 		.4byte	.LVL193
+ 2754 0ad7 F50D0000 		.4byte	0xdf5
+ 2755 0adb E70A0000 		.4byte	0xae7
+ 2756 0adf 0C       		.uleb128 0xc
+ 2757 0ae0 01       		.uleb128 0x1
+ 2758 0ae1 50       		.byte	0x50
+ 2759 0ae2 03       		.uleb128 0x3
+ 2760 0ae3 91       		.byte	0x91
+ 2761 0ae4 F07E     		.sleb128 -144
+ 2762 0ae6 00       		.byte	0
+ 2763 0ae7 11       		.uleb128 0x11
+ 2764 0ae8 44040000 		.4byte	.LVL197
+ 2765 0aec AD020000 		.4byte	0x2ad
+ 2766 0af0 12       		.uleb128 0x12
+ 2767 0af1 62040000 		.4byte	.LVL198
+ 2768 0af5 EA0D0000 		.4byte	0xdea
+ 2769 0af9 040B0000 		.4byte	0xb04
+ 2770 0afd 0C       		.uleb128 0xc
+ 2771 0afe 01       		.uleb128 0x1
+ 2772 0aff 50       		.byte	0x50
+ 2773 0b00 02       		.uleb128 0x2
+ 2774 0b01 75       		.byte	0x75
+ 2775 0b02 6A       		.sleb128 -22
+ 2776 0b03 00       		.byte	0
+ 2777 0b04 11       		.uleb128 0x11
+ 2778 0b05 68040000 		.4byte	.LVL200
+ 2779 0b09 AD020000 		.4byte	0x2ad
+ 2780 0b0d 12       		.uleb128 0x12
+ 2781 0b0e 6E040000 		.4byte	.LVL201
+ 2782 0b12 F50D0000 		.4byte	0xdf5
+ 2783 0b16 240B0000 		.4byte	0xb24
+ 2784 0b1a 0C       		.uleb128 0xc
+ 2785 0b1b 01       		.uleb128 0x1
+ 2786 0b1c 50       		.byte	0x50
+ 2787 0b1d 05       		.uleb128 0x5
+ 2788 0b1e 03       		.byte	0x3
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 60
+
+
+ 2789 0b1f 70010000 		.4byte	.LC19
+ 2790 0b23 00       		.byte	0
+ 2791 0b24 12       		.uleb128 0x12
+ 2792 0b25 74040000 		.4byte	.LVL202
+ 2793 0b29 EA0D0000 		.4byte	0xdea
+ 2794 0b2d 3B0B0000 		.4byte	0xb3b
+ 2795 0b31 0C       		.uleb128 0xc
+ 2796 0b32 01       		.uleb128 0x1
+ 2797 0b33 50       		.byte	0x50
+ 2798 0b34 05       		.uleb128 0x5
+ 2799 0b35 03       		.byte	0x3
+ 2800 0b36 84010000 		.4byte	.LC20
+ 2801 0b3a 00       		.byte	0
+ 2802 0b3b 11       		.uleb128 0x11
+ 2803 0b3c 8C040000 		.4byte	.LVL210
+ 2804 0b40 AD020000 		.4byte	0x2ad
+ 2805 0b44 12       		.uleb128 0x12
+ 2806 0b45 92040000 		.4byte	.LVL211
+ 2807 0b49 EA0D0000 		.4byte	0xdea
+ 2808 0b4d 590B0000 		.4byte	0xb59
+ 2809 0b51 0C       		.uleb128 0xc
+ 2810 0b52 01       		.uleb128 0x1
+ 2811 0b53 50       		.byte	0x50
+ 2812 0b54 03       		.uleb128 0x3
+ 2813 0b55 91       		.byte	0x91
+ 2814 0b56 B07F     		.sleb128 -80
+ 2815 0b58 00       		.byte	0
+ 2816 0b59 0B       		.uleb128 0xb
+ 2817 0b5a 98040000 		.4byte	.LVL212
+ 2818 0b5e F50D0000 		.4byte	0xdf5
+ 2819 0b62 0C       		.uleb128 0xc
+ 2820 0b63 01       		.uleb128 0x1
+ 2821 0b64 50       		.byte	0x50
+ 2822 0b65 03       		.uleb128 0x3
+ 2823 0b66 91       		.byte	0x91
+ 2824 0b67 B07F     		.sleb128 -80
+ 2825 0b69 00       		.byte	0
+ 2826 0b6a 00       		.byte	0
+ 2827 0b6b 1A       		.uleb128 0x1a
+ 2828 0b6c 8A050000 		.4byte	.LASF40
+ 2829 0b70 05       		.byte	0x5
+ 2830 0b71 1207     		.2byte	0x712
+ 2831 0b73 770B0000 		.4byte	0xb77
+ 2832 0b77 1B       		.uleb128 0x1b
+ 2833 0b78 7D000000 		.4byte	0x7d
+ 2834 0b7c 1C       		.uleb128 0x1c
+ 2835 0b7d 04050000 		.4byte	.LASF41
+ 2836 0b81 06       		.byte	0x6
+ 2837 0b82 09       		.byte	0x9
+ 2838 0b83 25000000 		.4byte	0x25
+ 2839 0b87 05       		.uleb128 0x5
+ 2840 0b88 03       		.byte	0x3
+ 2841 0b89 00000000 		.4byte	kp_servo
+ 2842 0b8d 1C       		.uleb128 0x1c
+ 2843 0b8e 00000000 		.4byte	.LASF42
+ 2844 0b92 06       		.byte	0x6
+ 2845 0b93 0A       		.byte	0xa
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 61
+
+
+ 2846 0b94 25000000 		.4byte	0x25
+ 2847 0b98 05       		.uleb128 0x5
+ 2848 0b99 03       		.byte	0x3
+ 2849 0b9a 00000000 		.4byte	ki_servo
+ 2850 0b9e 1C       		.uleb128 0x1c
+ 2851 0b9f CE010000 		.4byte	.LASF43
+ 2852 0ba3 06       		.byte	0x6
+ 2853 0ba4 0B       		.byte	0xb
+ 2854 0ba5 25000000 		.4byte	0x25
+ 2855 0ba9 05       		.uleb128 0x5
+ 2856 0baa 03       		.byte	0x3
+ 2857 0bab 00000000 		.4byte	kd_servo
+ 2858 0baf 1C       		.uleb128 0x1c
+ 2859 0bb0 E0020000 		.4byte	.LASF44
+ 2860 0bb4 06       		.byte	0x6
+ 2861 0bb5 0C       		.byte	0xc
+ 2862 0bb6 25000000 		.4byte	0x25
+ 2863 0bba 05       		.uleb128 0x5
+ 2864 0bbb 03       		.byte	0x3
+ 2865 0bbc 00000000 		.4byte	prev_error_servo
+ 2866 0bc0 1C       		.uleb128 0x1c
+ 2867 0bc1 D7010000 		.4byte	.LASF45
+ 2868 0bc5 06       		.byte	0x6
+ 2869 0bc6 0D       		.byte	0xd
+ 2870 0bc7 25000000 		.4byte	0x25
+ 2871 0bcb 05       		.uleb128 0x5
+ 2872 0bcc 03       		.byte	0x3
+ 2873 0bcd 00000000 		.4byte	prev_i_term_servo
+ 2874 0bd1 1C       		.uleb128 0x1c
+ 2875 0bd2 92020000 		.4byte	.LASF46
+ 2876 0bd6 06       		.byte	0x6
+ 2877 0bd7 0E       		.byte	0xe
+ 2878 0bd8 6F000000 		.4byte	0x6f
+ 2879 0bdc 05       		.uleb128 0x5
+ 2880 0bdd 03       		.byte	0x3
+ 2881 0bde 00000000 		.4byte	STEER_STATE
+ 2882 0be2 1C       		.uleb128 0x1c
+ 2883 0be3 B7020000 		.4byte	.LASF47
+ 2884 0be7 06       		.byte	0x6
+ 2885 0be8 0F       		.byte	0xf
+ 2886 0be9 6F000000 		.4byte	0x6f
+ 2887 0bed 05       		.uleb128 0x5
+ 2888 0bee 03       		.byte	0x3
+ 2889 0bef 00000000 		.4byte	CENTER_ANGLE
+ 2890 0bf3 1C       		.uleb128 0x1c
+ 2891 0bf4 D1050000 		.4byte	.LASF48
+ 2892 0bf8 07       		.byte	0x7
+ 2893 0bf9 15       		.byte	0x15
+ 2894 0bfa 6F000000 		.4byte	0x6f
+ 2895 0bfe 05       		.uleb128 0x5
+ 2896 0bff 03       		.byte	0x3
+ 2897 0c00 00000000 		.4byte	RUN_STATE
+ 2898 0c04 1C       		.uleb128 0x1c
+ 2899 0c05 42020000 		.4byte	.LASF49
+ 2900 0c09 07       		.byte	0x7
+ 2901 0c0a 14       		.byte	0x14
+ 2902 0c0b 6F000000 		.4byte	0x6f
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 62
+
+
+ 2903 0c0f 05       		.uleb128 0x5
+ 2904 0c10 03       		.byte	0x3
+ 2905 0c11 00000000 		.4byte	BALLOON_STATE
+ 2906 0c15 1C       		.uleb128 0x1c
+ 2907 0c16 72000000 		.4byte	.LASF50
+ 2908 0c1a 01       		.byte	0x1
+ 2909 0c1b 1F       		.byte	0x1f
+ 2910 0c1c 25000000 		.4byte	0x25
+ 2911 0c20 05       		.uleb128 0x5
+ 2912 0c21 03       		.byte	0x3
+ 2913 0c22 00000000 		.4byte	TARGET_SPEED
+ 2914 0c26 1D       		.uleb128 0x1d
+ 2915 0c27 6B7000   		.ascii	"kp\000"
+ 2916 0c2a 01       		.byte	0x1
+ 2917 0c2b 20       		.byte	0x20
+ 2918 0c2c 25000000 		.4byte	0x25
+ 2919 0c30 05       		.uleb128 0x5
+ 2920 0c31 03       		.byte	0x3
+ 2921 0c32 00000000 		.4byte	kp
+ 2922 0c36 1D       		.uleb128 0x1d
+ 2923 0c37 6B6900   		.ascii	"ki\000"
+ 2924 0c3a 01       		.byte	0x1
+ 2925 0c3b 21       		.byte	0x21
+ 2926 0c3c 25000000 		.4byte	0x25
+ 2927 0c40 05       		.uleb128 0x5
+ 2928 0c41 03       		.byte	0x3
+ 2929 0c42 00000000 		.4byte	ki
+ 2930 0c46 1D       		.uleb128 0x1d
+ 2931 0c47 6B6400   		.ascii	"kd\000"
+ 2932 0c4a 01       		.byte	0x1
+ 2933 0c4b 22       		.byte	0x22
+ 2934 0c4c 25000000 		.4byte	0x25
+ 2935 0c50 05       		.uleb128 0x5
+ 2936 0c51 03       		.byte	0x3
+ 2937 0c52 00000000 		.4byte	kd
+ 2938 0c56 1C       		.uleb128 0x1c
+ 2939 0c57 9E010000 		.4byte	.LASF51
+ 2940 0c5b 01       		.byte	0x1
+ 2941 0c5c 23       		.byte	0x23
+ 2942 0c5d 25000000 		.4byte	0x25
+ 2943 0c61 05       		.uleb128 0x5
+ 2944 0c62 03       		.byte	0x3
+ 2945 0c63 00000000 		.4byte	prev_error
+ 2946 0c67 1C       		.uleb128 0x1c
+ 2947 0c68 5B010000 		.4byte	.LASF52
+ 2948 0c6c 01       		.byte	0x1
+ 2949 0c6d 24       		.byte	0x24
+ 2950 0c6e 25000000 		.4byte	0x25
+ 2951 0c72 05       		.uleb128 0x5
+ 2952 0c73 03       		.byte	0x3
+ 2953 0c74 00000000 		.4byte	prev_i_term
+ 2954 0c78 1C       		.uleb128 0x1c
+ 2955 0c79 45030000 		.4byte	.LASF23
+ 2956 0c7d 01       		.byte	0x1
+ 2957 0c7e 25       		.byte	0x25
+ 2958 0c7f 25000000 		.4byte	0x25
+ 2959 0c83 05       		.uleb128 0x5
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 63
+
+
+ 2960 0c84 03       		.byte	0x3
+ 2961 0c85 00000000 		.4byte	speed
+ 2962 0c89 1C       		.uleb128 0x1c
+ 2963 0c8a 74020000 		.4byte	.LASF53
+ 2964 0c8e 01       		.byte	0x1
+ 2965 0c8f 27       		.byte	0x27
+ 2966 0c90 6F000000 		.4byte	0x6f
+ 2967 0c94 05       		.uleb128 0x5
+ 2968 0c95 03       		.byte	0x3
+ 2969 0c96 00000000 		.4byte	prevArduinoRunState
+ 2970 0c9a 1C       		.uleb128 0x1c
+ 2971 0c9b 02020000 		.4byte	.LASF54
+ 2972 0c9f 01       		.byte	0x1
+ 2973 0ca0 28       		.byte	0x28
+ 2974 0ca1 6F000000 		.4byte	0x6f
+ 2975 0ca5 05       		.uleb128 0x5
+ 2976 0ca6 03       		.byte	0x3
+ 2977 0ca7 00000000 		.4byte	arduinoRunState
+ 2978 0cab 1E       		.uleb128 0x1e
+ 2979 0cac 6F020000 		.4byte	.LASF55
+ 2980 0cb0 6F020000 		.4byte	.LASF55
+ 2981 0cb4 08       		.byte	0x8
+ 2982 0cb5 49       		.byte	0x49
+ 2983 0cb6 1E       		.uleb128 0x1e
+ 2984 0cb7 14030000 		.4byte	.LASF56
+ 2985 0cbb 14030000 		.4byte	.LASF56
+ 2986 0cbf 09       		.byte	0x9
+ 2987 0cc0 6B       		.byte	0x6b
+ 2988 0cc1 1E       		.uleb128 0x1e
+ 2989 0cc2 A7040000 		.4byte	.LASF57
+ 2990 0cc6 A7040000 		.4byte	.LASF57
+ 2991 0cca 0A       		.byte	0xa
+ 2992 0ccb 2F       		.byte	0x2f
+ 2993 0ccc 1E       		.uleb128 0x1e
+ 2994 0ccd 67030000 		.4byte	.LASF58
+ 2995 0cd1 67030000 		.4byte	.LASF58
+ 2996 0cd5 0B       		.byte	0xb
+ 2997 0cd6 26       		.byte	0x26
+ 2998 0cd7 1E       		.uleb128 0x1e
+ 2999 0cd8 11010000 		.4byte	.LASF59
+ 3000 0cdc 11010000 		.4byte	.LASF59
+ 3001 0ce0 0C       		.byte	0xc
+ 3002 0ce1 C3       		.byte	0xc3
+ 3003 0ce2 1E       		.uleb128 0x1e
+ 3004 0ce3 B0050000 		.4byte	.LASF60
+ 3005 0ce7 B0050000 		.4byte	.LASF60
+ 3006 0ceb 0D       		.byte	0xd
+ 3007 0cec 3A       		.byte	0x3a
+ 3008 0ced 1E       		.uleb128 0x1e
+ 3009 0cee 59050000 		.4byte	.LASF61
+ 3010 0cf2 59050000 		.4byte	.LASF61
+ 3011 0cf6 0D       		.byte	0xd
+ 3012 0cf7 3D       		.byte	0x3d
+ 3013 0cf8 1E       		.uleb128 0x1e
+ 3014 0cf9 CE040000 		.4byte	.LASF62
+ 3015 0cfd CE040000 		.4byte	.LASF62
+ 3016 0d01 0E       		.byte	0xe
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 64
+
+
+ 3017 0d02 54       		.byte	0x54
+ 3018 0d03 1E       		.uleb128 0x1e
+ 3019 0d04 88020000 		.4byte	.LASF63
+ 3020 0d08 88020000 		.4byte	.LASF63
+ 3021 0d0c 0D       		.byte	0xd
+ 3022 0d0d 38       		.byte	0x38
+ 3023 0d0e 1E       		.uleb128 0x1e
+ 3024 0d0f 4B030000 		.4byte	.LASF64
+ 3025 0d13 4B030000 		.4byte	.LASF64
+ 3026 0d17 0F       		.byte	0xf
+ 3027 0d18 17       		.byte	0x17
+ 3028 0d19 1E       		.uleb128 0x1e
+ 3029 0d1a 85010000 		.4byte	.LASF65
+ 3030 0d1e 85010000 		.4byte	.LASF65
+ 3031 0d22 0F       		.byte	0xf
+ 3032 0d23 1D       		.byte	0x1d
+ 3033 0d24 1E       		.uleb128 0x1e
+ 3034 0d25 DA000000 		.4byte	.LASF66
+ 3035 0d29 DA000000 		.4byte	.LASF66
+ 3036 0d2d 09       		.byte	0x9
+ 3037 0d2e 5A       		.byte	0x5a
+ 3038 0d2f 1E       		.uleb128 0x1e
+ 3039 0d30 F9000000 		.4byte	.LASF67
+ 3040 0d34 F9000000 		.4byte	.LASF67
+ 3041 0d38 10       		.byte	0x10
+ 3042 0d39 17       		.byte	0x17
+ 3043 0d3a 1E       		.uleb128 0x1e
+ 3044 0d3b D9040000 		.4byte	.LASF68
+ 3045 0d3f D9040000 		.4byte	.LASF68
+ 3046 0d43 0C       		.byte	0xc
+ 3047 0d44 92       		.byte	0x92
+ 3048 0d45 1E       		.uleb128 0x1e
+ 3049 0d46 36010000 		.4byte	.LASF69
+ 3050 0d4a 36010000 		.4byte	.LASF69
+ 3051 0d4e 11       		.byte	0x11
+ 3052 0d4f 17       		.byte	0x17
+ 3053 0d50 1E       		.uleb128 0x1e
+ 3054 0d51 E9040000 		.4byte	.LASF70
+ 3055 0d55 E9040000 		.4byte	.LASF70
+ 3056 0d59 11       		.byte	0x11
+ 3057 0d5a 1D       		.byte	0x1d
+ 3058 0d5b 1E       		.uleb128 0x1e
+ 3059 0d5c 50020000 		.4byte	.LASF71
+ 3060 0d60 50020000 		.4byte	.LASF71
+ 3061 0d64 12       		.byte	0x12
+ 3062 0d65 17       		.byte	0x17
+ 3063 0d66 1E       		.uleb128 0x1e
+ 3064 0d67 1E020000 		.4byte	.LASF72
+ 3065 0d6b 1E020000 		.4byte	.LASF72
+ 3066 0d6f 12       		.byte	0x12
+ 3067 0d70 1D       		.byte	0x1d
+ 3068 0d71 1E       		.uleb128 0x1e
+ 3069 0d72 2D050000 		.4byte	.LASF73
+ 3070 0d76 2D050000 		.4byte	.LASF73
+ 3071 0d7a 13       		.byte	0x13
+ 3072 0d7b 92       		.byte	0x92
+ 3073 0d7c 1E       		.uleb128 0x1e
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 65
+
+
+ 3074 0d7d A4000000 		.4byte	.LASF74
+ 3075 0d81 A4000000 		.4byte	.LASF74
+ 3076 0d85 14       		.byte	0x14
+ 3077 0d86 3F       		.byte	0x3f
+ 3078 0d87 1E       		.uleb128 0x1e
+ 3079 0d88 E8000000 		.4byte	.LASF75
+ 3080 0d8c E8000000 		.4byte	.LASF75
+ 3081 0d90 15       		.byte	0x15
+ 3082 0d91 5A       		.byte	0x5a
+ 3083 0d92 1E       		.uleb128 0x1e
+ 3084 0d93 A9010000 		.4byte	.LASF76
+ 3085 0d97 A9010000 		.4byte	.LASF76
+ 3086 0d9b 16       		.byte	0x16
+ 3087 0d9c 17       		.byte	0x17
+ 3088 0d9d 1E       		.uleb128 0x1e
+ 3089 0d9e 3D050000 		.4byte	.LASF77
+ 3090 0da2 3D050000 		.4byte	.LASF77
+ 3091 0da6 16       		.byte	0x16
+ 3092 0da7 1D       		.byte	0x1d
+ 3093 0da8 1E       		.uleb128 0x1e
+ 3094 0da9 C1050000 		.4byte	.LASF78
+ 3095 0dad C1050000 		.4byte	.LASF78
+ 3096 0db1 17       		.byte	0x17
+ 3097 0db2 17       		.byte	0x17
+ 3098 0db3 1E       		.uleb128 0x1e
+ 3099 0db4 47010000 		.4byte	.LASF79
+ 3100 0db8 47010000 		.4byte	.LASF79
+ 3101 0dbc 17       		.byte	0x17
+ 3102 0dbd 1D       		.byte	0x1d
+ 3103 0dbe 1E       		.uleb128 0x1e
+ 3104 0dbf EF010000 		.4byte	.LASF80
+ 3105 0dc3 EF010000 		.4byte	.LASF80
+ 3106 0dc7 18       		.byte	0x18
+ 3107 0dc8 17       		.byte	0x17
+ 3108 0dc9 1E       		.uleb128 0x1e
+ 3109 0dca 77040000 		.4byte	.LASF81
+ 3110 0dce 77040000 		.4byte	.LASF81
+ 3111 0dd2 18       		.byte	0x18
+ 3112 0dd3 1D       		.byte	0x1d
+ 3113 0dd4 1E       		.uleb128 0x1e
+ 3114 0dd5 C4020000 		.4byte	.LASF82
+ 3115 0dd9 C4020000 		.4byte	.LASF82
+ 3116 0ddd 06       		.byte	0x6
+ 3117 0dde 18       		.byte	0x18
+ 3118 0ddf 1E       		.uleb128 0x1e
+ 3119 0de0 60040000 		.4byte	.LASF83
+ 3120 0de4 60040000 		.4byte	.LASF83
+ 3121 0de8 13       		.byte	0x13
+ 3122 0de9 C3       		.byte	0xc3
+ 3123 0dea 1E       		.uleb128 0x1e
+ 3124 0deb 7F000000 		.4byte	.LASF84
+ 3125 0def 7F000000 		.4byte	.LASF84
+ 3126 0df3 0E       		.byte	0xe
+ 3127 0df4 8B       		.byte	0x8b
+ 3128 0df5 1E       		.uleb128 0x1e
+ 3129 0df6 35030000 		.4byte	.LASF85
+ 3130 0dfa 35030000 		.4byte	.LASF85
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 66
+
+
+ 3131 0dfe 0D       		.byte	0xd
+ 3132 0dff 3C       		.byte	0x3c
+ 3133 0e00 1E       		.uleb128 0x1e
+ 3134 0e01 78010000 		.4byte	.LASF86
+ 3135 0e05 78010000 		.4byte	.LASF86
+ 3136 0e09 19       		.byte	0x19
+ 3137 0e0a 29       		.byte	0x29
+ 3138 0e0b 1E       		.uleb128 0x1e
+ 3139 0e0c A3050000 		.4byte	.LASF87
+ 3140 0e10 A3050000 		.4byte	.LASF87
+ 3141 0e14 0E       		.byte	0xe
+ 3142 0e15 71       		.byte	0x71
+ 3143 0e16 1E       		.uleb128 0x1e
+ 3144 0e17 C2040000 		.4byte	.LASF88
+ 3145 0e1b C2040000 		.4byte	.LASF88
+ 3146 0e1f 0D       		.byte	0xd
+ 3147 0e20 3E       		.byte	0x3e
+ 3148 0e21 1E       		.uleb128 0x1e
+ 3149 0e22 D8020000 		.4byte	.LASF89
+ 3150 0e26 D8020000 		.4byte	.LASF89
+ 3151 0e2a 1A       		.byte	0x1a
+ 3152 0e2b E7       		.byte	0xe7
+ 3153 0e2c 00       		.byte	0
+ 3154              		.section	.debug_abbrev,"",%progbits
+ 3155              	.Ldebug_abbrev0:
+ 3156 0000 01       		.uleb128 0x1
+ 3157 0001 11       		.uleb128 0x11
+ 3158 0002 01       		.byte	0x1
+ 3159 0003 25       		.uleb128 0x25
+ 3160 0004 0E       		.uleb128 0xe
+ 3161 0005 13       		.uleb128 0x13
+ 3162 0006 0B       		.uleb128 0xb
+ 3163 0007 03       		.uleb128 0x3
+ 3164 0008 0E       		.uleb128 0xe
+ 3165 0009 1B       		.uleb128 0x1b
+ 3166 000a 0E       		.uleb128 0xe
+ 3167 000b 55       		.uleb128 0x55
+ 3168 000c 17       		.uleb128 0x17
+ 3169 000d 11       		.uleb128 0x11
+ 3170 000e 01       		.uleb128 0x1
+ 3171 000f 10       		.uleb128 0x10
+ 3172 0010 17       		.uleb128 0x17
+ 3173 0011 00       		.byte	0
+ 3174 0012 00       		.byte	0
+ 3175 0013 02       		.uleb128 0x2
+ 3176 0014 24       		.uleb128 0x24
+ 3177 0015 00       		.byte	0
+ 3178 0016 0B       		.uleb128 0xb
+ 3179 0017 0B       		.uleb128 0xb
+ 3180 0018 3E       		.uleb128 0x3e
+ 3181 0019 0B       		.uleb128 0xb
+ 3182 001a 03       		.uleb128 0x3
+ 3183 001b 0E       		.uleb128 0xe
+ 3184 001c 00       		.byte	0
+ 3185 001d 00       		.byte	0
+ 3186 001e 03       		.uleb128 0x3
+ 3187 001f 16       		.uleb128 0x16
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 67
+
+
+ 3188 0020 00       		.byte	0
+ 3189 0021 03       		.uleb128 0x3
+ 3190 0022 0E       		.uleb128 0xe
+ 3191 0023 3A       		.uleb128 0x3a
+ 3192 0024 0B       		.uleb128 0xb
+ 3193 0025 3B       		.uleb128 0x3b
+ 3194 0026 0B       		.uleb128 0xb
+ 3195 0027 49       		.uleb128 0x49
+ 3196 0028 13       		.uleb128 0x13
+ 3197 0029 00       		.byte	0
+ 3198 002a 00       		.byte	0
+ 3199 002b 04       		.uleb128 0x4
+ 3200 002c 24       		.uleb128 0x24
+ 3201 002d 00       		.byte	0
+ 3202 002e 0B       		.uleb128 0xb
+ 3203 002f 0B       		.uleb128 0xb
+ 3204 0030 3E       		.uleb128 0x3e
+ 3205 0031 0B       		.uleb128 0xb
+ 3206 0032 03       		.uleb128 0x3
+ 3207 0033 08       		.uleb128 0x8
+ 3208 0034 00       		.byte	0
+ 3209 0035 00       		.byte	0
+ 3210 0036 05       		.uleb128 0x5
+ 3211 0037 16       		.uleb128 0x16
+ 3212 0038 00       		.byte	0
+ 3213 0039 03       		.uleb128 0x3
+ 3214 003a 0E       		.uleb128 0xe
+ 3215 003b 3A       		.uleb128 0x3a
+ 3216 003c 0B       		.uleb128 0xb
+ 3217 003d 3B       		.uleb128 0x3b
+ 3218 003e 05       		.uleb128 0x5
+ 3219 003f 49       		.uleb128 0x49
+ 3220 0040 13       		.uleb128 0x13
+ 3221 0041 00       		.byte	0
+ 3222 0042 00       		.byte	0
+ 3223 0043 06       		.uleb128 0x6
+ 3224 0044 0F       		.uleb128 0xf
+ 3225 0045 00       		.byte	0
+ 3226 0046 0B       		.uleb128 0xb
+ 3227 0047 0B       		.uleb128 0xb
+ 3228 0048 49       		.uleb128 0x49
+ 3229 0049 13       		.uleb128 0x13
+ 3230 004a 00       		.byte	0
+ 3231 004b 00       		.byte	0
+ 3232 004c 07       		.uleb128 0x7
+ 3233 004d 2E       		.uleb128 0x2e
+ 3234 004e 00       		.byte	0
+ 3235 004f 3F       		.uleb128 0x3f
+ 3236 0050 19       		.uleb128 0x19
+ 3237 0051 03       		.uleb128 0x3
+ 3238 0052 0E       		.uleb128 0xe
+ 3239 0053 3A       		.uleb128 0x3a
+ 3240 0054 0B       		.uleb128 0xb
+ 3241 0055 3B       		.uleb128 0x3b
+ 3242 0056 0B       		.uleb128 0xb
+ 3243 0057 27       		.uleb128 0x27
+ 3244 0058 19       		.uleb128 0x19
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 68
+
+
+ 3245 0059 11       		.uleb128 0x11
+ 3246 005a 01       		.uleb128 0x1
+ 3247 005b 12       		.uleb128 0x12
+ 3248 005c 06       		.uleb128 0x6
+ 3249 005d 40       		.uleb128 0x40
+ 3250 005e 18       		.uleb128 0x18
+ 3251 005f 9742     		.uleb128 0x2117
+ 3252 0061 19       		.uleb128 0x19
+ 3253 0062 00       		.byte	0
+ 3254 0063 00       		.byte	0
+ 3255 0064 08       		.uleb128 0x8
+ 3256 0065 2E       		.uleb128 0x2e
+ 3257 0066 01       		.byte	0x1
+ 3258 0067 03       		.uleb128 0x3
+ 3259 0068 0E       		.uleb128 0xe
+ 3260 0069 3A       		.uleb128 0x3a
+ 3261 006a 0B       		.uleb128 0xb
+ 3262 006b 3B       		.uleb128 0x3b
+ 3263 006c 0B       		.uleb128 0xb
+ 3264 006d 27       		.uleb128 0x27
+ 3265 006e 19       		.uleb128 0x19
+ 3266 006f 49       		.uleb128 0x49
+ 3267 0070 13       		.uleb128 0x13
+ 3268 0071 11       		.uleb128 0x11
+ 3269 0072 01       		.uleb128 0x1
+ 3270 0073 12       		.uleb128 0x12
+ 3271 0074 06       		.uleb128 0x6
+ 3272 0075 40       		.uleb128 0x40
+ 3273 0076 18       		.uleb128 0x18
+ 3274 0077 9642     		.uleb128 0x2116
+ 3275 0079 19       		.uleb128 0x19
+ 3276 007a 01       		.uleb128 0x1
+ 3277 007b 13       		.uleb128 0x13
+ 3278 007c 00       		.byte	0
+ 3279 007d 00       		.byte	0
+ 3280 007e 09       		.uleb128 0x9
+ 3281 007f 05       		.uleb128 0x5
+ 3282 0080 00       		.byte	0
+ 3283 0081 03       		.uleb128 0x3
+ 3284 0082 0E       		.uleb128 0xe
+ 3285 0083 3A       		.uleb128 0x3a
+ 3286 0084 0B       		.uleb128 0xb
+ 3287 0085 3B       		.uleb128 0x3b
+ 3288 0086 0B       		.uleb128 0xb
+ 3289 0087 49       		.uleb128 0x49
+ 3290 0088 13       		.uleb128 0x13
+ 3291 0089 02       		.uleb128 0x2
+ 3292 008a 17       		.uleb128 0x17
+ 3293 008b 00       		.byte	0
+ 3294 008c 00       		.byte	0
+ 3295 008d 0A       		.uleb128 0xa
+ 3296 008e 34       		.uleb128 0x34
+ 3297 008f 00       		.byte	0
+ 3298 0090 03       		.uleb128 0x3
+ 3299 0091 0E       		.uleb128 0xe
+ 3300 0092 3A       		.uleb128 0x3a
+ 3301 0093 0B       		.uleb128 0xb
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 69
+
+
+ 3302 0094 3B       		.uleb128 0x3b
+ 3303 0095 0B       		.uleb128 0xb
+ 3304 0096 49       		.uleb128 0x49
+ 3305 0097 13       		.uleb128 0x13
+ 3306 0098 02       		.uleb128 0x2
+ 3307 0099 17       		.uleb128 0x17
+ 3308 009a 00       		.byte	0
+ 3309 009b 00       		.byte	0
+ 3310 009c 0B       		.uleb128 0xb
+ 3311 009d 898201   		.uleb128 0x4109
+ 3312 00a0 01       		.byte	0x1
+ 3313 00a1 11       		.uleb128 0x11
+ 3314 00a2 01       		.uleb128 0x1
+ 3315 00a3 31       		.uleb128 0x31
+ 3316 00a4 13       		.uleb128 0x13
+ 3317 00a5 00       		.byte	0
+ 3318 00a6 00       		.byte	0
+ 3319 00a7 0C       		.uleb128 0xc
+ 3320 00a8 8A8201   		.uleb128 0x410a
+ 3321 00ab 00       		.byte	0
+ 3322 00ac 02       		.uleb128 0x2
+ 3323 00ad 18       		.uleb128 0x18
+ 3324 00ae 9142     		.uleb128 0x2111
+ 3325 00b0 18       		.uleb128 0x18
+ 3326 00b1 00       		.byte	0
+ 3327 00b2 00       		.byte	0
+ 3328 00b3 0D       		.uleb128 0xd
+ 3329 00b4 2E       		.uleb128 0x2e
+ 3330 00b5 01       		.byte	0x1
+ 3331 00b6 3F       		.uleb128 0x3f
+ 3332 00b7 19       		.uleb128 0x19
+ 3333 00b8 03       		.uleb128 0x3
+ 3334 00b9 0E       		.uleb128 0xe
+ 3335 00ba 3A       		.uleb128 0x3a
+ 3336 00bb 0B       		.uleb128 0xb
+ 3337 00bc 3B       		.uleb128 0x3b
+ 3338 00bd 0B       		.uleb128 0xb
+ 3339 00be 27       		.uleb128 0x27
+ 3340 00bf 19       		.uleb128 0x19
+ 3341 00c0 49       		.uleb128 0x49
+ 3342 00c1 13       		.uleb128 0x13
+ 3343 00c2 11       		.uleb128 0x11
+ 3344 00c3 01       		.uleb128 0x1
+ 3345 00c4 12       		.uleb128 0x12
+ 3346 00c5 06       		.uleb128 0x6
+ 3347 00c6 40       		.uleb128 0x40
+ 3348 00c7 18       		.uleb128 0x18
+ 3349 00c8 9642     		.uleb128 0x2116
+ 3350 00ca 19       		.uleb128 0x19
+ 3351 00cb 01       		.uleb128 0x1
+ 3352 00cc 13       		.uleb128 0x13
+ 3353 00cd 00       		.byte	0
+ 3354 00ce 00       		.byte	0
+ 3355 00cf 0E       		.uleb128 0xe
+ 3356 00d0 34       		.uleb128 0x34
+ 3357 00d1 00       		.byte	0
+ 3358 00d2 03       		.uleb128 0x3
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 70
+
+
+ 3359 00d3 08       		.uleb128 0x8
+ 3360 00d4 3A       		.uleb128 0x3a
+ 3361 00d5 0B       		.uleb128 0xb
+ 3362 00d6 3B       		.uleb128 0x3b
+ 3363 00d7 0B       		.uleb128 0xb
+ 3364 00d8 49       		.uleb128 0x49
+ 3365 00d9 13       		.uleb128 0x13
+ 3366 00da 02       		.uleb128 0x2
+ 3367 00db 17       		.uleb128 0x17
+ 3368 00dc 00       		.byte	0
+ 3369 00dd 00       		.byte	0
+ 3370 00de 0F       		.uleb128 0xf
+ 3371 00df 2E       		.uleb128 0x2e
+ 3372 00e0 01       		.byte	0x1
+ 3373 00e1 3F       		.uleb128 0x3f
+ 3374 00e2 19       		.uleb128 0x19
+ 3375 00e3 03       		.uleb128 0x3
+ 3376 00e4 0E       		.uleb128 0xe
+ 3377 00e5 3A       		.uleb128 0x3a
+ 3378 00e6 0B       		.uleb128 0xb
+ 3379 00e7 3B       		.uleb128 0x3b
+ 3380 00e8 0B       		.uleb128 0xb
+ 3381 00e9 27       		.uleb128 0x27
+ 3382 00ea 19       		.uleb128 0x19
+ 3383 00eb 11       		.uleb128 0x11
+ 3384 00ec 01       		.uleb128 0x1
+ 3385 00ed 12       		.uleb128 0x12
+ 3386 00ee 06       		.uleb128 0x6
+ 3387 00ef 40       		.uleb128 0x40
+ 3388 00f0 18       		.uleb128 0x18
+ 3389 00f1 9642     		.uleb128 0x2116
+ 3390 00f3 19       		.uleb128 0x19
+ 3391 00f4 01       		.uleb128 0x1
+ 3392 00f5 13       		.uleb128 0x13
+ 3393 00f6 00       		.byte	0
+ 3394 00f7 00       		.byte	0
+ 3395 00f8 10       		.uleb128 0x10
+ 3396 00f9 34       		.uleb128 0x34
+ 3397 00fa 00       		.byte	0
+ 3398 00fb 03       		.uleb128 0x3
+ 3399 00fc 08       		.uleb128 0x8
+ 3400 00fd 3A       		.uleb128 0x3a
+ 3401 00fe 0B       		.uleb128 0xb
+ 3402 00ff 3B       		.uleb128 0x3b
+ 3403 0100 0B       		.uleb128 0xb
+ 3404 0101 49       		.uleb128 0x49
+ 3405 0102 13       		.uleb128 0x13
+ 3406 0103 00       		.byte	0
+ 3407 0104 00       		.byte	0
+ 3408 0105 11       		.uleb128 0x11
+ 3409 0106 898201   		.uleb128 0x4109
+ 3410 0109 00       		.byte	0
+ 3411 010a 11       		.uleb128 0x11
+ 3412 010b 01       		.uleb128 0x1
+ 3413 010c 31       		.uleb128 0x31
+ 3414 010d 13       		.uleb128 0x13
+ 3415 010e 00       		.byte	0
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 71
+
+
+ 3416 010f 00       		.byte	0
+ 3417 0110 12       		.uleb128 0x12
+ 3418 0111 898201   		.uleb128 0x4109
+ 3419 0114 01       		.byte	0x1
+ 3420 0115 11       		.uleb128 0x11
+ 3421 0116 01       		.uleb128 0x1
+ 3422 0117 31       		.uleb128 0x31
+ 3423 0118 13       		.uleb128 0x13
+ 3424 0119 01       		.uleb128 0x1
+ 3425 011a 13       		.uleb128 0x13
+ 3426 011b 00       		.byte	0
+ 3427 011c 00       		.byte	0
+ 3428 011d 13       		.uleb128 0x13
+ 3429 011e 01       		.uleb128 0x1
+ 3430 011f 01       		.byte	0x1
+ 3431 0120 49       		.uleb128 0x49
+ 3432 0121 13       		.uleb128 0x13
+ 3433 0122 01       		.uleb128 0x1
+ 3434 0123 13       		.uleb128 0x13
+ 3435 0124 00       		.byte	0
+ 3436 0125 00       		.byte	0
+ 3437 0126 14       		.uleb128 0x14
+ 3438 0127 21       		.uleb128 0x21
+ 3439 0128 00       		.byte	0
+ 3440 0129 49       		.uleb128 0x49
+ 3441 012a 13       		.uleb128 0x13
+ 3442 012b 2F       		.uleb128 0x2f
+ 3443 012c 0B       		.uleb128 0xb
+ 3444 012d 00       		.byte	0
+ 3445 012e 00       		.byte	0
+ 3446 012f 15       		.uleb128 0x15
+ 3447 0130 2E       		.uleb128 0x2e
+ 3448 0131 01       		.byte	0x1
+ 3449 0132 3F       		.uleb128 0x3f
+ 3450 0133 19       		.uleb128 0x19
+ 3451 0134 03       		.uleb128 0x3
+ 3452 0135 0E       		.uleb128 0xe
+ 3453 0136 3A       		.uleb128 0x3a
+ 3454 0137 0B       		.uleb128 0xb
+ 3455 0138 3B       		.uleb128 0x3b
+ 3456 0139 0B       		.uleb128 0xb
+ 3457 013a 27       		.uleb128 0x27
+ 3458 013b 19       		.uleb128 0x19
+ 3459 013c 11       		.uleb128 0x11
+ 3460 013d 01       		.uleb128 0x1
+ 3461 013e 12       		.uleb128 0x12
+ 3462 013f 06       		.uleb128 0x6
+ 3463 0140 40       		.uleb128 0x40
+ 3464 0141 18       		.uleb128 0x18
+ 3465 0142 9742     		.uleb128 0x2117
+ 3466 0144 19       		.uleb128 0x19
+ 3467 0145 01       		.uleb128 0x1
+ 3468 0146 13       		.uleb128 0x13
+ 3469 0147 00       		.byte	0
+ 3470 0148 00       		.byte	0
+ 3471 0149 16       		.uleb128 0x16
+ 3472 014a 2E       		.uleb128 0x2e
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 72
+
+
+ 3473 014b 01       		.byte	0x1
+ 3474 014c 3F       		.uleb128 0x3f
+ 3475 014d 19       		.uleb128 0x19
+ 3476 014e 03       		.uleb128 0x3
+ 3477 014f 0E       		.uleb128 0xe
+ 3478 0150 3A       		.uleb128 0x3a
+ 3479 0151 0B       		.uleb128 0xb
+ 3480 0152 3B       		.uleb128 0x3b
+ 3481 0153 0B       		.uleb128 0xb
+ 3482 0154 27       		.uleb128 0x27
+ 3483 0155 19       		.uleb128 0x19
+ 3484 0156 49       		.uleb128 0x49
+ 3485 0157 13       		.uleb128 0x13
+ 3486 0158 8701     		.uleb128 0x87
+ 3487 015a 19       		.uleb128 0x19
+ 3488 015b 11       		.uleb128 0x11
+ 3489 015c 01       		.uleb128 0x1
+ 3490 015d 12       		.uleb128 0x12
+ 3491 015e 06       		.uleb128 0x6
+ 3492 015f 40       		.uleb128 0x40
+ 3493 0160 18       		.uleb128 0x18
+ 3494 0161 9642     		.uleb128 0x2116
+ 3495 0163 19       		.uleb128 0x19
+ 3496 0164 01       		.uleb128 0x1
+ 3497 0165 13       		.uleb128 0x13
+ 3498 0166 00       		.byte	0
+ 3499 0167 00       		.byte	0
+ 3500 0168 17       		.uleb128 0x17
+ 3501 0169 34       		.uleb128 0x34
+ 3502 016a 00       		.byte	0
+ 3503 016b 03       		.uleb128 0x3
+ 3504 016c 0E       		.uleb128 0xe
+ 3505 016d 3A       		.uleb128 0x3a
+ 3506 016e 0B       		.uleb128 0xb
+ 3507 016f 3B       		.uleb128 0x3b
+ 3508 0170 0B       		.uleb128 0xb
+ 3509 0171 49       		.uleb128 0x49
+ 3510 0172 13       		.uleb128 0x13
+ 3511 0173 00       		.byte	0
+ 3512 0174 00       		.byte	0
+ 3513 0175 18       		.uleb128 0x18
+ 3514 0176 34       		.uleb128 0x34
+ 3515 0177 00       		.byte	0
+ 3516 0178 03       		.uleb128 0x3
+ 3517 0179 0E       		.uleb128 0xe
+ 3518 017a 3A       		.uleb128 0x3a
+ 3519 017b 0B       		.uleb128 0xb
+ 3520 017c 3B       		.uleb128 0x3b
+ 3521 017d 0B       		.uleb128 0xb
+ 3522 017e 49       		.uleb128 0x49
+ 3523 017f 13       		.uleb128 0x13
+ 3524 0180 02       		.uleb128 0x2
+ 3525 0181 18       		.uleb128 0x18
+ 3526 0182 00       		.byte	0
+ 3527 0183 00       		.byte	0
+ 3528 0184 19       		.uleb128 0x19
+ 3529 0185 34       		.uleb128 0x34
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 73
+
+
+ 3530 0186 00       		.byte	0
+ 3531 0187 03       		.uleb128 0x3
+ 3532 0188 0E       		.uleb128 0xe
+ 3533 0189 3A       		.uleb128 0x3a
+ 3534 018a 0B       		.uleb128 0xb
+ 3535 018b 3B       		.uleb128 0x3b
+ 3536 018c 0B       		.uleb128 0xb
+ 3537 018d 49       		.uleb128 0x49
+ 3538 018e 13       		.uleb128 0x13
+ 3539 018f 1C       		.uleb128 0x1c
+ 3540 0190 0B       		.uleb128 0xb
+ 3541 0191 00       		.byte	0
+ 3542 0192 00       		.byte	0
+ 3543 0193 1A       		.uleb128 0x1a
+ 3544 0194 34       		.uleb128 0x34
+ 3545 0195 00       		.byte	0
+ 3546 0196 03       		.uleb128 0x3
+ 3547 0197 0E       		.uleb128 0xe
+ 3548 0198 3A       		.uleb128 0x3a
+ 3549 0199 0B       		.uleb128 0xb
+ 3550 019a 3B       		.uleb128 0x3b
+ 3551 019b 05       		.uleb128 0x5
+ 3552 019c 49       		.uleb128 0x49
+ 3553 019d 13       		.uleb128 0x13
+ 3554 019e 3F       		.uleb128 0x3f
+ 3555 019f 19       		.uleb128 0x19
+ 3556 01a0 3C       		.uleb128 0x3c
+ 3557 01a1 19       		.uleb128 0x19
+ 3558 01a2 00       		.byte	0
+ 3559 01a3 00       		.byte	0
+ 3560 01a4 1B       		.uleb128 0x1b
+ 3561 01a5 35       		.uleb128 0x35
+ 3562 01a6 00       		.byte	0
+ 3563 01a7 49       		.uleb128 0x49
+ 3564 01a8 13       		.uleb128 0x13
+ 3565 01a9 00       		.byte	0
+ 3566 01aa 00       		.byte	0
+ 3567 01ab 1C       		.uleb128 0x1c
+ 3568 01ac 34       		.uleb128 0x34
+ 3569 01ad 00       		.byte	0
+ 3570 01ae 03       		.uleb128 0x3
+ 3571 01af 0E       		.uleb128 0xe
+ 3572 01b0 3A       		.uleb128 0x3a
+ 3573 01b1 0B       		.uleb128 0xb
+ 3574 01b2 3B       		.uleb128 0x3b
+ 3575 01b3 0B       		.uleb128 0xb
+ 3576 01b4 49       		.uleb128 0x49
+ 3577 01b5 13       		.uleb128 0x13
+ 3578 01b6 3F       		.uleb128 0x3f
+ 3579 01b7 19       		.uleb128 0x19
+ 3580 01b8 02       		.uleb128 0x2
+ 3581 01b9 18       		.uleb128 0x18
+ 3582 01ba 00       		.byte	0
+ 3583 01bb 00       		.byte	0
+ 3584 01bc 1D       		.uleb128 0x1d
+ 3585 01bd 34       		.uleb128 0x34
+ 3586 01be 00       		.byte	0
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 74
+
+
+ 3587 01bf 03       		.uleb128 0x3
+ 3588 01c0 08       		.uleb128 0x8
+ 3589 01c1 3A       		.uleb128 0x3a
+ 3590 01c2 0B       		.uleb128 0xb
+ 3591 01c3 3B       		.uleb128 0x3b
+ 3592 01c4 0B       		.uleb128 0xb
+ 3593 01c5 49       		.uleb128 0x49
+ 3594 01c6 13       		.uleb128 0x13
+ 3595 01c7 3F       		.uleb128 0x3f
+ 3596 01c8 19       		.uleb128 0x19
+ 3597 01c9 02       		.uleb128 0x2
+ 3598 01ca 18       		.uleb128 0x18
+ 3599 01cb 00       		.byte	0
+ 3600 01cc 00       		.byte	0
+ 3601 01cd 1E       		.uleb128 0x1e
+ 3602 01ce 2E       		.uleb128 0x2e
+ 3603 01cf 00       		.byte	0
+ 3604 01d0 3F       		.uleb128 0x3f
+ 3605 01d1 19       		.uleb128 0x19
+ 3606 01d2 3C       		.uleb128 0x3c
+ 3607 01d3 19       		.uleb128 0x19
+ 3608 01d4 6E       		.uleb128 0x6e
+ 3609 01d5 0E       		.uleb128 0xe
+ 3610 01d6 03       		.uleb128 0x3
+ 3611 01d7 0E       		.uleb128 0xe
+ 3612 01d8 3A       		.uleb128 0x3a
+ 3613 01d9 0B       		.uleb128 0xb
+ 3614 01da 3B       		.uleb128 0x3b
+ 3615 01db 0B       		.uleb128 0xb
+ 3616 01dc 00       		.byte	0
+ 3617 01dd 00       		.byte	0
+ 3618 01de 00       		.byte	0
+ 3619              		.section	.debug_loc,"",%progbits
+ 3620              	.Ldebug_loc0:
+ 3621              	.LLST0:
+ 3622 0000 00000000 		.4byte	.LVL0
+ 3623 0004 1D000000 		.4byte	.LVL9-1
+ 3624 0008 0100     		.2byte	0x1
+ 3625 000a 50       		.byte	0x50
+ 3626 000b 1D000000 		.4byte	.LVL9-1
+ 3627 000f 24000000 		.4byte	.LFE68
+ 3628 0013 0400     		.2byte	0x4
+ 3629 0015 F3       		.byte	0xf3
+ 3630 0016 01       		.uleb128 0x1
+ 3631 0017 50       		.byte	0x50
+ 3632 0018 9F       		.byte	0x9f
+ 3633 0019 00000000 		.4byte	0
+ 3634 001d 00000000 		.4byte	0
+ 3635              	.LLST1:
+ 3636 0021 00000000 		.4byte	.LVL0
+ 3637 0025 0E000000 		.4byte	.LVL5
+ 3638 0029 0100     		.2byte	0x1
+ 3639 002b 51       		.byte	0x51
+ 3640 002c 0E000000 		.4byte	.LVL5
+ 3641 0030 1D000000 		.4byte	.LVL9-1
+ 3642 0034 0100     		.2byte	0x1
+ 3643 0036 51       		.byte	0x51
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 75
+
+
+ 3644 0037 00000000 		.4byte	0
+ 3645 003b 00000000 		.4byte	0
+ 3646              	.LLST2:
+ 3647 003f 00000000 		.4byte	.LVL0
+ 3648 0043 1D000000 		.4byte	.LVL9-1
+ 3649 0047 0100     		.2byte	0x1
+ 3650 0049 52       		.byte	0x52
+ 3651 004a 1D000000 		.4byte	.LVL9-1
+ 3652 004e 24000000 		.4byte	.LFE68
+ 3653 0052 0400     		.2byte	0x4
+ 3654 0054 F3       		.byte	0xf3
+ 3655 0055 01       		.uleb128 0x1
+ 3656 0056 52       		.byte	0x52
+ 3657 0057 9F       		.byte	0x9f
+ 3658 0058 00000000 		.4byte	0
+ 3659 005c 00000000 		.4byte	0
+ 3660              	.LLST3:
+ 3661 0060 02000000 		.4byte	.LVL1
+ 3662 0064 08000000 		.4byte	.LVL3
+ 3663 0068 0200     		.2byte	0x2
+ 3664 006a 32       		.byte	0x32
+ 3665 006b 9F       		.byte	0x9f
+ 3666 006c 08000000 		.4byte	.LVL3
+ 3667 0070 18000000 		.4byte	.LVL8
+ 3668 0074 0100     		.2byte	0x1
+ 3669 0076 53       		.byte	0x53
+ 3670 0077 00000000 		.4byte	0
+ 3671 007b 00000000 		.4byte	0
+ 3672              	.LLST4:
+ 3673 007f 04000000 		.4byte	.LVL2
+ 3674 0083 0A000000 		.4byte	.LVL4
+ 3675 0087 0100     		.2byte	0x1
+ 3676 0089 54       		.byte	0x54
+ 3677 008a 12000000 		.4byte	.LVL7
+ 3678 008e 24000000 		.4byte	.LFE68
+ 3679 0092 0100     		.2byte	0x1
+ 3680 0094 54       		.byte	0x54
+ 3681 0095 00000000 		.4byte	0
+ 3682 0099 00000000 		.4byte	0
+ 3683              	.LLST5:
+ 3684 009d 00000000 		.4byte	.LVL11
+ 3685 00a1 0C000000 		.4byte	.LVL13
+ 3686 00a5 0100     		.2byte	0x1
+ 3687 00a7 50       		.byte	0x50
+ 3688 00a8 0C000000 		.4byte	.LVL13
+ 3689 00ac 0F000000 		.4byte	.LVL14-1
+ 3690 00b0 0100     		.2byte	0x1
+ 3691 00b2 51       		.byte	0x51
+ 3692 00b3 0F000000 		.4byte	.LVL14-1
+ 3693 00b7 A4000000 		.4byte	.LFE65
+ 3694 00bb 0600     		.2byte	0x6
+ 3695 00bd F3       		.byte	0xf3
+ 3696 00be 03       		.uleb128 0x3
+ 3697 00bf F5       		.byte	0xf5
+ 3698 00c0 00       		.uleb128 0
+ 3699 00c1 25       		.uleb128 0x25
+ 3700 00c2 9F       		.byte	0x9f
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 76
+
+
+ 3701 00c3 00000000 		.4byte	0
+ 3702 00c7 00000000 		.4byte	0
+ 3703              	.LLST6:
+ 3704 00cb 00000000 		.4byte	.LVL11
+ 3705 00cf 0A000000 		.4byte	.LVL12
+ 3706 00d3 0100     		.2byte	0x1
+ 3707 00d5 51       		.byte	0x51
+ 3708 00d6 0A000000 		.4byte	.LVL12
+ 3709 00da A4000000 		.4byte	.LFE65
+ 3710 00de 0400     		.2byte	0x4
+ 3711 00e0 F3       		.byte	0xf3
+ 3712 00e1 01       		.uleb128 0x1
+ 3713 00e2 51       		.byte	0x51
+ 3714 00e3 9F       		.byte	0x9f
+ 3715 00e4 00000000 		.4byte	0
+ 3716 00e8 00000000 		.4byte	0
+ 3717              	.LLST7:
+ 3718 00ec 26000000 		.4byte	.LVL18
+ 3719 00f0 2A000000 		.4byte	.LVL19
+ 3720 00f4 0100     		.2byte	0x1
+ 3721 00f6 50       		.byte	0x50
+ 3722 00f7 2A000000 		.4byte	.LVL19
+ 3723 00fb 94000000 		.4byte	.LVL39
+ 3724 00ff 0100     		.2byte	0x1
+ 3725 0101 58       		.byte	0x58
+ 3726 0102 00000000 		.4byte	0
+ 3727 0106 00000000 		.4byte	0
+ 3728              	.LLST8:
+ 3729 010a 52000000 		.4byte	.LVL26
+ 3730 010e 56000000 		.4byte	.LVL27
+ 3731 0112 0100     		.2byte	0x1
+ 3732 0114 50       		.byte	0x50
+ 3733 0115 56000000 		.4byte	.LVL27
+ 3734 0119 94000000 		.4byte	.LVL39
+ 3735 011d 0100     		.2byte	0x1
+ 3736 011f 56       		.byte	0x56
+ 3737 0120 00000000 		.4byte	0
+ 3738 0124 00000000 		.4byte	0
+ 3739              	.LLST9:
+ 3740 0128 68000000 		.4byte	.LVL31
+ 3741 012c 6C000000 		.4byte	.LVL32
+ 3742 0130 0100     		.2byte	0x1
+ 3743 0132 50       		.byte	0x50
+ 3744 0133 6C000000 		.4byte	.LVL32
+ 3745 0137 7A000000 		.4byte	.LVL35
+ 3746 013b 0100     		.2byte	0x1
+ 3747 013d 57       		.byte	0x57
+ 3748 013e 00000000 		.4byte	0
+ 3749 0142 00000000 		.4byte	0
+ 3750              	.LLST10:
+ 3751 0146 7A000000 		.4byte	.LVL35
+ 3752 014a 83000000 		.4byte	.LVL36-1
+ 3753 014e 0100     		.2byte	0x1
+ 3754 0150 50       		.byte	0x50
+ 3755 0151 83000000 		.4byte	.LVL36-1
+ 3756 0155 94000000 		.4byte	.LVL39
+ 3757 0159 0100     		.2byte	0x1
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 77
+
+
+ 3758 015b 57       		.byte	0x57
+ 3759 015c 00000000 		.4byte	0
+ 3760 0160 00000000 		.4byte	0
+ 3761              	.LLST11:
+ 3762 0164 12000000 		.4byte	.LVL15
+ 3763 0168 23000000 		.4byte	.LVL17-1
+ 3764 016c 0100     		.2byte	0x1
+ 3765 016e 50       		.byte	0x50
+ 3766 016f 23000000 		.4byte	.LVL17-1
+ 3767 0173 94000000 		.4byte	.LVL39
+ 3768 0177 0100     		.2byte	0x1
+ 3769 0179 55       		.byte	0x55
+ 3770 017a 00000000 		.4byte	0
+ 3771 017e 00000000 		.4byte	0
+ 3772              	.LLST12:
+ 3773 0182 1E000000 		.4byte	.LVL16
+ 3774 0186 42000000 		.4byte	.LVL23
+ 3775 018a 0100     		.2byte	0x1
+ 3776 018c 54       		.byte	0x54
+ 3777 018d 00000000 		.4byte	0
+ 3778 0191 00000000 		.4byte	0
+ 3779              	.LLST13:
+ 3780 0195 16000000 		.4byte	.LVL41
+ 3781 0199 24000000 		.4byte	.LVL44
+ 3782 019d 0100     		.2byte	0x1
+ 3783 019f 54       		.byte	0x54
+ 3784 01a0 26000000 		.4byte	.LVL45
+ 3785 01a4 50000000 		.4byte	.LVL52
+ 3786 01a8 0100     		.2byte	0x1
+ 3787 01aa 54       		.byte	0x54
+ 3788 01ab 00000000 		.4byte	0
+ 3789 01af 00000000 		.4byte	0
+ 3790              	.LLST14:
+ 3791 01b3 26000000 		.4byte	.LVL45
+ 3792 01b7 2C000000 		.4byte	.LVL46
+ 3793 01bb 0600     		.2byte	0x6
+ 3794 01bd 74       		.byte	0x74
+ 3795 01be 00       		.sleb128 0
+ 3796 01bf 08       		.byte	0x8
+ 3797 01c0 64       		.byte	0x64
+ 3798 01c1 1E       		.byte	0x1e
+ 3799 01c2 9F       		.byte	0x9f
+ 3800 01c3 2C000000 		.4byte	.LVL46
+ 3801 01c7 2F000000 		.4byte	.LVL47-1
+ 3802 01cb 0100     		.2byte	0x1
+ 3803 01cd 50       		.byte	0x50
+ 3804 01ce 2F000000 		.4byte	.LVL47-1
+ 3805 01d2 50000000 		.4byte	.LVL52
+ 3806 01d6 0600     		.2byte	0x6
+ 3807 01d8 74       		.byte	0x74
+ 3808 01d9 00       		.sleb128 0
+ 3809 01da 08       		.byte	0x8
+ 3810 01db 64       		.byte	0x64
+ 3811 01dc 1E       		.byte	0x1e
+ 3812 01dd 9F       		.byte	0x9f
+ 3813 01de 00000000 		.4byte	0
+ 3814 01e2 00000000 		.4byte	0
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 78
+
+
+ 3815              	.LLST15:
+ 3816 01e6 36000000 		.4byte	.LVL48
+ 3817 01ea 3B000000 		.4byte	.LVL49-1
+ 3818 01ee 0100     		.2byte	0x1
+ 3819 01f0 50       		.byte	0x50
+ 3820 01f1 00000000 		.4byte	0
+ 3821 01f5 00000000 		.4byte	0
+ 3822              	.LLST16:
+ 3823 01f9 50000000 		.4byte	.LVL52
+ 3824 01fd 58000000 		.4byte	.LVL54
+ 3825 0201 0100     		.2byte	0x1
+ 3826 0203 54       		.byte	0x54
+ 3827 0204 5E000000 		.4byte	.LVL55
+ 3828 0208 66000000 		.4byte	.LVL57
+ 3829 020c 0100     		.2byte	0x1
+ 3830 020e 54       		.byte	0x54
+ 3831 020f 00000000 		.4byte	0
+ 3832 0213 00000000 		.4byte	0
+ 3833              	.LLST17:
+ 3834 0217 C2000000 		.4byte	.LVL91
+ 3835 021b CD000000 		.4byte	.LVL92-1
+ 3836 021f 0100     		.2byte	0x1
+ 3837 0221 50       		.byte	0x50
+ 3838 0222 00000000 		.4byte	0
+ 3839 0226 00000000 		.4byte	0
+ 3840              	.LLST18:
+ 3841 022a 04000000 		.4byte	.LVL60
+ 3842 022e 82000000 		.4byte	.LVL86
+ 3843 0232 0200     		.2byte	0x2
+ 3844 0234 30       		.byte	0x30
+ 3845 0235 9F       		.byte	0x9f
+ 3846 0236 82000000 		.4byte	.LVL86
+ 3847 023a DE000000 		.4byte	.LVL94
+ 3848 023e 0100     		.2byte	0x1
+ 3849 0240 54       		.byte	0x54
+ 3850 0241 E0000000 		.4byte	.LVL95
+ 3851 0245 58010000 		.4byte	.LVL102
+ 3852 0249 0100     		.2byte	0x1
+ 3853 024b 54       		.byte	0x54
+ 3854 024c 5A010000 		.4byte	.LVL103
+ 3855 0250 6C010000 		.4byte	.LVL105
+ 3856 0254 0100     		.2byte	0x1
+ 3857 0256 54       		.byte	0x54
+ 3858 0257 AE010000 		.4byte	.LVL112
+ 3859 025b C0010000 		.4byte	.LVL114
+ 3860 025f 0100     		.2byte	0x1
+ 3861 0261 54       		.byte	0x54
+ 3862 0262 F0010000 		.4byte	.LVL119
+ 3863 0266 1A020000 		.4byte	.LVL125
+ 3864 026a 0100     		.2byte	0x1
+ 3865 026c 54       		.byte	0x54
+ 3866 026d 1C020000 		.4byte	.LVL126
+ 3867 0271 46020000 		.4byte	.LVL132
+ 3868 0275 0100     		.2byte	0x1
+ 3869 0277 54       		.byte	0x54
+ 3870 0278 48020000 		.4byte	.LVL133
+ 3871 027c 72020000 		.4byte	.LVL139
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 79
+
+
+ 3872 0280 0100     		.2byte	0x1
+ 3873 0282 54       		.byte	0x54
+ 3874 0283 D8020000 		.4byte	.LVL140
+ 3875 0287 DE020000 		.4byte	.LVL142
+ 3876 028b 0100     		.2byte	0x1
+ 3877 028d 54       		.byte	0x54
+ 3878 028e 52030000 		.4byte	.LVL155
+ 3879 0292 62030000 		.4byte	.LVL158
+ 3880 0296 0100     		.2byte	0x1
+ 3881 0298 54       		.byte	0x54
+ 3882 0299 86030000 		.4byte	.LVL166
+ 3883 029d B0030000 		.4byte	.LVL172
+ 3884 02a1 0100     		.2byte	0x1
+ 3885 02a3 54       		.byte	0x54
+ 3886 02a4 B2030000 		.4byte	.LVL173
+ 3887 02a8 DC030000 		.4byte	.LVL179
+ 3888 02ac 0100     		.2byte	0x1
+ 3889 02ae 54       		.byte	0x54
+ 3890 02af DE030000 		.4byte	.LVL180
+ 3891 02b3 08040000 		.4byte	.LVL186
+ 3892 02b7 0100     		.2byte	0x1
+ 3893 02b9 54       		.byte	0x54
+ 3894 02ba 0A040000 		.4byte	.LVL187
+ 3895 02be 38040000 		.4byte	.LVL194
+ 3896 02c2 0100     		.2byte	0x1
+ 3897 02c4 54       		.byte	0x54
+ 3898 02c5 3A040000 		.4byte	.LVL195
+ 3899 02c9 3C040000 		.4byte	.LVL196
+ 3900 02cd 0100     		.2byte	0x1
+ 3901 02cf 54       		.byte	0x54
+ 3902 02d0 64040000 		.4byte	.LVL199
+ 3903 02d4 76040000 		.4byte	.LVL203
+ 3904 02d8 0100     		.2byte	0x1
+ 3905 02da 54       		.byte	0x54
+ 3906 02db 78040000 		.4byte	.LVL204
+ 3907 02df 7A040000 		.4byte	.LVL205
+ 3908 02e3 0100     		.2byte	0x1
+ 3909 02e5 54       		.byte	0x54
+ 3910 02e6 7C040000 		.4byte	.LVL206
+ 3911 02ea 7E040000 		.4byte	.LVL207
+ 3912 02ee 0100     		.2byte	0x1
+ 3913 02f0 54       		.byte	0x54
+ 3914 02f1 80040000 		.4byte	.LVL208
+ 3915 02f5 98040000 		.4byte	.LVL212
+ 3916 02f9 0100     		.2byte	0x1
+ 3917 02fb 54       		.byte	0x54
+ 3918 02fc 98040000 		.4byte	.LVL212
+ 3919 0300 E0040000 		.4byte	.LFE69
+ 3920 0304 0200     		.2byte	0x2
+ 3921 0306 30       		.byte	0x30
+ 3922 0307 9F       		.byte	0x9f
+ 3923 0308 00000000 		.4byte	0
+ 3924 030c 00000000 		.4byte	0
+ 3925              	.LLST19:
+ 3926 0310 62030000 		.4byte	.LVL158
+ 3927 0314 68030000 		.4byte	.LVL159
+ 3928 0318 0100     		.2byte	0x1
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 80
+
+
+ 3929 031a 50       		.byte	0x50
+ 3930 031b 68030000 		.4byte	.LVL159
+ 3931 031f 84030000 		.4byte	.LVL165
+ 3932 0323 0100     		.2byte	0x1
+ 3933 0325 54       		.byte	0x54
+ 3934 0326 00000000 		.4byte	0
+ 3935 032a 00000000 		.4byte	0
+ 3936              		.section	.debug_aranges,"",%progbits
+ 3937 0000 44000000 		.4byte	0x44
+ 3938 0004 0200     		.2byte	0x2
+ 3939 0006 00000000 		.4byte	.Ldebug_info0
+ 3940 000a 04       		.byte	0x4
+ 3941 000b 00       		.byte	0
+ 3942 000c 0000     		.2byte	0
+ 3943 000e 0000     		.2byte	0
+ 3944 0010 00000000 		.4byte	.LFB64
+ 3945 0014 02000000 		.4byte	.LFE64-.LFB64
+ 3946 0018 00000000 		.4byte	.LFB68
+ 3947 001c 24000000 		.4byte	.LFE68-.LFB68
+ 3948 0020 00000000 		.4byte	.LFB65
+ 3949 0024 A4000000 		.4byte	.LFE65-.LFB65
+ 3950 0028 00000000 		.4byte	.LFB67
+ 3951 002c 7C000000 		.4byte	.LFE67-.LFB67
+ 3952 0030 00000000 		.4byte	.LFB66
+ 3953 0034 12000000 		.4byte	.LFE66-.LFB66
+ 3954 0038 00000000 		.4byte	.LFB69
+ 3955 003c E0040000 		.4byte	.LFE69-.LFB69
+ 3956 0040 00000000 		.4byte	0
+ 3957 0044 00000000 		.4byte	0
+ 3958              		.section	.debug_ranges,"",%progbits
+ 3959              	.Ldebug_ranges0:
+ 3960 0000 00000000 		.4byte	.LFB64
+ 3961 0004 02000000 		.4byte	.LFE64
+ 3962 0008 00000000 		.4byte	.LFB68
+ 3963 000c 24000000 		.4byte	.LFE68
+ 3964 0010 00000000 		.4byte	.LFB65
+ 3965 0014 A4000000 		.4byte	.LFE65
+ 3966 0018 00000000 		.4byte	.LFB67
+ 3967 001c 7C000000 		.4byte	.LFE67
+ 3968 0020 00000000 		.4byte	.LFB66
+ 3969 0024 12000000 		.4byte	.LFE66
+ 3970 0028 00000000 		.4byte	.LFB69
+ 3971 002c E0040000 		.4byte	.LFE69
+ 3972 0030 00000000 		.4byte	0
+ 3973 0034 00000000 		.4byte	0
+ 3974              		.section	.debug_line,"",%progbits
+ 3975              	.Ldebug_line0:
+ 3976 0000 6B040000 		.section	.debug_str,"MS",%progbits,1
+ 3976      0200F602 
+ 3976      00000201 
+ 3976      FB0E0D00 
+ 3976      01010101 
+ 3977              	.LASF42:
+ 3978 0000 6B695F73 		.ascii	"ki_servo\000"
+ 3978      6572766F 
+ 3978      00
+ 3979              	.LASF92:
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 81
+
+
+ 3980 0009 433A5C55 		.ascii	"C:\\Users\\ryant\\Documents\\Princeton\\!S20-21\\EL"
+ 3980      73657273 
+ 3980      5C727961 
+ 3980      6E745C44 
+ 3980      6F63756D 
+ 3981 0036 45333032 		.ascii	"E302\\current_code_repo\\carlab\\nav_control\\nav_c"
+ 3981      5C637572 
+ 3981      72656E74 
+ 3981      5F636F64 
+ 3981      655F7265 
+ 3982 0065 6F6E7472 		.ascii	"ontrol.cydsn\000"
+ 3982      6F6C2E63 
+ 3982      7964736E 
+ 3982      00
+ 3983              	.LASF50:
+ 3984 0072 54415247 		.ascii	"TARGET_SPEED\000"
+ 3984      45545F53 
+ 3984      50454544 
+ 3984      00
+ 3985              	.LASF84:
+ 3986 007f 58424545 		.ascii	"XBEE_PutString\000"
+ 3986      5F507574 
+ 3986      53747269 
+ 3986      6E6700
+ 3987              	.LASF37:
+ 3988 008e 6F757470 		.ascii	"outputBuf\000"
+ 3988      75744275 
+ 3988      6600
+ 3989              	.LASF39:
+ 3990 0098 6E657752 		.ascii	"newRunState\000"
+ 3990      756E5374 
+ 3990      61746500 
+ 3991              	.LASF74:
+ 3992 00a4 54687265 		.ascii	"Threshold_Comparator_Start\000"
+ 3992      73686F6C 
+ 3992      645F436F 
+ 3992      6D706172 
+ 3992      61746F72 
+ 3993              	.LASF3:
+ 3994 00bf 73686F72 		.ascii	"short int\000"
+ 3994      7420696E 
+ 3994      7400
+ 3995              	.LASF20:
+ 3996 00c9 72656164 		.ascii	"readBuf\000"
+ 3996      42756600 
+ 3997              	.LASF21:
+ 3998 00d1 62756649 		.ascii	"bufIndex\000"
+ 3998      6E646578 
+ 3998      00
+ 3999              	.LASF66:
+ 4000 00da 436F756E 		.ascii	"Counter_Start\000"
+ 4000      7465725F 
+ 4000      53746172 
+ 4000      7400
+ 4001              	.LASF75:
+ 4002 00e8 4C696E65 		.ascii	"Line_Timer_Start\000"
+ 4002      5F54696D 
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 82
+
+
+ 4002      65725F53 
+ 4002      74617274 
+ 4002      00
+ 4003              	.LASF67:
+ 4004 00f9 436F756E 		.ascii	"Counter_Interrupt_Start\000"
+ 4004      7465725F 
+ 4004      496E7465 
+ 4004      72727570 
+ 4004      745F5374 
+ 4005              	.LASF59:
+ 4006 0111 50574D5F 		.ascii	"PWM_Motor_WriteCompare\000"
+ 4006      4D6F746F 
+ 4006      725F5772 
+ 4006      69746543 
+ 4006      6F6D7061 
+ 4007              	.LASF7:
+ 4008 0128 6C6F6E67 		.ascii	"long long int\000"
+ 4008      206C6F6E 
+ 4008      6720696E 
+ 4008      7400
+ 4009              	.LASF69:
+ 4010 0136 565F5379 		.ascii	"V_Sync_Int_Start\000"
+ 4010      6E635F49 
+ 4010      6E745F53 
+ 4010      74617274 
+ 4010      00
+ 4011              	.LASF79:
+ 4012 0147 506F7263 		.ascii	"Porch_Int_SetVector\000"
+ 4012      685F496E 
+ 4012      745F5365 
+ 4012      74566563 
+ 4012      746F7200 
+ 4013              	.LASF52:
+ 4014 015b 70726576 		.ascii	"prev_i_term\000"
+ 4014      5F695F74 
+ 4014      65726D00 
+ 4015              	.LASF32:
+ 4016 0167 70776D5F 		.ascii	"pwm_value\000"
+ 4016      76616C75 
+ 4016      6500
+ 4017              	.LASF27:
+ 4018 0171 645F7465 		.ascii	"d_term\000"
+ 4018      726D00
+ 4019              	.LASF86:
+ 4020 0178 46726F6D 		.ascii	"From_Pi_Read\000"
+ 4020      5F50695F 
+ 4020      52656164 
+ 4020      00
+ 4021              	.LASF65:
+ 4022 0185 48616C6C 		.ascii	"Hall_Interrupt_SetVector\000"
+ 4022      5F496E74 
+ 4022      65727275 
+ 4022      70745F53 
+ 4022      65745665 
+ 4023              	.LASF51:
+ 4024 019e 70726576 		.ascii	"prev_error\000"
+ 4024      5F657272 
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 83
+
+
+ 4024      6F7200
+ 4025              	.LASF76:
+ 4026 01a9 4C696E65 		.ascii	"Line_Int_Start\000"
+ 4026      5F496E74 
+ 4026      5F537461 
+ 4026      727400
+ 4027              	.LASF13:
+ 4028 01b8 75696E74 		.ascii	"uint16\000"
+ 4028      313600
+ 4029              	.LASF22:
+ 4030 01bf 72656164 		.ascii	"readChar\000"
+ 4030      43686172 
+ 4030      00
+ 4031              	.LASF12:
+ 4032 01c8 75696E74 		.ascii	"uint8\000"
+ 4032      3800
+ 4033              	.LASF43:
+ 4034 01ce 6B645F73 		.ascii	"kd_servo\000"
+ 4034      6572766F 
+ 4034      00
+ 4035              	.LASF45:
+ 4036 01d7 70726576 		.ascii	"prev_i_term_servo\000"
+ 4036      5F695F74 
+ 4036      65726D5F 
+ 4036      73657276 
+ 4036      6F00
+ 4037              	.LASF0:
+ 4038 01e9 666C6F61 		.ascii	"float\000"
+ 4038      7400
+ 4039              	.LASF80:
+ 4040 01ef 476F5F41 		.ascii	"Go_Again_Int_Start\000"
+ 4040      6761696E 
+ 4040      5F496E74 
+ 4040      5F537461 
+ 4040      727400
+ 4041              	.LASF54:
+ 4042 0202 61726475 		.ascii	"arduinoRunState\000"
+ 4042      696E6F52 
+ 4042      756E5374 
+ 4042      61746500 
+ 4043              	.LASF36:
+ 4044 0212 61726475 		.ascii	"arduinoChar\000"
+ 4044      696E6F43 
+ 4044      68617200 
+ 4045              	.LASF72:
+ 4046 021e 485F5379 		.ascii	"H_Sync_Int_SetVector\000"
+ 4046      6E635F49 
+ 4046      6E745F53 
+ 4046      65745665 
+ 4046      63746F72 
+ 4047              	.LASF33:
+ 4048 0233 696E7465 		.ascii	"inter\000"
+ 4048      7200
+ 4049              	.LASF5:
+ 4050 0239 6C6F6E67 		.ascii	"long int\000"
+ 4050      20696E74 
+ 4050      00
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 84
+
+
+ 4051              	.LASF49:
+ 4052 0242 42414C4C 		.ascii	"BALLOON_STATE\000"
+ 4052      4F4F4E5F 
+ 4052      53544154 
+ 4052      4500
+ 4053              	.LASF71:
+ 4054 0250 485F5379 		.ascii	"H_Sync_Int_Start\000"
+ 4054      6E635F49 
+ 4054      6E745F53 
+ 4054      74617274 
+ 4054      00
+ 4055              	.LASF2:
+ 4056 0261 756E7369 		.ascii	"unsigned char\000"
+ 4056      676E6564 
+ 4056      20636861 
+ 4056      7200
+ 4057              	.LASF55:
+ 4058 026f 61746F66 		.ascii	"atof\000"
+ 4058      00
+ 4059              	.LASF53:
+ 4060 0274 70726576 		.ascii	"prevArduinoRunState\000"
+ 4060      41726475 
+ 4060      696E6F52 
+ 4060      756E5374 
+ 4060      61746500 
+ 4061              	.LASF63:
+ 4062 0288 4C43445F 		.ascii	"LCD_Start\000"
+ 4062      53746172 
+ 4062      7400
+ 4063              	.LASF46:
+ 4064 0292 53544545 		.ascii	"STEER_STATE\000"
+ 4064      525F5354 
+ 4064      41544500 
+ 4065              	.LASF35:
+ 4066 029e 72656164 		.ascii	"readChar_ard\000"
+ 4066      43686172 
+ 4066      5F617264 
+ 4066      00
+ 4067              	.LASF16:
+ 4068 02ab 6C6F6E67 		.ascii	"long double\000"
+ 4068      20646F75 
+ 4068      626C6500 
+ 4069              	.LASF47:
+ 4070 02b7 43454E54 		.ascii	"CENTER_ANGLE\000"
+ 4070      45525F41 
+ 4070      4E474C45 
+ 4070      00
+ 4071              	.LASF82:
+ 4072 02c4 53657276 		.ascii	"Servo_PWM_AngleCalc\000"
+ 4072      6F5F5057 
+ 4072      4D5F416E 
+ 4072      676C6543 
+ 4072      616C6300 
+ 4073              	.LASF89:
+ 4074 02d8 73707269 		.ascii	"sprintf\000"
+ 4074      6E746600 
+ 4075              	.LASF44:
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 85
+
+
+ 4076 02e0 70726576 		.ascii	"prev_error_servo\000"
+ 4076      5F657272 
+ 4076      6F725F73 
+ 4076      6572766F 
+ 4076      00
+ 4077              	.LASF1:
+ 4078 02f1 7369676E 		.ascii	"signed char\000"
+ 4078      65642063 
+ 4078      68617200 
+ 4079              	.LASF8:
+ 4080 02fd 6C6F6E67 		.ascii	"long long unsigned int\000"
+ 4080      206C6F6E 
+ 4080      6720756E 
+ 4080      7369676E 
+ 4080      65642069 
+ 4081              	.LASF56:
+ 4082 0314 436F756E 		.ascii	"Counter_ReadCapture\000"
+ 4082      7465725F 
+ 4082      52656164 
+ 4082      43617074 
+ 4082      75726500 
+ 4083              	.LASF9:
+ 4084 0328 756E7369 		.ascii	"unsigned int\000"
+ 4084      676E6564 
+ 4084      20696E74 
+ 4084      00
+ 4085              	.LASF85:
+ 4086 0335 4C43445F 		.ascii	"LCD_PrintString\000"
+ 4086      5072696E 
+ 4086      74537472 
+ 4086      696E6700 
+ 4087              	.LASF23:
+ 4088 0345 73706565 		.ascii	"speed\000"
+ 4088      6400
+ 4089              	.LASF64:
+ 4090 034b 48616C6C 		.ascii	"Hall_Interrupt_Start\000"
+ 4090      5F496E74 
+ 4090      65727275 
+ 4090      70745F53 
+ 4090      74617274 
+ 4091              	.LASF25:
+ 4092 0360 705F7465 		.ascii	"p_term\000"
+ 4092      726D00
+ 4093              	.LASF58:
+ 4094 0367 546F5F50 		.ascii	"To_Pi_Write\000"
+ 4094      695F5772 
+ 4094      69746500 
+ 4095              	.LASF4:
+ 4096 0373 73686F72 		.ascii	"short unsigned int\000"
+ 4096      7420756E 
+ 4096      7369676E 
+ 4096      65642069 
+ 4096      6E7400
+ 4097              	.LASF90:
+ 4098 0386 474E5520 		.ascii	"GNU C11 5.4.1 20160609 (release) [ARM/embedded-5-br"
+ 4098      43313120 
+ 4098      352E342E 
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 86
+
+
+ 4098      31203230 
+ 4098      31363036 
+ 4099 03b9 616E6368 		.ascii	"anch revision 237715] -mcpu=cortex-m3 -mthumb -g -O"
+ 4099      20726576 
+ 4099      6973696F 
+ 4099      6E203233 
+ 4099      37373135 
+ 4100 03ec 67202D66 		.ascii	"g -ffunction-sections -ffat-lto-objects\000"
+ 4100      66756E63 
+ 4100      74696F6E 
+ 4100      2D736563 
+ 4100      74696F6E 
+ 4101              	.LASF15:
+ 4102 0414 63686172 		.ascii	"char\000"
+ 4102      00
+ 4103              	.LASF30:
+ 4104 0419 656C6170 		.ascii	"elapsed_time_micro_s\000"
+ 4104      7365645F 
+ 4104      74696D65 
+ 4104      5F6D6963 
+ 4104      726F5F73 
+ 4105              	.LASF96:
+ 4106 042e 6D61696E 		.ascii	"main\000"
+ 4106      00
+ 4107              	.LASF26:
+ 4108 0433 695F7465 		.ascii	"i_term\000"
+ 4108      726D00
+ 4109              	.LASF11:
+ 4110 043a 696E7433 		.ascii	"int32_t\000"
+ 4110      325F7400 
+ 4111              	.LASF34:
+ 4112 0442 4C43445F 		.ascii	"LCD_Reset\000"
+ 4112      52657365 
+ 4112      7400
+ 4113              	.LASF94:
+ 4114 044c 5049445F 		.ascii	"PID_SetVal\000"
+ 4114      53657456 
+ 4114      616C00
+ 4115              	.LASF19:
+ 4116 0457 6E756D49 		.ascii	"numIndex\000"
+ 4116      6E646578 
+ 4116      00
+ 4117              	.LASF83:
+ 4118 0460 53657276 		.ascii	"Servo_PWM_WriteCompare\000"
+ 4118      6F5F5057 
+ 4118      4D5F5772 
+ 4118      69746543 
+ 4118      6F6D7061 
+ 4119              	.LASF81:
+ 4120 0477 476F5F41 		.ascii	"Go_Again_Int_SetVector\000"
+ 4120      6761696E 
+ 4120      5F496E74 
+ 4120      5F536574 
+ 4120      56656374 
+ 4121              	.LASF91:
+ 4122 048e 6D61696E 		.ascii	"main.c\000"
+ 4122      2E6300
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 87
+
+
+ 4123              	.LASF6:
+ 4124 0495 6C6F6E67 		.ascii	"long unsigned int\000"
+ 4124      20756E73 
+ 4124      69676E65 
+ 4124      6420696E 
+ 4124      7400
+ 4125              	.LASF57:
+ 4126 04a7 436F756E 		.ascii	"Counter_Reset_Write\000"
+ 4126      7465725F 
+ 4126      52657365 
+ 4126      745F5772 
+ 4126      69746500 
+ 4127              	.LASF14:
+ 4128 04bb 646F7562 		.ascii	"double\000"
+ 4128      6C6500
+ 4129              	.LASF88:
+ 4130 04c2 4C43445F 		.ascii	"LCD_PutChar\000"
+ 4130      50757443 
+ 4130      68617200 
+ 4131              	.LASF62:
+ 4132 04ce 58424545 		.ascii	"XBEE_Start\000"
+ 4132      5F537461 
+ 4132      727400
+ 4133              	.LASF68:
+ 4134 04d9 50574D5F 		.ascii	"PWM_Motor_Start\000"
+ 4134      4D6F746F 
+ 4134      725F5374 
+ 4134      61727400 
+ 4135              	.LASF70:
+ 4136 04e9 565F5379 		.ascii	"V_Sync_Int_SetVector\000"
+ 4136      6E635F49 
+ 4136      6E745F53 
+ 4136      65745665 
+ 4136      63746F72 
+ 4137              	.LASF24:
+ 4138 04fe 636F756E 		.ascii	"count\000"
+ 4138      7400
+ 4139              	.LASF41:
+ 4140 0504 6B705F73 		.ascii	"kp_servo\000"
+ 4140      6572766F 
+ 4140      00
+ 4141              	.LASF10:
+ 4142 050d 5F5F696E 		.ascii	"__int32_t\000"
+ 4142      7433325F 
+ 4142      7400
+ 4143              	.LASF31:
+ 4144 0517 656C6170 		.ascii	"elapsed_time_s\000"
+ 4144      7365645F 
+ 4144      74696D65 
+ 4144      5F7300
+ 4145              	.LASF18:
+ 4146 0526 6E756D42 		.ascii	"numBuf\000"
+ 4146      756600
+ 4147              	.LASF73:
+ 4148 052d 53657276 		.ascii	"Servo_PWM_Start\000"
+ 4148      6F5F5057 
+ 4148      4D5F5374 
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 88
+
+
+ 4148      61727400 
+ 4149              	.LASF77:
+ 4150 053d 4C696E65 		.ascii	"Line_Int_SetVector\000"
+ 4150      5F496E74 
+ 4150      5F536574 
+ 4150      56656374 
+ 4150      6F7200
+ 4151              	.LASF17:
+ 4152 0550 73697A65 		.ascii	"sizetype\000"
+ 4152      74797065 
+ 4152      00
+ 4153              	.LASF61:
+ 4154 0559 4C43445F 		.ascii	"LCD_Position\000"
+ 4154      506F7369 
+ 4154      74696F6E 
+ 4154      00
+ 4155              	.LASF38:
+ 4156 0566 616E676C 		.ascii	"angle\000"
+ 4156      6500
+ 4157              	.LASF28:
+ 4158 056c 6F757470 		.ascii	"output\000"
+ 4158      757400
+ 4159              	.LASF29:
+ 4160 0573 6572726F 		.ascii	"error\000"
+ 4160      7200
+ 4161              	.LASF93:
+ 4162 0579 476F5F41 		.ascii	"Go_Again_Int_ISR\000"
+ 4162      6761696E 
+ 4162      5F496E74 
+ 4162      5F495352 
+ 4162      00
+ 4163              	.LASF40:
+ 4164 058a 49544D5F 		.ascii	"ITM_RxBuffer\000"
+ 4164      52784275 
+ 4164      66666572 
+ 4164      00
+ 4165              	.LASF95:
+ 4166 0597 5049445F 		.ascii	"PID_Control\000"
+ 4166      436F6E74 
+ 4166      726F6C00 
+ 4167              	.LASF87:
+ 4168 05a3 58424545 		.ascii	"XBEE_GetChar\000"
+ 4168      5F476574 
+ 4168      43686172 
+ 4168      00
+ 4169              	.LASF60:
+ 4170 05b0 4C43445F 		.ascii	"LCD_WriteControl\000"
+ 4170      57726974 
+ 4170      65436F6E 
+ 4170      74726F6C 
+ 4170      00
+ 4171              	.LASF78:
+ 4172 05c1 506F7263 		.ascii	"Porch_Int_Start\000"
+ 4172      685F496E 
+ 4172      745F5374 
+ 4172      61727400 
+ 4173              	.LASF48:
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccrSC7uO.s 			page 89
+
+
+ 4174 05d1 52554E5F 		.ascii	"RUN_STATE\000"
+ 4174      53544154 
+ 4174      4500
+ 4175              		.ident	"GCC: (GNU Tools for ARM Embedded Processors) 5.4.1 20160609 (release) [ARM/embedded-5-bran

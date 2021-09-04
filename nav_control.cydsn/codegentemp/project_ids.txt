@@ -1,0 +1,6 @@
+C:\Users\ryant\Documents\Princeton\!S20-21\ELE302\current_code_repo\carlab\nav_control\nav_control.cydsn\nav_control.cyprj|9e49e5c7-e146-4c60-b893-9af219c4e290
+C:\Program Files (x86)\Cypress\PSoC Creator\4.2\PSoC Creator\psoc\content\default\CyAnnotationLibrary\CyAnnotationLibrary.cylib\CyAnnotationLibrary.cyprj|8487b46b-c278-427a-9711-80a2b8f6822f
+C:\Users\ryant\Documents\PSoC Creator\4.2\Downloads ( 4.2).cylib\Downloads ( 4.2).cyprj|c4243658-6c02-451e-a43b-622eddb6983f
+C:\Program Files (x86)\Cypress\PSoC Creator\4.2\PSoC Creator\psoc\content\cycomponentlibraryupdates\CyComponentLibraryUpdates.cylib\CyComponentLibraryUpdates.cyprj|25df4cce-f17a-45f3-bcd9-0e54f139f500
+C:\Program Files (x86)\Cypress\PSoC Creator\4.2\PSoC Creator\psoc\content\cycomponentlibrary\CyComponentLibrary.cylib\CyComponentLibrary.cyprj|f0a9049b-539f-439b-8881-798377868c79
+C:\Program Files (x86)\Cypress\PSoC Creator\4.2\PSoC Creator\psoc\content\cyprimitives\CyPrimitives.cylib\CyPrimitives.cyprj|66b46161-89da-4642-bae6-3983bd6fb09f

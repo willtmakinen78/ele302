@@ -1,0 +1,3917 @@
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 1
+
+
+   1              		.syntax unified
+   2              		.cpu cortex-m3
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 1
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.thumb
+  14              		.syntax unified
+  15              		.file	"main.c"
+  16              		.text
+  17              	.Ltext0:
+  18              		.cfi_sections	.debug_frame
+  19              		.global	__aeabi_d2f
+  20              		.section	.text.PID_SetVal,"ax",%progbits
+  21              		.align	2
+  22              		.thumb
+  23              		.thumb_func
+  24              		.type	PID_SetVal, %function
+  25              	PID_SetVal:
+  26              	.LFB68:
+  27              		.file 1 "main.c"
+   1:main.c        **** /* ========================================
+   2:main.c        ****  *
+   3:main.c        ****  * Copyright YOUR COMPANY, THE YEAR
+   4:main.c        ****  * All Rights Reserved
+   5:main.c        ****  * UNPUBLISHED, LICENSED SOFTWARE.
+   6:main.c        ****  *
+   7:main.c        ****  * CONFIDENTIAL AND PROPRIETARY INFORMATION
+   8:main.c        ****  * WHICH IS THE PROPERTY OF your company.
+   9:main.c        ****  *
+  10:main.c        ****  * ========================================
+  11:main.c        **** */
+  12:main.c        **** #include "project.h"
+  13:main.c        **** #include <stdio.h>
+  14:main.c        **** #include <stdlib.h>
+  15:main.c        **** #include <math.h>
+  16:main.c        **** #include <string.h>
+  17:main.c        **** 
+  18:main.c        **** #define BUF_SIZE 64
+  19:main.c        **** #define MICRO_S_PER_COUNT 100
+  20:main.c        **** #define CIRCUMFERENCE_FT 0.6477
+  21:main.c        **** #define MAGNETS_PER_REV 5.0
+  22:main.c        **** #define STOP_PWM 0
+  23:main.c        **** #define START_PWM 50
+  24:main.c        **** #define MAX_PWM 255
+  25:main.c        **** 
+  26:main.c        **** int RUN_STATE = 0;
+  27:main.c        **** float TARGET_SPEED = 4.9;
+  28:main.c        **** float kp = 95;
+  29:main.c        **** float ki = 20;
+  30:main.c        **** float kd = 0;
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 2
+
+
+  31:main.c        **** float prev_error = 0;
+  32:main.c        **** float prev_i_term = 0;
+  33:main.c        **** 
+  34:main.c        **** void PWM_Control(uint8 duty) {
+  35:main.c        ****     PWM_Motor_WriteCompare(duty);
+  36:main.c        **** }
+  37:main.c        **** 
+  38:main.c        **** uint8 PID_Control(float speed, uint16 count) {
+  39:main.c        ****         float p_term;
+  40:main.c        ****         float i_term;
+  41:main.c        ****         float d_term;
+  42:main.c        ****         float output;
+  43:main.c        ****         char outputBuf[16];
+  44:main.c        ****     
+  45:main.c        ****         float error = TARGET_SPEED - speed;
+  46:main.c        ****         
+  47:main.c        ****         uint16 dt = count * MICRO_S_PER_COUNT;
+  48:main.c        ****         
+  49:main.c        ****         p_term = kp * error;
+  50:main.c        ****     
+  51:main.c        ****         i_term =  ((ki/1000) * (prev_i_term + (error)*(dt)));
+  52:main.c        ****         
+  53:main.c        ****         d_term = kd * ((error - prev_error)/dt);
+  54:main.c        ****         
+  55:main.c        ****         
+  56:main.c        ****         sprintf(outputBuf, "P_term: %i ", (int)p_term);
+  57:main.c        ****         XBEE_PutString(outputBuf);
+  58:main.c        ****         sprintf(outputBuf, "I_term: %i ", (int)i_term);
+  59:main.c        ****         XBEE_PutString(outputBuf);
+  60:main.c        ****         sprintf(outputBuf, "D_term: %i \n\r", (int)d_term);
+  61:main.c        ****         XBEE_PutString(outputBuf);
+  62:main.c        ****         
+  63:main.c        ****         
+  64:main.c        ****         
+  65:main.c        ****         output = p_term + i_term + d_term;
+  66:main.c        ****         
+  67:main.c        ****         
+  68:main.c        ****         
+  69:main.c        ****         prev_error = error;
+  70:main.c        ****         prev_i_term = i_term;
+  71:main.c        ****         
+  72:main.c        ****         if (output > MAX_PWM) {
+  73:main.c        ****             output = MAX_PWM; 
+  74:main.c        ****         }
+  75:main.c        ****         
+  76:main.c        ****         return (uint8)output;
+  77:main.c        **** }
+  78:main.c        **** 
+  79:main.c        **** 
+  80:main.c        **** void LCD_Reset(void) {
+  81:main.c        ****     LCD_ClearDisplay();
+  82:main.c        ****     LCD_Position(0,0);
+  83:main.c        **** }
+  84:main.c        **** 
+  85:main.c        **** CY_ISR(inter) {
+  86:main.c        ****     uint16 count;
+  87:main.c        ****     int elapsed_time_micro_s;
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 3
+
+
+  88:main.c        ****     float elapsed_time_s; 
+  89:main.c        ****     char buf[64];
+  90:main.c        ****     float speed;
+  91:main.c        ****     uint8 pwm_value;
+  92:main.c        ****     
+  93:main.c        ****     /* Is program running? */
+  94:main.c        ****     if (RUN_STATE == 1) {
+  95:main.c        ****         
+  96:main.c        ****     /* Calculate pwm value */
+  97:main.c        ****     count = Counter_ReadCapture();
+  98:main.c        ****     count = 65535 - count;
+  99:main.c        ****     elapsed_time_micro_s = count * MICRO_S_PER_COUNT;
+ 100:main.c        ****     elapsed_time_s = (float) elapsed_time_micro_s / (float) 1e6;
+ 101:main.c        ****     speed = (float) CIRCUMFERENCE_FT / (elapsed_time_s * (float) MAGNETS_PER_REV);
+ 102:main.c        ****     pwm_value = PID_Control(speed, count);
+ 103:main.c        ****     
+ 104:main.c        ****     /*----Print to XBEE----*/
+ 105:main.c        ****     sprintf(buf, "Speed: %d\n\r", (int) (speed*1000.0));
+ 106:main.c        ****     XBEE_PutString(buf);
+ 107:main.c        ****     sprintf(buf, "PWM_VALUE: %d\n\r", pwm_value);
+ 108:main.c        ****     XBEE_PutString(buf);
+ 109:main.c        ****     /*---------------------*/
+ 110:main.c        ****     
+ 111:main.c        ****     
+ 112:main.c        ****     } else {
+ 113:main.c        ****         pwm_value = 0;
+ 114:main.c        ****     }
+ 115:main.c        ****     
+ 116:main.c        ****     /* Set PWM Value */
+ 117:main.c        ****     PWM_Control(pwm_value);
+ 118:main.c        ****     
+ 119:main.c        ****     Counter_Reset_Write(1);
+ 120:main.c        ****     Counter_Reset_Write(0);
+ 121:main.c        **** }
+ 122:main.c        **** 
+ 123:main.c        **** static float PID_SetVal(char numBuf[], int numIndex, char readBuf[]) {
+  28              		.loc 1 123 0
+  29              		.cfi_startproc
+  30              		@ args = 0, pretend = 0, frame = 0
+  31              		@ frame_needed = 0, uses_anonymous_args = 0
+  32              	.LVL0:
+  33 0000 10B5     		push	{r4, lr}
+  34              		.cfi_def_cfa_offset 8
+  35              		.cfi_offset 4, -8
+  36              		.cfi_offset 14, -4
+  37              	.LVL1:
+ 124:main.c        ****     
+ 125:main.c        ****     int bufIndex = 2;
+ 126:main.c        ****     char readChar = readBuf[bufIndex]; 
+  38              		.loc 1 126 0
+  39 0002 9478     		ldrb	r4, [r2, #2]	@ zero_extendqisi2
+  40              	.LVL2:
+ 125:main.c        ****     char readChar = readBuf[bufIndex]; 
+  41              		.loc 1 125 0
+  42 0004 0223     		movs	r3, #2
+ 127:main.c        ****     
+ 128:main.c        ****     while (readChar != '\r') {
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 4
+
+
+  43              		.loc 1 128 0
+  44 0006 04E0     		b	.L2
+  45              	.LVL3:
+  46              	.L3:
+ 129:main.c        ****         numBuf[numIndex] = readBuf[bufIndex];
+  47              		.loc 1 129 0
+  48 0008 D45C     		ldrb	r4, [r2, r3]	@ zero_extendqisi2
+  49              	.LVL4:
+  50 000a 4454     		strb	r4, [r0, r1]
+ 130:main.c        ****         numIndex++;
+  51              		.loc 1 130 0
+  52 000c 0131     		adds	r1, r1, #1
+  53              	.LVL5:
+ 131:main.c        ****         bufIndex++;
+  54              		.loc 1 131 0
+  55 000e 0133     		adds	r3, r3, #1
+  56              	.LVL6:
+ 132:main.c        ****         readChar = readBuf[bufIndex];
+  57              		.loc 1 132 0
+  58 0010 D45C     		ldrb	r4, [r2, r3]	@ zero_extendqisi2
+  59              	.LVL7:
+  60              	.L2:
+ 128:main.c        ****         numBuf[numIndex] = readBuf[bufIndex];
+  61              		.loc 1 128 0
+  62 0012 0D2C     		cmp	r4, #13
+  63 0014 F8D1     		bne	.L3
+ 133:main.c        ****     }
+ 134:main.c        **** 
+ 135:main.c        ****     numBuf[numIndex] = '\0';
+  64              		.loc 1 135 0
+  65 0016 0023     		movs	r3, #0
+  66              	.LVL8:
+  67 0018 4354     		strb	r3, [r0, r1]
+ 136:main.c        ****     
+ 137:main.c        ****     return atof(numBuf);
+  68              		.loc 1 137 0
+  69 001a FFF7FEFF 		bl	atof
+  70              	.LVL9:
+  71 001e FFF7FEFF 		bl	__aeabi_d2f
+  72              	.LVL10:
+ 138:main.c        **** }
+  73              		.loc 1 138 0
+  74 0022 10BD     		pop	{r4, pc}
+  75              		.cfi_endproc
+  76              	.LFE68:
+  77              		.size	PID_SetVal, .-PID_SetVal
+  78              		.section	.text.PWM_Control,"ax",%progbits
+  79              		.align	2
+  80              		.global	PWM_Control
+  81              		.thumb
+  82              		.thumb_func
+  83              		.type	PWM_Control, %function
+  84              	PWM_Control:
+  85              	.LFB64:
+  34:main.c        ****     PWM_Motor_WriteCompare(duty);
+  86              		.loc 1 34 0
+  87              		.cfi_startproc
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 5
+
+
+  88              		@ args = 0, pretend = 0, frame = 0
+  89              		@ frame_needed = 0, uses_anonymous_args = 0
+  90              	.LVL11:
+  91 0000 08B5     		push	{r3, lr}
+  92              		.cfi_def_cfa_offset 8
+  93              		.cfi_offset 3, -8
+  94              		.cfi_offset 14, -4
+  35:main.c        **** }
+  95              		.loc 1 35 0
+  96 0002 FFF7FEFF 		bl	PWM_Motor_WriteCompare
+  97              	.LVL12:
+  98 0006 08BD     		pop	{r3, pc}
+  99              		.cfi_endproc
+ 100              	.LFE64:
+ 101              		.size	PWM_Control, .-PWM_Control
+ 102              		.global	__aeabi_fsub
+ 103              		.global	__aeabi_fmul
+ 104              		.global	__aeabi_fdiv
+ 105              		.global	__aeabi_i2f
+ 106              		.global	__aeabi_fadd
+ 107              		.global	__aeabi_f2iz
+ 108              		.global	__aeabi_fcmpgt
+ 109              		.global	__aeabi_f2uiz
+ 110              		.section	.text.PID_Control,"ax",%progbits
+ 111              		.align	2
+ 112              		.global	PID_Control
+ 113              		.thumb
+ 114              		.thumb_func
+ 115              		.type	PID_Control, %function
+ 116              	PID_Control:
+ 117              	.LFB65:
+  38:main.c        ****         float p_term;
+ 118              		.loc 1 38 0
+ 119              		.cfi_startproc
+ 120              		@ args = 0, pretend = 0, frame = 16
+ 121              		@ frame_needed = 0, uses_anonymous_args = 0
+ 122              	.LVL13:
+ 123 0000 2DE9F041 		push	{r4, r5, r6, r7, r8, lr}
+ 124              		.cfi_def_cfa_offset 24
+ 125              		.cfi_offset 4, -24
+ 126              		.cfi_offset 5, -20
+ 127              		.cfi_offset 6, -16
+ 128              		.cfi_offset 7, -12
+ 129              		.cfi_offset 8, -8
+ 130              		.cfi_offset 14, -4
+ 131 0004 84B0     		sub	sp, sp, #16
+ 132              		.cfi_def_cfa_offset 40
+ 133 0006 0C46     		mov	r4, r1
+  45:main.c        ****         
+ 134              		.loc 1 45 0
+ 135 0008 344D     		ldr	r5, .L11
+ 136 000a 0146     		mov	r1, r0
+ 137              	.LVL14:
+ 138 000c 2868     		ldr	r0, [r5]	@ float
+ 139              	.LVL15:
+ 140 000e FFF7FEFF 		bl	__aeabi_fsub
+ 141              	.LVL16:
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 6
+
+
+ 142 0012 0646     		mov	r6, r0
+ 143              	.LVL17:
+  47:main.c        ****         
+ 144              		.loc 1 47 0
+ 145 0014 04EB8404 		add	r4, r4, r4, lsl #2
+ 146 0018 04EB8404 		add	r4, r4, r4, lsl #2
+ 147 001c A300     		lsls	r3, r4, #2
+ 148 001e 9CB2     		uxth	r4, r3
+ 149              	.LVL18:
+  49:main.c        ****     
+ 150              		.loc 1 49 0
+ 151 0020 6968     		ldr	r1, [r5, #4]	@ float
+ 152 0022 FFF7FEFF 		bl	__aeabi_fmul
+ 153              	.LVL19:
+ 154 0026 8046     		mov	r8, r0
+ 155              	.LVL20:
+  51:main.c        ****         
+ 156              		.loc 1 51 0
+ 157 0028 2D49     		ldr	r1, .L11+4
+ 158 002a A868     		ldr	r0, [r5, #8]	@ float
+ 159              	.LVL21:
+ 160 002c FFF7FEFF 		bl	__aeabi_fdiv
+ 161              	.LVL22:
+ 162 0030 0546     		mov	r5, r0
+ 163 0032 2046     		mov	r0, r4
+ 164 0034 FFF7FEFF 		bl	__aeabi_i2f
+ 165              	.LVL23:
+ 166 0038 0746     		mov	r7, r0
+ 167 003a 0146     		mov	r1, r0
+ 168 003c 3046     		mov	r0, r6
+ 169 003e FFF7FEFF 		bl	__aeabi_fmul
+ 170              	.LVL24:
+ 171 0042 284C     		ldr	r4, .L11+8
+ 172              	.LVL25:
+ 173 0044 2168     		ldr	r1, [r4]	@ float
+ 174 0046 FFF7FEFF 		bl	__aeabi_fadd
+ 175              	.LVL26:
+ 176 004a 0146     		mov	r1, r0
+ 177 004c 2846     		mov	r0, r5
+ 178 004e FFF7FEFF 		bl	__aeabi_fmul
+ 179              	.LVL27:
+ 180 0052 0546     		mov	r5, r0
+ 181              	.LVL28:
+  53:main.c        ****         
+ 182              		.loc 1 53 0
+ 183 0054 6168     		ldr	r1, [r4, #4]	@ float
+ 184 0056 3046     		mov	r0, r6
+ 185              	.LVL29:
+ 186 0058 FFF7FEFF 		bl	__aeabi_fsub
+ 187              	.LVL30:
+ 188 005c 3946     		mov	r1, r7
+ 189 005e FFF7FEFF 		bl	__aeabi_fdiv
+ 190              	.LVL31:
+ 191 0062 A168     		ldr	r1, [r4, #8]	@ float
+ 192 0064 FFF7FEFF 		bl	__aeabi_fmul
+ 193              	.LVL32:
+ 194 0068 0746     		mov	r7, r0
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 7
+
+
+ 195              	.LVL33:
+  56:main.c        ****         XBEE_PutString(outputBuf);
+ 196              		.loc 1 56 0
+ 197 006a 4046     		mov	r0, r8
+ 198              	.LVL34:
+ 199 006c FFF7FEFF 		bl	__aeabi_f2iz
+ 200              	.LVL35:
+ 201 0070 0246     		mov	r2, r0
+ 202 0072 1D49     		ldr	r1, .L11+12
+ 203 0074 6846     		mov	r0, sp
+ 204 0076 FFF7FEFF 		bl	sprintf
+ 205              	.LVL36:
+  57:main.c        ****         sprintf(outputBuf, "I_term: %i ", (int)i_term);
+ 206              		.loc 1 57 0
+ 207 007a 6846     		mov	r0, sp
+ 208 007c FFF7FEFF 		bl	XBEE_PutString
+ 209              	.LVL37:
+  58:main.c        ****         XBEE_PutString(outputBuf);
+ 210              		.loc 1 58 0
+ 211 0080 2846     		mov	r0, r5
+ 212 0082 FFF7FEFF 		bl	__aeabi_f2iz
+ 213              	.LVL38:
+ 214 0086 0246     		mov	r2, r0
+ 215 0088 1849     		ldr	r1, .L11+16
+ 216 008a 6846     		mov	r0, sp
+ 217 008c FFF7FEFF 		bl	sprintf
+ 218              	.LVL39:
+  59:main.c        ****         sprintf(outputBuf, "D_term: %i \n\r", (int)d_term);
+ 219              		.loc 1 59 0
+ 220 0090 6846     		mov	r0, sp
+ 221 0092 FFF7FEFF 		bl	XBEE_PutString
+ 222              	.LVL40:
+  60:main.c        ****         XBEE_PutString(outputBuf);
+ 223              		.loc 1 60 0
+ 224 0096 3846     		mov	r0, r7
+ 225 0098 FFF7FEFF 		bl	__aeabi_f2iz
+ 226              	.LVL41:
+ 227 009c 0246     		mov	r2, r0
+ 228 009e 1449     		ldr	r1, .L11+20
+ 229 00a0 6846     		mov	r0, sp
+ 230 00a2 FFF7FEFF 		bl	sprintf
+ 231              	.LVL42:
+  61:main.c        ****         
+ 232              		.loc 1 61 0
+ 233 00a6 6846     		mov	r0, sp
+ 234 00a8 FFF7FEFF 		bl	XBEE_PutString
+ 235              	.LVL43:
+  65:main.c        ****         
+ 236              		.loc 1 65 0
+ 237 00ac 2946     		mov	r1, r5
+ 238 00ae 4046     		mov	r0, r8
+ 239 00b0 FFF7FEFF 		bl	__aeabi_fadd
+ 240              	.LVL44:
+ 241 00b4 0146     		mov	r1, r0
+ 242 00b6 3846     		mov	r0, r7
+ 243 00b8 FFF7FEFF 		bl	__aeabi_fadd
+ 244              	.LVL45:
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 8
+
+
+ 245 00bc 0746     		mov	r7, r0
+ 246              	.LVL46:
+  69:main.c        ****         prev_i_term = i_term;
+ 247              		.loc 1 69 0
+ 248 00be 6660     		str	r6, [r4, #4]	@ float
+  70:main.c        ****         
+ 249              		.loc 1 70 0
+ 250 00c0 2560     		str	r5, [r4]	@ float
+  72:main.c        ****             output = MAX_PWM; 
+ 251              		.loc 1 72 0
+ 252 00c2 0C49     		ldr	r1, .L11+24
+ 253 00c4 FFF7FEFF 		bl	__aeabi_fcmpgt
+ 254              	.LVL47:
+ 255 00c8 00B1     		cbz	r0, .L8
+  73:main.c        ****         }
+ 256              		.loc 1 73 0
+ 257 00ca 0A4F     		ldr	r7, .L11+24
+ 258              	.LVL48:
+ 259              	.L8:
+  76:main.c        **** }
+ 260              		.loc 1 76 0
+ 261 00cc 3846     		mov	r0, r7
+ 262 00ce FFF7FEFF 		bl	__aeabi_f2uiz
+ 263              	.LVL49:
+  77:main.c        **** 
+ 264              		.loc 1 77 0
+ 265 00d2 C0B2     		uxtb	r0, r0
+ 266 00d4 04B0     		add	sp, sp, #16
+ 267              		.cfi_def_cfa_offset 24
+ 268              		@ sp needed
+ 269 00d6 BDE8F081 		pop	{r4, r5, r6, r7, r8, pc}
+ 270              	.LVL50:
+ 271              	.L12:
+ 272 00da 00BF     		.align	2
+ 273              	.L11:
+ 274 00dc 00000000 		.word	.LANCHOR0
+ 275 00e0 00007A44 		.word	1148846080
+ 276 00e4 00000000 		.word	.LANCHOR1
+ 277 00e8 00000000 		.word	.LC0
+ 278 00ec 0C000000 		.word	.LC1
+ 279 00f0 18000000 		.word	.LC2
+ 280 00f4 00007F43 		.word	1132396544
+ 281              		.cfi_endproc
+ 282              	.LFE65:
+ 283              		.size	PID_Control, .-PID_Control
+ 284              		.global	__aeabi_f2d
+ 285              		.global	__aeabi_dmul
+ 286              		.global	__aeabi_d2iz
+ 287              		.section	.text.inter,"ax",%progbits
+ 288              		.align	2
+ 289              		.global	inter
+ 290              		.thumb
+ 291              		.thumb_func
+ 292              		.type	inter, %function
+ 293              	inter:
+ 294              	.LFB67:
+  85:main.c        ****     uint16 count;
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 9
+
+
+ 295              		.loc 1 85 0
+ 296              		.cfi_startproc
+ 297              		@ args = 0, pretend = 0, frame = 64
+ 298              		@ frame_needed = 0, uses_anonymous_args = 0
+ 299 0000 30B5     		push	{r4, r5, lr}
+ 300              		.cfi_def_cfa_offset 12
+ 301              		.cfi_offset 4, -12
+ 302              		.cfi_offset 5, -8
+ 303              		.cfi_offset 14, -4
+ 304 0002 91B0     		sub	sp, sp, #68
+ 305              		.cfi_def_cfa_offset 80
+  94:main.c        ****         
+ 306              		.loc 1 94 0
+ 307 0004 204B     		ldr	r3, .L17
+ 308 0006 DB68     		ldr	r3, [r3, #12]
+ 309 0008 012B     		cmp	r3, #1
+ 310 000a 31D1     		bne	.L15
+  97:main.c        ****     count = 65535 - count;
+ 311              		.loc 1 97 0
+ 312 000c FFF7FEFF 		bl	Counter_ReadCapture
+ 313              	.LVL51:
+  98:main.c        ****     elapsed_time_micro_s = count * MICRO_S_PER_COUNT;
+ 314              		.loc 1 98 0
+ 315 0010 C043     		mvns	r0, r0
+ 316              	.LVL52:
+ 317 0012 84B2     		uxth	r4, r0
+ 318              	.LVL53:
+ 100:main.c        ****     speed = (float) CIRCUMFERENCE_FT / (elapsed_time_s * (float) MAGNETS_PER_REV);
+ 319              		.loc 1 100 0
+ 320 0014 6420     		movs	r0, #100
+ 321 0016 00FB04F0 		mul	r0, r0, r4
+ 322              	.LVL54:
+ 323 001a FFF7FEFF 		bl	__aeabi_i2f
+ 324              	.LVL55:
+ 325 001e 1B49     		ldr	r1, .L17+4
+ 326 0020 FFF7FEFF 		bl	__aeabi_fdiv
+ 327              	.LVL56:
+ 101:main.c        ****     pwm_value = PID_Control(speed, count);
+ 328              		.loc 1 101 0
+ 329 0024 1A49     		ldr	r1, .L17+8
+ 330 0026 FFF7FEFF 		bl	__aeabi_fmul
+ 331              	.LVL57:
+ 332 002a 0146     		mov	r1, r0
+ 333 002c 1948     		ldr	r0, .L17+12
+ 334 002e FFF7FEFF 		bl	__aeabi_fdiv
+ 335              	.LVL58:
+ 336 0032 0546     		mov	r5, r0
+ 337              	.LVL59:
+ 102:main.c        ****     
+ 338              		.loc 1 102 0
+ 339 0034 2146     		mov	r1, r4
+ 340 0036 FFF7FEFF 		bl	PID_Control
+ 341              	.LVL60:
+ 342 003a 0446     		mov	r4, r0
+ 343              	.LVL61:
+ 105:main.c        ****     XBEE_PutString(buf);
+ 344              		.loc 1 105 0
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 10
+
+
+ 345 003c 2846     		mov	r0, r5
+ 346 003e FFF7FEFF 		bl	__aeabi_f2d
+ 347              	.LVL62:
+ 348 0042 0022     		movs	r2, #0
+ 349 0044 144B     		ldr	r3, .L17+16
+ 350 0046 FFF7FEFF 		bl	__aeabi_dmul
+ 351              	.LVL63:
+ 352 004a FFF7FEFF 		bl	__aeabi_d2iz
+ 353              	.LVL64:
+ 354 004e 0246     		mov	r2, r0
+ 355 0050 1249     		ldr	r1, .L17+20
+ 356 0052 6846     		mov	r0, sp
+ 357 0054 FFF7FEFF 		bl	sprintf
+ 358              	.LVL65:
+ 106:main.c        ****     sprintf(buf, "PWM_VALUE: %d\n\r", pwm_value);
+ 359              		.loc 1 106 0
+ 360 0058 6846     		mov	r0, sp
+ 361 005a FFF7FEFF 		bl	XBEE_PutString
+ 362              	.LVL66:
+ 107:main.c        ****     XBEE_PutString(buf);
+ 363              		.loc 1 107 0
+ 364 005e 2246     		mov	r2, r4
+ 365 0060 0F49     		ldr	r1, .L17+24
+ 366 0062 6846     		mov	r0, sp
+ 367 0064 FFF7FEFF 		bl	sprintf
+ 368              	.LVL67:
+ 108:main.c        ****     /*---------------------*/
+ 369              		.loc 1 108 0
+ 370 0068 6846     		mov	r0, sp
+ 371 006a FFF7FEFF 		bl	XBEE_PutString
+ 372              	.LVL68:
+ 373 006e 00E0     		b	.L14
+ 374              	.LVL69:
+ 375              	.L15:
+ 113:main.c        ****     }
+ 376              		.loc 1 113 0
+ 377 0070 0024     		movs	r4, #0
+ 378              	.L14:
+ 379              	.LVL70:
+ 117:main.c        ****     
+ 380              		.loc 1 117 0
+ 381 0072 2046     		mov	r0, r4
+ 382 0074 FFF7FEFF 		bl	PWM_Control
+ 383              	.LVL71:
+ 119:main.c        ****     Counter_Reset_Write(0);
+ 384              		.loc 1 119 0
+ 385 0078 0120     		movs	r0, #1
+ 386 007a FFF7FEFF 		bl	Counter_Reset_Write
+ 387              	.LVL72:
+ 120:main.c        **** }
+ 388              		.loc 1 120 0
+ 389 007e 0020     		movs	r0, #0
+ 390 0080 FFF7FEFF 		bl	Counter_Reset_Write
+ 391              	.LVL73:
+ 121:main.c        **** 
+ 392              		.loc 1 121 0
+ 393 0084 11B0     		add	sp, sp, #68
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 11
+
+
+ 394              		.cfi_def_cfa_offset 12
+ 395              		@ sp needed
+ 396 0086 30BD     		pop	{r4, r5, pc}
+ 397              	.LVL74:
+ 398              	.L18:
+ 399              		.align	2
+ 400              	.L17:
+ 401 0088 00000000 		.word	.LANCHOR1
+ 402 008c 00247449 		.word	1232348160
+ 403 0090 0000A040 		.word	1084227584
+ 404 0094 ABCF253F 		.word	1059442603
+ 405 0098 00408F40 		.word	1083129856
+ 406 009c 28000000 		.word	.LC3
+ 407 00a0 34000000 		.word	.LC4
+ 408              		.cfi_endproc
+ 409              	.LFE67:
+ 410              		.size	inter, .-inter
+ 411              		.section	.text.LCD_Reset,"ax",%progbits
+ 412              		.align	2
+ 413              		.global	LCD_Reset
+ 414              		.thumb
+ 415              		.thumb_func
+ 416              		.type	LCD_Reset, %function
+ 417              	LCD_Reset:
+ 418              	.LFB66:
+  80:main.c        ****     LCD_ClearDisplay();
+ 419              		.loc 1 80 0
+ 420              		.cfi_startproc
+ 421              		@ args = 0, pretend = 0, frame = 0
+ 422              		@ frame_needed = 0, uses_anonymous_args = 0
+ 423 0000 08B5     		push	{r3, lr}
+ 424              		.cfi_def_cfa_offset 8
+ 425              		.cfi_offset 3, -8
+ 426              		.cfi_offset 14, -4
+  81:main.c        ****     LCD_Position(0,0);
+ 427              		.loc 1 81 0
+ 428 0002 0120     		movs	r0, #1
+ 429 0004 FFF7FEFF 		bl	LCD_WriteControl
+ 430              	.LVL75:
+  82:main.c        **** }
+ 431              		.loc 1 82 0
+ 432 0008 0021     		movs	r1, #0
+ 433 000a 0846     		mov	r0, r1
+ 434 000c FFF7FEFF 		bl	LCD_Position
+ 435              	.LVL76:
+ 436 0010 08BD     		pop	{r3, pc}
+ 437              		.cfi_endproc
+ 438              	.LFE66:
+ 439              		.size	LCD_Reset, .-LCD_Reset
+ 440 0012 00BF     		.section	.text.main,"ax",%progbits
+ 441              		.align	2
+ 442              		.global	main
+ 443              		.thumb
+ 444              		.thumb_func
+ 445              		.type	main, %function
+ 446              	main:
+ 447              	.LFB69:
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 12
+
+
+ 139:main.c        **** 
+ 140:main.c        **** int main(void)
+ 141:main.c        **** {
+ 448              		.loc 1 141 0
+ 449              		.cfi_startproc
+ 450              		@ args = 0, pretend = 0, frame = 192
+ 451              		@ frame_needed = 0, uses_anonymous_args = 0
+ 452 0000 70B5     		push	{r4, r5, r6, lr}
+ 453              		.cfi_def_cfa_offset 16
+ 454              		.cfi_offset 4, -16
+ 455              		.cfi_offset 5, -12
+ 456              		.cfi_offset 6, -8
+ 457              		.cfi_offset 14, -4
+ 458 0002 B2B0     		sub	sp, sp, #200
+ 459              		.cfi_def_cfa_offset 216
+ 460              	.LVL77:
+ 142:main.c        ****     // Local variable declarations
+ 143:main.c        ****     uint8 readChar;
+ 144:main.c        ****     char readBuf[BUF_SIZE];
+ 145:main.c        ****     char outputBuf[BUF_SIZE];
+ 146:main.c        ****     uint8 bufIndex = 0;
+ 147:main.c        ****     int numIndex = 0;
+ 148:main.c        ****     char numBuf[BUF_SIZE];
+ 149:main.c        ****     
+ 150:main.c        ****     // Start Components
+ 151:main.c        ****     CyGlobalIntEnable; 
+ 461              		.loc 1 151 0
+ 462              		.syntax unified
+ 463              	@ 151 "main.c" 1
+ 464 0004 62B6     		CPSIE   i
+ 465              	@ 0 "" 2
+ 152:main.c        ****     XBEE_Start();
+ 466              		.loc 1 152 0
+ 467              		.thumb
+ 468              		.syntax unified
+ 469 0006 FFF7FEFF 		bl	XBEE_Start
+ 470              	.LVL78:
+ 153:main.c        ****     LCD_Start();
+ 471              		.loc 1 153 0
+ 472 000a FFF7FEFF 		bl	LCD_Start
+ 473              	.LVL79:
+ 154:main.c        ****     Hall_Interrupt_Start();
+ 474              		.loc 1 154 0
+ 475 000e FFF7FEFF 		bl	Hall_Interrupt_Start
+ 476              	.LVL80:
+ 155:main.c        ****     Hall_Interrupt_SetVector(inter);
+ 477              		.loc 1 155 0
+ 478 0012 8048     		ldr	r0, .L38
+ 479 0014 FFF7FEFF 		bl	Hall_Interrupt_SetVector
+ 480              	.LVL81:
+ 156:main.c        ****     Counter_Start();
+ 481              		.loc 1 156 0
+ 482 0018 FFF7FEFF 		bl	Counter_Start
+ 483              	.LVL82:
+ 157:main.c        ****     Counter_Interrupt_Start();
+ 484              		.loc 1 157 0
+ 485 001c FFF7FEFF 		bl	Counter_Interrupt_Start
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 13
+
+
+ 486              	.LVL83:
+ 158:main.c        ****     PWM_Motor_Start();
+ 487              		.loc 1 158 0
+ 488 0020 FFF7FEFF 		bl	PWM_Motor_Start
+ 489              	.LVL84:
+ 159:main.c        ****     
+ 160:main.c        ****     
+ 161:main.c        ****     XBEE_PutString("Connection success\n\r");
+ 490              		.loc 1 161 0
+ 491 0024 7C48     		ldr	r0, .L38+4
+ 492 0026 FFF7FEFF 		bl	XBEE_PutString
+ 493              	.LVL85:
+ 162:main.c        ****     LCD_PrintString("Initialized.");
+ 494              		.loc 1 162 0
+ 495 002a 7C48     		ldr	r0, .L38+8
+ 496 002c FFF7FEFF 		bl	LCD_PrintString
+ 497              	.LVL86:
+ 498              	.L33:
+ 141:main.c        ****     // Local variable declarations
+ 499              		.loc 1 141 0
+ 500 0030 0024     		movs	r4, #0
+ 501              	.LVL87:
+ 502              	.L32:
+ 163:main.c        ****     
+ 164:main.c        ****     
+ 165:main.c        ****     for(;;)
+ 166:main.c        ****     {
+ 167:main.c        ****         readChar = XBEE_GetChar();
+ 503              		.loc 1 167 0
+ 504 0032 FFF7FEFF 		bl	XBEE_GetChar
+ 505              	.LVL88:
+ 168:main.c        **** 
+ 169:main.c        ****         
+ 170:main.c        ****         /*------------------Input Reading------------------*/
+ 171:main.c        ****         /* Read a char */
+ 172:main.c        ****         if (readChar > 0u) {
+ 506              		.loc 1 172 0
+ 507 0036 0546     		mov	r5, r0
+ 508 0038 0028     		cmp	r0, #0
+ 509 003a 00F0DE80 		beq	.L22
+ 173:main.c        ****             LCD_Reset();
+ 510              		.loc 1 173 0
+ 511 003e FFF7FEFF 		bl	LCD_Reset
+ 512              	.LVL89:
+ 174:main.c        ****             LCD_PutChar(readChar);
+ 513              		.loc 1 174 0
+ 514 0042 2846     		mov	r0, r5
+ 515 0044 FFF7FEFF 		bl	LCD_PutChar
+ 516              	.LVL90:
+ 175:main.c        ****             readBuf[bufIndex] = readChar;
+ 517              		.loc 1 175 0
+ 518 0048 32AB     		add	r3, sp, #200
+ 519 004a 2344     		add	r3, r3, r4
+ 520 004c 03F8405C 		strb	r5, [r3, #-64]
+ 176:main.c        ****             bufIndex++;
+ 521              		.loc 1 176 0
+ 522 0050 0134     		adds	r4, r4, #1
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 14
+
+
+ 523              	.LVL91:
+ 524 0052 E4B2     		uxtb	r4, r4
+ 525              	.LVL92:
+ 177:main.c        ****             
+ 178:main.c        ****             /* Handle ENTER pressed */
+ 179:main.c        ****             if (readChar == '\r') {
+ 526              		.loc 1 179 0
+ 527 0054 0D2D     		cmp	r5, #13
+ 528 0056 40F0D080 		bne	.L22
+ 180:main.c        ****                 LCD_Reset();
+ 529              		.loc 1 180 0
+ 530 005a FFF7FEFF 		bl	LCD_Reset
+ 531              	.LVL93:
+ 181:main.c        ****                 LCD_PrintString("Value entered");
+ 532              		.loc 1 181 0
+ 533 005e 7048     		ldr	r0, .L38+12
+ 534 0060 FFF7FEFF 		bl	LCD_PrintString
+ 535              	.LVL94:
+ 182:main.c        ****                    
+ 183:main.c        ****                 switch (readBuf[0]) {
+ 536              		.loc 1 183 0
+ 537 0064 9DF88830 		ldrb	r3, [sp, #136]	@ zero_extendqisi2
+ 538 0068 643B     		subs	r3, r3, #100
+ 539 006a 102B     		cmp	r3, #16
+ 540 006c 00F2B980 		bhi	.L23
+ 541 0070 DFE803F0 		tbb	[pc, r3]
+ 542              	.L25:
+ 543 0074 7F       		.byte	(.L24-.L25)/2
+ 544 0075 B7       		.byte	(.L23-.L25)/2
+ 545 0076 B7       		.byte	(.L23-.L25)/2
+ 546 0077 21       		.byte	(.L26-.L25)/2
+ 547 0078 B7       		.byte	(.L23-.L25)/2
+ 548 0079 69       		.byte	(.L27-.L25)/2
+ 549 007a B7       		.byte	(.L23-.L25)/2
+ 550 007b 95       		.byte	(.L28-.L25)/2
+ 551 007c B7       		.byte	(.L23-.L25)/2
+ 552 007d B7       		.byte	(.L23-.L25)/2
+ 553 007e B7       		.byte	(.L23-.L25)/2
+ 554 007f B7       		.byte	(.L23-.L25)/2
+ 555 0080 53       		.byte	(.L29-.L25)/2
+ 556 0081 B7       		.byte	(.L23-.L25)/2
+ 557 0082 B7       		.byte	(.L23-.L25)/2
+ 558 0083 3C       		.byte	(.L30-.L25)/2
+ 559 0084 09       		.byte	(.L31-.L25)/2
+ 560 0085 00       		.p2align 1
+ 561              	.L31:
+ 184:main.c        ****                     
+ 185:main.c        ****                     case 't':
+ 186:main.c        ****                         if (RUN_STATE == 0) {
+ 562              		.loc 1 186 0
+ 563 0086 674B     		ldr	r3, .L38+16
+ 564 0088 DB68     		ldr	r3, [r3, #12]
+ 565 008a 002B     		cmp	r3, #0
+ 566 008c 40F0B080 		bne	.L34
+ 187:main.c        ****                             TARGET_SPEED = PID_SetVal(numBuf, numIndex, readBuf);
+ 567              		.loc 1 187 0
+ 568 0090 22AA     		add	r2, sp, #136
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 15
+
+
+ 569 0092 0021     		movs	r1, #0
+ 570 0094 02A8     		add	r0, sp, #8
+ 571 0096 FFF7FEFF 		bl	PID_SetVal
+ 572              	.LVL95:
+ 573 009a 634B     		ldr	r3, .L38+20
+ 574 009c 1860     		str	r0, [r3]	@ float
+ 188:main.c        ****                             sprintf(outputBuf, "Target speed set to %i\n\r", (int)TARGET_SPEED);
+ 575              		.loc 1 188 0
+ 576 009e FFF7FEFF 		bl	__aeabi_f2iz
+ 577              	.LVL96:
+ 578 00a2 0246     		mov	r2, r0
+ 579 00a4 6149     		ldr	r1, .L38+24
+ 580 00a6 12A8     		add	r0, sp, #72
+ 581 00a8 FFF7FEFF 		bl	sprintf
+ 582              	.LVL97:
+ 189:main.c        ****                             XBEE_PutString(outputBuf);
+ 583              		.loc 1 189 0
+ 584 00ac 12A8     		add	r0, sp, #72
+ 585 00ae FFF7FEFF 		bl	XBEE_PutString
+ 586              	.LVL98:
+ 190:main.c        ****                         }
+ 191:main.c        ****                         break;
+ 192:main.c        ****                    
+ 193:main.c        ****                     case 'g': 
+ 194:main.c        ****                         if (RUN_STATE == 0) {
+ 195:main.c        ****                             RUN_STATE = 1;
+ 196:main.c        ****                             LCD_Reset();
+ 197:main.c        ****                             LCD_PrintString("----GO----");
+ 198:main.c        ****                             XBEE_PutString("----GO----\n\r");
+ 199:main.c        ****                             PWM_Control(START_PWM);
+ 200:main.c        ****                             Counter_Reset_Write(1);
+ 201:main.c        ****                             Counter_Reset_Write(0);
+ 202:main.c        ****                         }
+ 203:main.c        ****                         break;
+ 204:main.c        ****                         
+ 205:main.c        ****                     case 's':
+ 206:main.c        ****                         if (RUN_STATE == 1) {
+ 207:main.c        ****                             RUN_STATE = 0;
+ 208:main.c        ****                             LCD_Reset();
+ 209:main.c        ****                             LCD_PrintString("----STOP----");
+ 210:main.c        ****                             PWM_Control(STOP_PWM);
+ 211:main.c        ****                             XBEE_PutString("----STOP----\n\r");
+ 212:main.c        ****                             prev_error = 0;
+ 213:main.c        ****                             prev_i_term = 0;
+ 214:main.c        ****                         }
+ 215:main.c        ****                         break;
+ 216:main.c        ****                         
+ 217:main.c        ****                     case 'p':
+ 218:main.c        ****                         LCD_Reset();
+ 219:main.c        ****                         kp = PID_SetVal(numBuf, numIndex,readBuf);
+ 220:main.c        ****                         sprintf(outputBuf, "kp=%s\n\r", numBuf);
+ 221:main.c        ****                         XBEE_PutString(outputBuf);
+ 222:main.c        ****                         LCD_PrintString(outputBuf);
+ 223:main.c        ****                         break;
+ 224:main.c        ****                        
+ 225:main.c        ****                     case 'i': 
+ 226:main.c        ****                         LCD_Reset();
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 16
+
+
+ 227:main.c        ****                         ki = PID_SetVal(numBuf, numIndex,readBuf);
+ 228:main.c        ****                         sprintf(outputBuf, "ki=%s\n\r", numBuf);
+ 229:main.c        ****                         XBEE_PutString(outputBuf);
+ 230:main.c        ****                         LCD_PrintString(outputBuf);
+ 231:main.c        ****                         break;
+ 232:main.c        ****                     
+ 233:main.c        ****                     case 'd': 
+ 234:main.c        ****                         LCD_Reset();
+ 235:main.c        ****                         kd = PID_SetVal(numBuf, numIndex,readBuf);
+ 236:main.c        ****                         sprintf(outputBuf, "kd=%s\n\r", numBuf);
+ 237:main.c        ****                         XBEE_PutString(outputBuf);
+ 238:main.c        ****                         LCD_PrintString(outputBuf);
+ 239:main.c        ****                         break;
+ 240:main.c        ****                         
+ 241:main.c        ****                     case 'k':
+ 242:main.c        ****                         LCD_Reset();
+ 243:main.c        ****                         sprintf(outputBuf, "kp=%i\n\rki=%i\n\rkd=%i\n\rtarget_speed=%i\n\r", (int)k
+ 244:main.c        ****                         XBEE_PutString(outputBuf);
+ 245:main.c        ****                         LCD_PrintString(outputBuf);
+ 246:main.c        ****                         break;
+ 247:main.c        ****                        
+ 248:main.c        ****                     default:
+ 249:main.c        ****                         LCD_Reset();
+ 250:main.c        ****                         LCD_PrintString("Invalid input.\n\r");
+ 251:main.c        ****                         break;
+ 252:main.c        ****                         
+ 253:main.c        ****                 }
+ 254:main.c        ****                 bufIndex = 0;
+ 587              		.loc 1 254 0
+ 588 00b2 0024     		movs	r4, #0
+ 589              	.LVL99:
+ 590 00b4 A1E0     		b	.L22
+ 591              	.LVL100:
+ 592              	.L26:
+ 194:main.c        ****                             RUN_STATE = 1;
+ 593              		.loc 1 194 0
+ 594 00b6 5B4B     		ldr	r3, .L38+16
+ 595 00b8 DB68     		ldr	r3, [r3, #12]
+ 596 00ba 002B     		cmp	r3, #0
+ 597 00bc 40F09A80 		bne	.L35
+ 195:main.c        ****                             LCD_Reset();
+ 598              		.loc 1 195 0
+ 599 00c0 0124     		movs	r4, #1
+ 600              	.LVL101:
+ 601 00c2 584B     		ldr	r3, .L38+16
+ 602 00c4 DC60     		str	r4, [r3, #12]
+ 196:main.c        ****                             LCD_PrintString("----GO----");
+ 603              		.loc 1 196 0
+ 604 00c6 FFF7FEFF 		bl	LCD_Reset
+ 605              	.LVL102:
+ 197:main.c        ****                             XBEE_PutString("----GO----\n\r");
+ 606              		.loc 1 197 0
+ 607 00ca 5948     		ldr	r0, .L38+28
+ 608 00cc FFF7FEFF 		bl	LCD_PrintString
+ 609              	.LVL103:
+ 198:main.c        ****                             PWM_Control(START_PWM);
+ 610              		.loc 1 198 0
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 17
+
+
+ 611 00d0 5848     		ldr	r0, .L38+32
+ 612 00d2 FFF7FEFF 		bl	XBEE_PutString
+ 613              	.LVL104:
+ 199:main.c        ****                             Counter_Reset_Write(1);
+ 614              		.loc 1 199 0
+ 615 00d6 3220     		movs	r0, #50
+ 616 00d8 FFF7FEFF 		bl	PWM_Control
+ 617              	.LVL105:
+ 200:main.c        ****                             Counter_Reset_Write(0);
+ 618              		.loc 1 200 0
+ 619 00dc 2046     		mov	r0, r4
+ 620 00de FFF7FEFF 		bl	Counter_Reset_Write
+ 621              	.LVL106:
+ 201:main.c        ****                         }
+ 622              		.loc 1 201 0
+ 623 00e2 0020     		movs	r0, #0
+ 624 00e4 FFF7FEFF 		bl	Counter_Reset_Write
+ 625              	.LVL107:
+ 626              		.loc 1 254 0
+ 627 00e8 0024     		movs	r4, #0
+ 628 00ea 86E0     		b	.L22
+ 629              	.LVL108:
+ 630              	.L30:
+ 206:main.c        ****                             RUN_STATE = 0;
+ 631              		.loc 1 206 0
+ 632 00ec 4D4B     		ldr	r3, .L38+16
+ 633 00ee DB68     		ldr	r3, [r3, #12]
+ 634 00f0 012B     		cmp	r3, #1
+ 635 00f2 40F08180 		bne	.L36
+ 207:main.c        ****                             LCD_Reset();
+ 636              		.loc 1 207 0
+ 637 00f6 4B4D     		ldr	r5, .L38+16
+ 638 00f8 0024     		movs	r4, #0
+ 639              	.LVL109:
+ 640 00fa EC60     		str	r4, [r5, #12]
+ 208:main.c        ****                             LCD_PrintString("----STOP----");
+ 641              		.loc 1 208 0
+ 642 00fc FFF7FEFF 		bl	LCD_Reset
+ 643              	.LVL110:
+ 209:main.c        ****                             PWM_Control(STOP_PWM);
+ 644              		.loc 1 209 0
+ 645 0100 4D48     		ldr	r0, .L38+36
+ 646 0102 FFF7FEFF 		bl	LCD_PrintString
+ 647              	.LVL111:
+ 210:main.c        ****                             XBEE_PutString("----STOP----\n\r");
+ 648              		.loc 1 210 0
+ 649 0106 2046     		mov	r0, r4
+ 650 0108 FFF7FEFF 		bl	PWM_Control
+ 651              	.LVL112:
+ 211:main.c        ****                             prev_error = 0;
+ 652              		.loc 1 211 0
+ 653 010c 4B48     		ldr	r0, .L38+40
+ 654 010e FFF7FEFF 		bl	XBEE_PutString
+ 655              	.LVL113:
+ 212:main.c        ****                             prev_i_term = 0;
+ 656              		.loc 1 212 0
+ 657 0112 0023     		movs	r3, #0
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 18
+
+
+ 658 0114 6B60     		str	r3, [r5, #4]	@ float
+ 213:main.c        ****                         }
+ 659              		.loc 1 213 0
+ 660 0116 2B60     		str	r3, [r5]	@ float
+ 661 0118 6FE0     		b	.L22
+ 662              	.LVL114:
+ 663              	.L29:
+ 218:main.c        ****                         kp = PID_SetVal(numBuf, numIndex,readBuf);
+ 664              		.loc 1 218 0
+ 665 011a FFF7FEFF 		bl	LCD_Reset
+ 666              	.LVL115:
+ 219:main.c        ****                         sprintf(outputBuf, "kp=%s\n\r", numBuf);
+ 667              		.loc 1 219 0
+ 668 011e 22AA     		add	r2, sp, #136
+ 669 0120 0021     		movs	r1, #0
+ 670 0122 02A8     		add	r0, sp, #8
+ 671 0124 FFF7FEFF 		bl	PID_SetVal
+ 672              	.LVL116:
+ 673 0128 3F4B     		ldr	r3, .L38+20
+ 674 012a 5860     		str	r0, [r3, #4]	@ float
+ 220:main.c        ****                         XBEE_PutString(outputBuf);
+ 675              		.loc 1 220 0
+ 676 012c 02AA     		add	r2, sp, #8
+ 677 012e 4449     		ldr	r1, .L38+44
+ 678 0130 12A8     		add	r0, sp, #72
+ 679 0132 FFF7FEFF 		bl	sprintf
+ 680              	.LVL117:
+ 221:main.c        ****                         LCD_PrintString(outputBuf);
+ 681              		.loc 1 221 0
+ 682 0136 12A8     		add	r0, sp, #72
+ 683 0138 FFF7FEFF 		bl	XBEE_PutString
+ 684              	.LVL118:
+ 222:main.c        ****                         break;
+ 685              		.loc 1 222 0
+ 686 013c 12A8     		add	r0, sp, #72
+ 687 013e FFF7FEFF 		bl	LCD_PrintString
+ 688              	.LVL119:
+ 689              		.loc 1 254 0
+ 690 0142 0024     		movs	r4, #0
+ 691              	.LVL120:
+ 223:main.c        ****                        
+ 692              		.loc 1 223 0
+ 693 0144 59E0     		b	.L22
+ 694              	.LVL121:
+ 695              	.L27:
+ 226:main.c        ****                         ki = PID_SetVal(numBuf, numIndex,readBuf);
+ 696              		.loc 1 226 0
+ 697 0146 FFF7FEFF 		bl	LCD_Reset
+ 698              	.LVL122:
+ 227:main.c        ****                         sprintf(outputBuf, "ki=%s\n\r", numBuf);
+ 699              		.loc 1 227 0
+ 700 014a 22AA     		add	r2, sp, #136
+ 701 014c 0021     		movs	r1, #0
+ 702 014e 02A8     		add	r0, sp, #8
+ 703 0150 FFF7FEFF 		bl	PID_SetVal
+ 704              	.LVL123:
+ 705 0154 344B     		ldr	r3, .L38+20
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 19
+
+
+ 706 0156 9860     		str	r0, [r3, #8]	@ float
+ 228:main.c        ****                         XBEE_PutString(outputBuf);
+ 707              		.loc 1 228 0
+ 708 0158 02AA     		add	r2, sp, #8
+ 709 015a 3A49     		ldr	r1, .L38+48
+ 710 015c 12A8     		add	r0, sp, #72
+ 711 015e FFF7FEFF 		bl	sprintf
+ 712              	.LVL124:
+ 229:main.c        ****                         LCD_PrintString(outputBuf);
+ 713              		.loc 1 229 0
+ 714 0162 12A8     		add	r0, sp, #72
+ 715 0164 FFF7FEFF 		bl	XBEE_PutString
+ 716              	.LVL125:
+ 230:main.c        ****                         break;
+ 717              		.loc 1 230 0
+ 718 0168 12A8     		add	r0, sp, #72
+ 719 016a FFF7FEFF 		bl	LCD_PrintString
+ 720              	.LVL126:
+ 721              		.loc 1 254 0
+ 722 016e 0024     		movs	r4, #0
+ 723              	.LVL127:
+ 231:main.c        ****                     
+ 724              		.loc 1 231 0
+ 725 0170 43E0     		b	.L22
+ 726              	.LVL128:
+ 727              	.L24:
+ 234:main.c        ****                         kd = PID_SetVal(numBuf, numIndex,readBuf);
+ 728              		.loc 1 234 0
+ 729 0172 FFF7FEFF 		bl	LCD_Reset
+ 730              	.LVL129:
+ 235:main.c        ****                         sprintf(outputBuf, "kd=%s\n\r", numBuf);
+ 731              		.loc 1 235 0
+ 732 0176 22AA     		add	r2, sp, #136
+ 733 0178 0021     		movs	r1, #0
+ 734 017a 02A8     		add	r0, sp, #8
+ 735 017c FFF7FEFF 		bl	PID_SetVal
+ 736              	.LVL130:
+ 737 0180 284B     		ldr	r3, .L38+16
+ 738 0182 9860     		str	r0, [r3, #8]	@ float
+ 236:main.c        ****                         XBEE_PutString(outputBuf);
+ 739              		.loc 1 236 0
+ 740 0184 02AA     		add	r2, sp, #8
+ 741 0186 3049     		ldr	r1, .L38+52
+ 742 0188 12A8     		add	r0, sp, #72
+ 743 018a FFF7FEFF 		bl	sprintf
+ 744              	.LVL131:
+ 237:main.c        ****                         LCD_PrintString(outputBuf);
+ 745              		.loc 1 237 0
+ 746 018e 12A8     		add	r0, sp, #72
+ 747 0190 FFF7FEFF 		bl	XBEE_PutString
+ 748              	.LVL132:
+ 238:main.c        ****                         break;
+ 749              		.loc 1 238 0
+ 750 0194 12A8     		add	r0, sp, #72
+ 751 0196 FFF7FEFF 		bl	LCD_PrintString
+ 752              	.LVL133:
+ 753              		.loc 1 254 0
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 20
+
+
+ 754 019a 0024     		movs	r4, #0
+ 755              	.LVL134:
+ 239:main.c        ****                         
+ 756              		.loc 1 239 0
+ 757 019c 2DE0     		b	.L22
+ 758              	.LVL135:
+ 759              	.L28:
+ 242:main.c        ****                         sprintf(outputBuf, "kp=%i\n\rki=%i\n\rkd=%i\n\rtarget_speed=%i\n\r", (int)k
+ 760              		.loc 1 242 0
+ 761 019e FFF7FEFF 		bl	LCD_Reset
+ 762              	.LVL136:
+ 243:main.c        ****                         XBEE_PutString(outputBuf);
+ 763              		.loc 1 243 0
+ 764 01a2 214C     		ldr	r4, .L38+20
+ 765              	.LVL137:
+ 766 01a4 A068     		ldr	r0, [r4, #8]	@ float
+ 767 01a6 FFF7FEFF 		bl	__aeabi_f2iz
+ 768              	.LVL138:
+ 769 01aa 0646     		mov	r6, r0
+ 770 01ac 6068     		ldr	r0, [r4, #4]	@ float
+ 771 01ae FFF7FEFF 		bl	__aeabi_f2iz
+ 772              	.LVL139:
+ 773 01b2 0546     		mov	r5, r0
+ 774 01b4 2068     		ldr	r0, [r4]	@ float
+ 775 01b6 FFF7FEFF 		bl	__aeabi_f2iz
+ 776              	.LVL140:
+ 777 01ba 0190     		str	r0, [sp, #4]
+ 778 01bc 194B     		ldr	r3, .L38+16
+ 779 01be 9868     		ldr	r0, [r3, #8]	@ float
+ 780 01c0 FFF7FEFF 		bl	__aeabi_f2iz
+ 781              	.LVL141:
+ 782 01c4 0090     		str	r0, [sp]
+ 783 01c6 3346     		mov	r3, r6
+ 784 01c8 2A46     		mov	r2, r5
+ 785 01ca 2049     		ldr	r1, .L38+56
+ 786 01cc 12A8     		add	r0, sp, #72
+ 787 01ce FFF7FEFF 		bl	sprintf
+ 788              	.LVL142:
+ 244:main.c        ****                         LCD_PrintString(outputBuf);
+ 789              		.loc 1 244 0
+ 790 01d2 12A8     		add	r0, sp, #72
+ 791 01d4 FFF7FEFF 		bl	XBEE_PutString
+ 792              	.LVL143:
+ 245:main.c        ****                         break;
+ 793              		.loc 1 245 0
+ 794 01d8 12A8     		add	r0, sp, #72
+ 795 01da FFF7FEFF 		bl	LCD_PrintString
+ 796              	.LVL144:
+ 797              		.loc 1 254 0
+ 798 01de 0024     		movs	r4, #0
+ 246:main.c        ****                        
+ 799              		.loc 1 246 0
+ 800 01e0 0BE0     		b	.L22
+ 801              	.LVL145:
+ 802              	.L23:
+ 249:main.c        ****                         LCD_PrintString("Invalid input.\n\r");
+ 803              		.loc 1 249 0
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 21
+
+
+ 804 01e2 FFF7FEFF 		bl	LCD_Reset
+ 805              	.LVL146:
+ 250:main.c        ****                         break;
+ 806              		.loc 1 250 0
+ 807 01e6 1A48     		ldr	r0, .L38+60
+ 808 01e8 FFF7FEFF 		bl	LCD_PrintString
+ 809              	.LVL147:
+ 810              		.loc 1 254 0
+ 811 01ec 0024     		movs	r4, #0
+ 812              	.LVL148:
+ 251:main.c        ****                         
+ 813              		.loc 1 251 0
+ 814 01ee 04E0     		b	.L22
+ 815              	.LVL149:
+ 816              	.L34:
+ 817              		.loc 1 254 0
+ 818 01f0 0024     		movs	r4, #0
+ 819              	.LVL150:
+ 820 01f2 02E0     		b	.L22
+ 821              	.LVL151:
+ 822              	.L35:
+ 823 01f4 0024     		movs	r4, #0
+ 824              	.LVL152:
+ 825 01f6 00E0     		b	.L22
+ 826              	.LVL153:
+ 827              	.L36:
+ 828 01f8 0024     		movs	r4, #0
+ 829              	.LVL154:
+ 830              	.L22:
+ 255:main.c        ****             }
+ 256:main.c        ****             
+ 257:main.c        ****         }
+ 258:main.c        ****         
+ 259:main.c        ****         /* Clear the BUF */
+ 260:main.c        ****         if (bufIndex == BUF_SIZE) {
+ 831              		.loc 1 260 0
+ 832 01fa 402C     		cmp	r4, #64
+ 833 01fc 7FF419AF 		bne	.L32
+ 261:main.c        ****             LCD_Reset();
+ 834              		.loc 1 261 0
+ 835 0200 FFF7FEFF 		bl	LCD_Reset
+ 836              	.LVL155:
+ 262:main.c        ****             XBEE_PutString(readBuf);
+ 837              		.loc 1 262 0
+ 838 0204 22A8     		add	r0, sp, #136
+ 839 0206 FFF7FEFF 		bl	XBEE_PutString
+ 840              	.LVL156:
+ 263:main.c        ****             LCD_PrintString(readBuf);
+ 841              		.loc 1 263 0
+ 842 020a 22A8     		add	r0, sp, #136
+ 843 020c FFF7FEFF 		bl	LCD_PrintString
+ 844              	.LVL157:
+ 845 0210 0EE7     		b	.L33
+ 846              	.L39:
+ 847 0212 00BF     		.align	2
+ 848              	.L38:
+ 849 0214 00000000 		.word	inter
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 22
+
+
+ 850 0218 44000000 		.word	.LC5
+ 851 021c 5C000000 		.word	.LC6
+ 852 0220 6C000000 		.word	.LC7
+ 853 0224 00000000 		.word	.LANCHOR1
+ 854 0228 00000000 		.word	.LANCHOR0
+ 855 022c 7C000000 		.word	.LC8
+ 856 0230 98000000 		.word	.LC9
+ 857 0234 A4000000 		.word	.LC10
+ 858 0238 B4000000 		.word	.LC11
+ 859 023c C4000000 		.word	.LC12
+ 860 0240 D4000000 		.word	.LC13
+ 861 0244 DC000000 		.word	.LC14
+ 862 0248 E4000000 		.word	.LC15
+ 863 024c EC000000 		.word	.LC16
+ 864 0250 14010000 		.word	.LC17
+ 865              		.cfi_endproc
+ 866              	.LFE69:
+ 867              		.size	main, .-main
+ 868              		.global	prev_i_term
+ 869              		.global	prev_error
+ 870              		.global	kd
+ 871              		.global	ki
+ 872              		.global	kp
+ 873              		.global	TARGET_SPEED
+ 874              		.global	RUN_STATE
+ 875              		.data
+ 876              		.align	2
+ 877              		.set	.LANCHOR0,. + 0
+ 878              		.type	TARGET_SPEED, %object
+ 879              		.size	TARGET_SPEED, 4
+ 880              	TARGET_SPEED:
+ 881 0000 CDCC9C40 		.word	1084017869
+ 882              		.type	kp, %object
+ 883              		.size	kp, 4
+ 884              	kp:
+ 885 0004 0000BE42 		.word	1119748096
+ 886              		.type	ki, %object
+ 887              		.size	ki, 4
+ 888              	ki:
+ 889 0008 0000A041 		.word	1101004800
+ 890              		.section	.rodata.str1.4,"aMS",%progbits,1
+ 891              		.align	2
+ 892              	.LC0:
+ 893 0000 505F7465 		.ascii	"P_term: %i \000"
+ 893      726D3A20 
+ 893      25692000 
+ 894              	.LC1:
+ 895 000c 495F7465 		.ascii	"I_term: %i \000"
+ 895      726D3A20 
+ 895      25692000 
+ 896              	.LC2:
+ 897 0018 445F7465 		.ascii	"D_term: %i \012\015\000"
+ 897      726D3A20 
+ 897      2569200A 
+ 897      0D00
+ 898 0026 0000     		.space	2
+ 899              	.LC3:
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 23
+
+
+ 900 0028 53706565 		.ascii	"Speed: %d\012\015\000"
+ 900      643A2025 
+ 900      640A0D00 
+ 901              	.LC4:
+ 902 0034 50574D5F 		.ascii	"PWM_VALUE: %d\012\015\000"
+ 902      56414C55 
+ 902      453A2025 
+ 902      640A0D00 
+ 903              	.LC5:
+ 904 0044 436F6E6E 		.ascii	"Connection success\012\015\000"
+ 904      65637469 
+ 904      6F6E2073 
+ 904      75636365 
+ 904      73730A0D 
+ 905 0059 000000   		.space	3
+ 906              	.LC6:
+ 907 005c 496E6974 		.ascii	"Initialized.\000"
+ 907      69616C69 
+ 907      7A65642E 
+ 907      00
+ 908 0069 000000   		.space	3
+ 909              	.LC7:
+ 910 006c 56616C75 		.ascii	"Value entered\000"
+ 910      6520656E 
+ 910      74657265 
+ 910      6400
+ 911 007a 0000     		.space	2
+ 912              	.LC8:
+ 913 007c 54617267 		.ascii	"Target speed set to %i\012\015\000"
+ 913      65742073 
+ 913      70656564 
+ 913      20736574 
+ 913      20746F20 
+ 914 0095 000000   		.space	3
+ 915              	.LC9:
+ 916 0098 2D2D2D2D 		.ascii	"----GO----\000"
+ 916      474F2D2D 
+ 916      2D2D00
+ 917 00a3 00       		.space	1
+ 918              	.LC10:
+ 919 00a4 2D2D2D2D 		.ascii	"----GO----\012\015\000"
+ 919      474F2D2D 
+ 919      2D2D0A0D 
+ 919      00
+ 920 00b1 000000   		.space	3
+ 921              	.LC11:
+ 922 00b4 2D2D2D2D 		.ascii	"----STOP----\000"
+ 922      53544F50 
+ 922      2D2D2D2D 
+ 922      00
+ 923 00c1 000000   		.space	3
+ 924              	.LC12:
+ 925 00c4 2D2D2D2D 		.ascii	"----STOP----\012\015\000"
+ 925      53544F50 
+ 925      2D2D2D2D 
+ 925      0A0D00
+ 926 00d3 00       		.space	1
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 24
+
+
+ 927              	.LC13:
+ 928 00d4 6B703D25 		.ascii	"kp=%s\012\015\000"
+ 928      730A0D00 
+ 929              	.LC14:
+ 930 00dc 6B693D25 		.ascii	"ki=%s\012\015\000"
+ 930      730A0D00 
+ 931              	.LC15:
+ 932 00e4 6B643D25 		.ascii	"kd=%s\012\015\000"
+ 932      730A0D00 
+ 933              	.LC16:
+ 934 00ec 6B703D25 		.ascii	"kp=%i\012\015ki=%i\012\015kd=%i\012\015target_speed"
+ 934      690A0D6B 
+ 934      693D2569 
+ 934      0A0D6B64 
+ 934      3D25690A 
+ 935 010d 3D25690A 		.ascii	"=%i\012\015\000"
+ 935      0D00
+ 936 0113 00       		.space	1
+ 937              	.LC17:
+ 938 0114 496E7661 		.ascii	"Invalid input.\012\015\000"
+ 938      6C696420 
+ 938      696E7075 
+ 938      742E0A0D 
+ 938      00
+ 939              		.bss
+ 940              		.align	2
+ 941              		.set	.LANCHOR1,. + 0
+ 942              		.type	prev_i_term, %object
+ 943              		.size	prev_i_term, 4
+ 944              	prev_i_term:
+ 945 0000 00000000 		.space	4
+ 946              		.type	prev_error, %object
+ 947              		.size	prev_error, 4
+ 948              	prev_error:
+ 949 0004 00000000 		.space	4
+ 950              		.type	kd, %object
+ 951              		.size	kd, 4
+ 952              	kd:
+ 953 0008 00000000 		.space	4
+ 954              		.type	RUN_STATE, %object
+ 955              		.size	RUN_STATE, 4
+ 956              	RUN_STATE:
+ 957 000c 00000000 		.space	4
+ 958              		.text
+ 959              	.Letext0:
+ 960              		.file 2 "c:\\program files (x86)\\cypress\\psoc creator\\4.2\\psoc creator\\import\\gnu\\arm\\5.4.
+ 961              		.file 3 "c:\\program files (x86)\\cypress\\psoc creator\\4.2\\psoc creator\\import\\gnu\\arm\\5.4.
+ 962              		.file 4 "Generated_Source\\PSoC5/cytypes.h"
+ 963              		.file 5 "Generated_Source\\PSoC5/core_cm3.h"
+ 964              		.file 6 "c:\\program files (x86)\\cypress\\psoc creator\\4.2\\psoc creator\\import\\gnu\\arm\\5.4.
+ 965              		.file 7 "Generated_Source\\PSoC5/PWM_Motor.h"
+ 966              		.file 8 "c:\\program files (x86)\\cypress\\psoc creator\\4.2\\psoc creator\\import\\gnu\\arm\\5.4.
+ 967              		.file 9 "Generated_Source\\PSoC5/XBEE.h"
+ 968              		.file 10 "Generated_Source\\PSoC5/Counter.h"
+ 969              		.file 11 "Generated_Source\\PSoC5/Counter_Reset.h"
+ 970              		.file 12 "Generated_Source\\PSoC5/LCD.h"
+ 971              		.file 13 "Generated_Source\\PSoC5/Hall_Interrupt.h"
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 25
+
+
+ 972              		.file 14 "Generated_Source\\PSoC5/Counter_Interrupt.h"
+ 973              		.section	.debug_info,"",%progbits
+ 974              	.Ldebug_info0:
+ 975 0000 C5090000 		.4byte	0x9c5
+ 976 0004 0400     		.2byte	0x4
+ 977 0006 00000000 		.4byte	.Ldebug_abbrev0
+ 978 000a 04       		.byte	0x4
+ 979 000b 01       		.uleb128 0x1
+ 980 000c C0010000 		.4byte	.LASF61
+ 981 0010 0C       		.byte	0xc
+ 982 0011 95020000 		.4byte	.LASF62
+ 983 0015 16030000 		.4byte	.LASF63
+ 984 0019 00000000 		.4byte	.Ldebug_ranges0+0
+ 985 001d 00000000 		.4byte	0
+ 986 0021 00000000 		.4byte	.Ldebug_line0
+ 987 0025 02       		.uleb128 0x2
+ 988 0026 04       		.byte	0x4
+ 989 0027 04       		.byte	0x4
+ 990 0028 D2000000 		.4byte	.LASF0
+ 991 002c 02       		.uleb128 0x2
+ 992 002d 01       		.byte	0x1
+ 993 002e 06       		.byte	0x6
+ 994 002f 37010000 		.4byte	.LASF1
+ 995 0033 02       		.uleb128 0x2
+ 996 0034 01       		.byte	0x1
+ 997 0035 08       		.byte	0x8
+ 998 0036 1C010000 		.4byte	.LASF2
+ 999 003a 02       		.uleb128 0x2
+ 1000 003b 02       		.byte	0x2
+ 1001 003c 05       		.byte	0x5
+ 1002 003d 37000000 		.4byte	.LASF3
+ 1003 0041 02       		.uleb128 0x2
+ 1004 0042 02       		.byte	0x2
+ 1005 0043 07       		.byte	0x7
+ 1006 0044 AD010000 		.4byte	.LASF4
+ 1007 0048 03       		.uleb128 0x3
+ 1008 0049 F6020000 		.4byte	.LASF10
+ 1009 004d 02       		.byte	0x2
+ 1010 004e 3F       		.byte	0x3f
+ 1011 004f 53000000 		.4byte	0x53
+ 1012 0053 02       		.uleb128 0x2
+ 1013 0054 04       		.byte	0x4
+ 1014 0055 05       		.byte	0x5
+ 1015 0056 EC000000 		.4byte	.LASF5
+ 1016 005a 02       		.uleb128 0x2
+ 1017 005b 04       		.byte	0x4
+ 1018 005c 07       		.byte	0x7
+ 1019 005d 9C020000 		.4byte	.LASF6
+ 1020 0061 02       		.uleb128 0x2
+ 1021 0062 08       		.byte	0x8
+ 1022 0063 05       		.byte	0x5
+ 1023 0064 D8000000 		.4byte	.LASF7
+ 1024 0068 02       		.uleb128 0x2
+ 1025 0069 08       		.byte	0x8
+ 1026 006a 07       		.byte	0x7
+ 1027 006b 43010000 		.4byte	.LASF8
+ 1028 006f 04       		.uleb128 0x4
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 26
+
+
+ 1029 0070 04       		.byte	0x4
+ 1030 0071 05       		.byte	0x5
+ 1031 0072 696E7400 		.ascii	"int\000"
+ 1032 0076 02       		.uleb128 0x2
+ 1033 0077 04       		.byte	0x4
+ 1034 0078 07       		.byte	0x7
+ 1035 0079 6E010000 		.4byte	.LASF9
+ 1036 007d 03       		.uleb128 0x3
+ 1037 007e 6F020000 		.4byte	.LASF11
+ 1038 0082 03       		.byte	0x3
+ 1039 0083 2C       		.byte	0x2c
+ 1040 0084 48000000 		.4byte	0x48
+ 1041 0088 05       		.uleb128 0x5
+ 1042 0089 CC000000 		.4byte	.LASF12
+ 1043 008d 04       		.byte	0x4
+ 1044 008e E401     		.2byte	0x1e4
+ 1045 0090 33000000 		.4byte	0x33
+ 1046 0094 05       		.uleb128 0x5
+ 1047 0095 BC000000 		.4byte	.LASF13
+ 1048 0099 04       		.byte	0x4
+ 1049 009a E501     		.2byte	0x1e5
+ 1050 009c 41000000 		.4byte	0x41
+ 1051 00a0 02       		.uleb128 0x2
+ 1052 00a1 08       		.byte	0x8
+ 1053 00a2 04       		.byte	0x4
+ 1054 00a3 C2020000 		.4byte	.LASF14
+ 1055 00a7 02       		.uleb128 0x2
+ 1056 00a8 01       		.byte	0x1
+ 1057 00a9 08       		.byte	0x8
+ 1058 00aa 4E020000 		.4byte	.LASF15
+ 1059 00ae 02       		.uleb128 0x2
+ 1060 00af 08       		.byte	0x8
+ 1061 00b0 04       		.byte	0x4
+ 1062 00b1 10010000 		.4byte	.LASF16
+ 1063 00b5 02       		.uleb128 0x2
+ 1064 00b6 04       		.byte	0x4
+ 1065 00b7 07       		.byte	0x7
+ 1066 00b8 87030000 		.4byte	.LASF17
+ 1067 00bc 06       		.uleb128 0x6
+ 1068 00bd 04       		.byte	0x4
+ 1069 00be A7000000 		.4byte	0xa7
+ 1070 00c2 07       		.uleb128 0x7
+ 1071 00c3 81020000 		.4byte	.LASF64
+ 1072 00c7 01       		.byte	0x1
+ 1073 00c8 7B       		.byte	0x7b
+ 1074 00c9 25000000 		.4byte	0x25
+ 1075 00cd 00000000 		.4byte	.LFB68
+ 1076 00d1 24000000 		.4byte	.LFE68-.LFB68
+ 1077 00d5 01       		.uleb128 0x1
+ 1078 00d6 9C       		.byte	0x9c
+ 1079 00d7 38010000 		.4byte	0x138
+ 1080 00db 08       		.uleb128 0x8
+ 1081 00dc 0F030000 		.4byte	.LASF18
+ 1082 00e0 01       		.byte	0x1
+ 1083 00e1 7B       		.byte	0x7b
+ 1084 00e2 BC000000 		.4byte	0xbc
+ 1085 00e6 00000000 		.4byte	.LLST0
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 27
+
+
+ 1086 00ea 08       		.uleb128 0x8
+ 1087 00eb 8C020000 		.4byte	.LASF19
+ 1088 00ef 01       		.byte	0x1
+ 1089 00f0 7B       		.byte	0x7b
+ 1090 00f1 6F000000 		.4byte	0x6f
+ 1091 00f5 21000000 		.4byte	.LLST1
+ 1092 00f9 08       		.uleb128 0x8
+ 1093 00fa 41000000 		.4byte	.LASF20
+ 1094 00fe 01       		.byte	0x1
+ 1095 00ff 7B       		.byte	0x7b
+ 1096 0100 BC000000 		.4byte	0xbc
+ 1097 0104 3F000000 		.4byte	.LLST2
+ 1098 0108 09       		.uleb128 0x9
+ 1099 0109 49000000 		.4byte	.LASF21
+ 1100 010d 01       		.byte	0x1
+ 1101 010e 7D       		.byte	0x7d
+ 1102 010f 6F000000 		.4byte	0x6f
+ 1103 0113 60000000 		.4byte	.LLST3
+ 1104 0117 09       		.uleb128 0x9
+ 1105 0118 C3000000 		.4byte	.LASF22
+ 1106 011c 01       		.byte	0x1
+ 1107 011d 7E       		.byte	0x7e
+ 1108 011e A7000000 		.4byte	0xa7
+ 1109 0122 7F000000 		.4byte	.LLST4
+ 1110 0126 0A       		.uleb128 0xa
+ 1111 0127 1E000000 		.4byte	.LVL9
+ 1112 012b 02090000 		.4byte	0x902
+ 1113 012f 0B       		.uleb128 0xb
+ 1114 0130 01       		.uleb128 0x1
+ 1115 0131 50       		.byte	0x50
+ 1116 0132 03       		.uleb128 0x3
+ 1117 0133 F3       		.byte	0xf3
+ 1118 0134 01       		.uleb128 0x1
+ 1119 0135 50       		.byte	0x50
+ 1120 0136 00       		.byte	0
+ 1121 0137 00       		.byte	0
+ 1122 0138 0C       		.uleb128 0xc
+ 1123 0139 F5000000 		.4byte	.LASF32
+ 1124 013d 01       		.byte	0x1
+ 1125 013e 22       		.byte	0x22
+ 1126 013f 00000000 		.4byte	.LFB64
+ 1127 0143 08000000 		.4byte	.LFE64-.LFB64
+ 1128 0147 01       		.uleb128 0x1
+ 1129 0148 9C       		.byte	0x9c
+ 1130 0149 66010000 		.4byte	0x166
+ 1131 014d 08       		.uleb128 0x8
+ 1132 014e 2A010000 		.4byte	.LASF23
+ 1133 0152 01       		.byte	0x1
+ 1134 0153 22       		.byte	0x22
+ 1135 0154 88000000 		.4byte	0x88
+ 1136 0158 9D000000 		.4byte	.LLST5
+ 1137 015c 0D       		.uleb128 0xd
+ 1138 015d 06000000 		.4byte	.LVL12
+ 1139 0161 0D090000 		.4byte	0x90d
+ 1140 0165 00       		.byte	0
+ 1141 0166 0E       		.uleb128 0xe
+ 1142 0167 D0030000 		.4byte	.LASF65
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 28
+
+
+ 1143 016b 01       		.byte	0x1
+ 1144 016c 26       		.byte	0x26
+ 1145 016d 88000000 		.4byte	0x88
+ 1146 0171 00000000 		.4byte	.LFB65
+ 1147 0175 F8000000 		.4byte	.LFE65-.LFB65
+ 1148 0179 01       		.uleb128 0x1
+ 1149 017a 9C       		.byte	0x9c
+ 1150 017b 94020000 		.4byte	0x294
+ 1151 017f 08       		.uleb128 0x8
+ 1152 0180 8B010000 		.4byte	.LASF24
+ 1153 0184 01       		.byte	0x1
+ 1154 0185 26       		.byte	0x26
+ 1155 0186 25000000 		.4byte	0x25
+ 1156 018a BE000000 		.4byte	.LLST6
+ 1157 018e 08       		.uleb128 0x8
+ 1158 018f F0020000 		.4byte	.LASF25
+ 1159 0193 01       		.byte	0x1
+ 1160 0194 26       		.byte	0x26
+ 1161 0195 94000000 		.4byte	0x94
+ 1162 0199 EC000000 		.4byte	.LLST7
+ 1163 019d 09       		.uleb128 0x9
+ 1164 019e A6010000 		.4byte	.LASF26
+ 1165 01a2 01       		.byte	0x1
+ 1166 01a3 27       		.byte	0x27
+ 1167 01a4 25000000 		.4byte	0x25
+ 1168 01a8 0D010000 		.4byte	.LLST8
+ 1169 01ac 09       		.uleb128 0x9
+ 1170 01ad 68020000 		.4byte	.LASF27
+ 1171 01b1 01       		.byte	0x1
+ 1172 01b2 28       		.byte	0x28
+ 1173 01b3 25000000 		.4byte	0x25
+ 1174 01b7 2B010000 		.4byte	.LLST9
+ 1175 01bb 09       		.uleb128 0x9
+ 1176 01bc AA000000 		.4byte	.LASF28
+ 1177 01c0 01       		.byte	0x1
+ 1178 01c1 29       		.byte	0x29
+ 1179 01c2 25000000 		.4byte	0x25
+ 1180 01c6 49010000 		.4byte	.LLST10
+ 1181 01ca 09       		.uleb128 0x9
+ 1182 01cb B6030000 		.4byte	.LASF29
+ 1183 01cf 01       		.byte	0x1
+ 1184 01d0 2A       		.byte	0x2a
+ 1185 01d1 25000000 		.4byte	0x25
+ 1186 01d5 67010000 		.4byte	.LLST11
+ 1187 01d9 0F       		.uleb128 0xf
+ 1188 01da 1C000000 		.4byte	.LASF30
+ 1189 01de 01       		.byte	0x1
+ 1190 01df 2B       		.byte	0x2b
+ 1191 01e0 94020000 		.4byte	0x294
+ 1192 01e4 02       		.uleb128 0x2
+ 1193 01e5 91       		.byte	0x91
+ 1194 01e6 58       		.sleb128 -40
+ 1195 01e7 09       		.uleb128 0x9
+ 1196 01e8 BD030000 		.4byte	.LASF31
+ 1197 01ec 01       		.byte	0x1
+ 1198 01ed 2D       		.byte	0x2d
+ 1199 01ee 25000000 		.4byte	0x25
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 29
+
+
+ 1200 01f2 85010000 		.4byte	.LLST12
+ 1201 01f6 10       		.uleb128 0x10
+ 1202 01f7 647400   		.ascii	"dt\000"
+ 1203 01fa 01       		.byte	0x1
+ 1204 01fb 2F       		.byte	0x2f
+ 1205 01fc 94000000 		.4byte	0x94
+ 1206 0200 A3010000 		.4byte	.LLST13
+ 1207 0204 11       		.uleb128 0x11
+ 1208 0205 7A000000 		.4byte	.LVL36
+ 1209 0209 18090000 		.4byte	0x918
+ 1210 020d 21020000 		.4byte	0x221
+ 1211 0211 0B       		.uleb128 0xb
+ 1212 0212 01       		.uleb128 0x1
+ 1213 0213 50       		.byte	0x50
+ 1214 0214 02       		.uleb128 0x2
+ 1215 0215 7D       		.byte	0x7d
+ 1216 0216 00       		.sleb128 0
+ 1217 0217 0B       		.uleb128 0xb
+ 1218 0218 01       		.uleb128 0x1
+ 1219 0219 51       		.byte	0x51
+ 1220 021a 05       		.uleb128 0x5
+ 1221 021b 03       		.byte	0x3
+ 1222 021c 00000000 		.4byte	.LC0
+ 1223 0220 00       		.byte	0
+ 1224 0221 11       		.uleb128 0x11
+ 1225 0222 80000000 		.4byte	.LVL37
+ 1226 0226 23090000 		.4byte	0x923
+ 1227 022a 35020000 		.4byte	0x235
+ 1228 022e 0B       		.uleb128 0xb
+ 1229 022f 01       		.uleb128 0x1
+ 1230 0230 50       		.byte	0x50
+ 1231 0231 02       		.uleb128 0x2
+ 1232 0232 7D       		.byte	0x7d
+ 1233 0233 00       		.sleb128 0
+ 1234 0234 00       		.byte	0
+ 1235 0235 11       		.uleb128 0x11
+ 1236 0236 90000000 		.4byte	.LVL39
+ 1237 023a 18090000 		.4byte	0x918
+ 1238 023e 52020000 		.4byte	0x252
+ 1239 0242 0B       		.uleb128 0xb
+ 1240 0243 01       		.uleb128 0x1
+ 1241 0244 50       		.byte	0x50
+ 1242 0245 02       		.uleb128 0x2
+ 1243 0246 7D       		.byte	0x7d
+ 1244 0247 00       		.sleb128 0
+ 1245 0248 0B       		.uleb128 0xb
+ 1246 0249 01       		.uleb128 0x1
+ 1247 024a 51       		.byte	0x51
+ 1248 024b 05       		.uleb128 0x5
+ 1249 024c 03       		.byte	0x3
+ 1250 024d 0C000000 		.4byte	.LC1
+ 1251 0251 00       		.byte	0
+ 1252 0252 11       		.uleb128 0x11
+ 1253 0253 96000000 		.4byte	.LVL40
+ 1254 0257 23090000 		.4byte	0x923
+ 1255 025b 66020000 		.4byte	0x266
+ 1256 025f 0B       		.uleb128 0xb
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 30
+
+
+ 1257 0260 01       		.uleb128 0x1
+ 1258 0261 50       		.byte	0x50
+ 1259 0262 02       		.uleb128 0x2
+ 1260 0263 7D       		.byte	0x7d
+ 1261 0264 00       		.sleb128 0
+ 1262 0265 00       		.byte	0
+ 1263 0266 11       		.uleb128 0x11
+ 1264 0267 A6000000 		.4byte	.LVL42
+ 1265 026b 18090000 		.4byte	0x918
+ 1266 026f 83020000 		.4byte	0x283
+ 1267 0273 0B       		.uleb128 0xb
+ 1268 0274 01       		.uleb128 0x1
+ 1269 0275 50       		.byte	0x50
+ 1270 0276 02       		.uleb128 0x2
+ 1271 0277 7D       		.byte	0x7d
+ 1272 0278 00       		.sleb128 0
+ 1273 0279 0B       		.uleb128 0xb
+ 1274 027a 01       		.uleb128 0x1
+ 1275 027b 51       		.byte	0x51
+ 1276 027c 05       		.uleb128 0x5
+ 1277 027d 03       		.byte	0x3
+ 1278 027e 18000000 		.4byte	.LC2
+ 1279 0282 00       		.byte	0
+ 1280 0283 0A       		.uleb128 0xa
+ 1281 0284 AC000000 		.4byte	.LVL43
+ 1282 0288 23090000 		.4byte	0x923
+ 1283 028c 0B       		.uleb128 0xb
+ 1284 028d 01       		.uleb128 0x1
+ 1285 028e 50       		.byte	0x50
+ 1286 028f 02       		.uleb128 0x2
+ 1287 0290 7D       		.byte	0x7d
+ 1288 0291 00       		.sleb128 0
+ 1289 0292 00       		.byte	0
+ 1290 0293 00       		.byte	0
+ 1291 0294 12       		.uleb128 0x12
+ 1292 0295 A7000000 		.4byte	0xa7
+ 1293 0299 A4020000 		.4byte	0x2a4
+ 1294 029d 13       		.uleb128 0x13
+ 1295 029e B5000000 		.4byte	0xb5
+ 1296 02a2 0F       		.byte	0xf
+ 1297 02a3 00       		.byte	0
+ 1298 02a4 14       		.uleb128 0x14
+ 1299 02a5 E6000000 		.4byte	.LASF33
+ 1300 02a9 01       		.byte	0x1
+ 1301 02aa 55       		.byte	0x55
+ 1302 02ab 00000000 		.4byte	.LFB67
+ 1303 02af A4000000 		.4byte	.LFE67-.LFB67
+ 1304 02b3 01       		.uleb128 0x1
+ 1305 02b4 9C       		.byte	0x9c
+ 1306 02b5 D6030000 		.4byte	0x3d6
+ 1307 02b9 09       		.uleb128 0x9
+ 1308 02ba F0020000 		.4byte	.LASF25
+ 1309 02be 01       		.byte	0x1
+ 1310 02bf 56       		.byte	0x56
+ 1311 02c0 94000000 		.4byte	0x94
+ 1312 02c4 B6010000 		.4byte	.LLST14
+ 1313 02c8 09       		.uleb128 0x9
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 31
+
+
+ 1314 02c9 53020000 		.4byte	.LASF34
+ 1315 02cd 01       		.byte	0x1
+ 1316 02ce 57       		.byte	0x57
+ 1317 02cf 6F000000 		.4byte	0x6f
+ 1318 02d3 D4010000 		.4byte	.LLST15
+ 1319 02d7 09       		.uleb128 0x9
+ 1320 02d8 00030000 		.4byte	.LASF35
+ 1321 02dc 01       		.byte	0x1
+ 1322 02dd 58       		.byte	0x58
+ 1323 02de 25000000 		.4byte	0x25
+ 1324 02e2 07020000 		.4byte	.LLST16
+ 1325 02e6 15       		.uleb128 0x15
+ 1326 02e7 62756600 		.ascii	"buf\000"
+ 1327 02eb 01       		.byte	0x1
+ 1328 02ec 59       		.byte	0x59
+ 1329 02ed D6030000 		.4byte	0x3d6
+ 1330 02f1 03       		.uleb128 0x3
+ 1331 02f2 91       		.byte	0x91
+ 1332 02f3 B07F     		.sleb128 -80
+ 1333 02f5 09       		.uleb128 0x9
+ 1334 02f6 8B010000 		.4byte	.LASF24
+ 1335 02fa 01       		.byte	0x1
+ 1336 02fb 5A       		.byte	0x5a
+ 1337 02fc 25000000 		.4byte	0x25
+ 1338 0300 1A020000 		.4byte	.LLST17
+ 1339 0304 09       		.uleb128 0x9
+ 1340 0305 A0000000 		.4byte	.LASF36
+ 1341 0309 01       		.byte	0x1
+ 1342 030a 5B       		.byte	0x5b
+ 1343 030b 88000000 		.4byte	0x88
+ 1344 030f 38020000 		.4byte	.LLST18
+ 1345 0313 0D       		.uleb128 0xd
+ 1346 0314 10000000 		.4byte	.LVL51
+ 1347 0318 2E090000 		.4byte	0x92e
+ 1348 031c 11       		.uleb128 0x11
+ 1349 031d 3A000000 		.4byte	.LVL60
+ 1350 0321 66010000 		.4byte	0x166
+ 1351 0325 37030000 		.4byte	0x337
+ 1352 0329 0B       		.uleb128 0xb
+ 1353 032a 01       		.uleb128 0x1
+ 1354 032b 50       		.byte	0x50
+ 1355 032c 03       		.uleb128 0x3
+ 1356 032d F5       		.byte	0xf5
+ 1357 032e 05       		.uleb128 0x5
+ 1358 032f 25       		.uleb128 0x25
+ 1359 0330 0B       		.uleb128 0xb
+ 1360 0331 01       		.uleb128 0x1
+ 1361 0332 51       		.byte	0x51
+ 1362 0333 02       		.uleb128 0x2
+ 1363 0334 74       		.byte	0x74
+ 1364 0335 00       		.sleb128 0
+ 1365 0336 00       		.byte	0
+ 1366 0337 11       		.uleb128 0x11
+ 1367 0338 58000000 		.4byte	.LVL65
+ 1368 033c 18090000 		.4byte	0x918
+ 1369 0340 54030000 		.4byte	0x354
+ 1370 0344 0B       		.uleb128 0xb
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 32
+
+
+ 1371 0345 01       		.uleb128 0x1
+ 1372 0346 50       		.byte	0x50
+ 1373 0347 02       		.uleb128 0x2
+ 1374 0348 7D       		.byte	0x7d
+ 1375 0349 00       		.sleb128 0
+ 1376 034a 0B       		.uleb128 0xb
+ 1377 034b 01       		.uleb128 0x1
+ 1378 034c 51       		.byte	0x51
+ 1379 034d 05       		.uleb128 0x5
+ 1380 034e 03       		.byte	0x3
+ 1381 034f 28000000 		.4byte	.LC3
+ 1382 0353 00       		.byte	0
+ 1383 0354 11       		.uleb128 0x11
+ 1384 0355 5E000000 		.4byte	.LVL66
+ 1385 0359 23090000 		.4byte	0x923
+ 1386 035d 68030000 		.4byte	0x368
+ 1387 0361 0B       		.uleb128 0xb
+ 1388 0362 01       		.uleb128 0x1
+ 1389 0363 50       		.byte	0x50
+ 1390 0364 02       		.uleb128 0x2
+ 1391 0365 7D       		.byte	0x7d
+ 1392 0366 00       		.sleb128 0
+ 1393 0367 00       		.byte	0
+ 1394 0368 11       		.uleb128 0x11
+ 1395 0369 68000000 		.4byte	.LVL67
+ 1396 036d 18090000 		.4byte	0x918
+ 1397 0371 8B030000 		.4byte	0x38b
+ 1398 0375 0B       		.uleb128 0xb
+ 1399 0376 01       		.uleb128 0x1
+ 1400 0377 50       		.byte	0x50
+ 1401 0378 02       		.uleb128 0x2
+ 1402 0379 7D       		.byte	0x7d
+ 1403 037a 00       		.sleb128 0
+ 1404 037b 0B       		.uleb128 0xb
+ 1405 037c 01       		.uleb128 0x1
+ 1406 037d 51       		.byte	0x51
+ 1407 037e 05       		.uleb128 0x5
+ 1408 037f 03       		.byte	0x3
+ 1409 0380 34000000 		.4byte	.LC4
+ 1410 0384 0B       		.uleb128 0xb
+ 1411 0385 01       		.uleb128 0x1
+ 1412 0386 52       		.byte	0x52
+ 1413 0387 02       		.uleb128 0x2
+ 1414 0388 74       		.byte	0x74
+ 1415 0389 00       		.sleb128 0
+ 1416 038a 00       		.byte	0
+ 1417 038b 11       		.uleb128 0x11
+ 1418 038c 6E000000 		.4byte	.LVL68
+ 1419 0390 23090000 		.4byte	0x923
+ 1420 0394 9F030000 		.4byte	0x39f
+ 1421 0398 0B       		.uleb128 0xb
+ 1422 0399 01       		.uleb128 0x1
+ 1423 039a 50       		.byte	0x50
+ 1424 039b 02       		.uleb128 0x2
+ 1425 039c 7D       		.byte	0x7d
+ 1426 039d 00       		.sleb128 0
+ 1427 039e 00       		.byte	0
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 33
+
+
+ 1428 039f 11       		.uleb128 0x11
+ 1429 03a0 78000000 		.4byte	.LVL71
+ 1430 03a4 38010000 		.4byte	0x138
+ 1431 03a8 B3030000 		.4byte	0x3b3
+ 1432 03ac 0B       		.uleb128 0xb
+ 1433 03ad 01       		.uleb128 0x1
+ 1434 03ae 50       		.byte	0x50
+ 1435 03af 02       		.uleb128 0x2
+ 1436 03b0 74       		.byte	0x74
+ 1437 03b1 00       		.sleb128 0
+ 1438 03b2 00       		.byte	0
+ 1439 03b3 11       		.uleb128 0x11
+ 1440 03b4 7E000000 		.4byte	.LVL72
+ 1441 03b8 39090000 		.4byte	0x939
+ 1442 03bc C6030000 		.4byte	0x3c6
+ 1443 03c0 0B       		.uleb128 0xb
+ 1444 03c1 01       		.uleb128 0x1
+ 1445 03c2 50       		.byte	0x50
+ 1446 03c3 01       		.uleb128 0x1
+ 1447 03c4 31       		.byte	0x31
+ 1448 03c5 00       		.byte	0
+ 1449 03c6 0A       		.uleb128 0xa
+ 1450 03c7 84000000 		.4byte	.LVL73
+ 1451 03cb 39090000 		.4byte	0x939
+ 1452 03cf 0B       		.uleb128 0xb
+ 1453 03d0 01       		.uleb128 0x1
+ 1454 03d1 50       		.byte	0x50
+ 1455 03d2 01       		.uleb128 0x1
+ 1456 03d3 30       		.byte	0x30
+ 1457 03d4 00       		.byte	0
+ 1458 03d5 00       		.byte	0
+ 1459 03d6 12       		.uleb128 0x12
+ 1460 03d7 A7000000 		.4byte	0xa7
+ 1461 03db E6030000 		.4byte	0x3e6
+ 1462 03df 13       		.uleb128 0x13
+ 1463 03e0 B5000000 		.4byte	0xb5
+ 1464 03e4 3F       		.byte	0x3f
+ 1465 03e5 00       		.byte	0
+ 1466 03e6 0C       		.uleb128 0xc
+ 1467 03e7 77020000 		.4byte	.LASF37
+ 1468 03eb 01       		.byte	0x1
+ 1469 03ec 50       		.byte	0x50
+ 1470 03ed 00000000 		.4byte	.LFB66
+ 1471 03f1 12000000 		.4byte	.LFE66-.LFB66
+ 1472 03f5 01       		.uleb128 0x1
+ 1473 03f6 9C       		.byte	0x9c
+ 1474 03f7 23040000 		.4byte	0x423
+ 1475 03fb 11       		.uleb128 0x11
+ 1476 03fc 08000000 		.4byte	.LVL75
+ 1477 0400 44090000 		.4byte	0x944
+ 1478 0404 0E040000 		.4byte	0x40e
+ 1479 0408 0B       		.uleb128 0xb
+ 1480 0409 01       		.uleb128 0x1
+ 1481 040a 50       		.byte	0x50
+ 1482 040b 01       		.uleb128 0x1
+ 1483 040c 31       		.byte	0x31
+ 1484 040d 00       		.byte	0
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 34
+
+
+ 1485 040e 0A       		.uleb128 0xa
+ 1486 040f 10000000 		.4byte	.LVL76
+ 1487 0413 4F090000 		.4byte	0x94f
+ 1488 0417 0B       		.uleb128 0xb
+ 1489 0418 01       		.uleb128 0x1
+ 1490 0419 50       		.byte	0x50
+ 1491 041a 01       		.uleb128 0x1
+ 1492 041b 30       		.byte	0x30
+ 1493 041c 0B       		.uleb128 0xb
+ 1494 041d 01       		.uleb128 0x1
+ 1495 041e 51       		.byte	0x51
+ 1496 041f 01       		.uleb128 0x1
+ 1497 0420 30       		.byte	0x30
+ 1498 0421 00       		.byte	0
+ 1499 0422 00       		.byte	0
+ 1500 0423 16       		.uleb128 0x16
+ 1501 0424 8F000000 		.4byte	.LASF66
+ 1502 0428 01       		.byte	0x1
+ 1503 0429 8C       		.byte	0x8c
+ 1504 042a 6F000000 		.4byte	0x6f
+ 1505 042e 00000000 		.4byte	.LFB69
+ 1506 0432 54020000 		.4byte	.LFE69-.LFB69
+ 1507 0436 01       		.uleb128 0x1
+ 1508 0437 9C       		.byte	0x9c
+ 1509 0438 7D080000 		.4byte	0x87d
+ 1510 043c 09       		.uleb128 0x9
+ 1511 043d C3000000 		.4byte	.LASF22
+ 1512 0441 01       		.byte	0x1
+ 1513 0442 8F       		.byte	0x8f
+ 1514 0443 88000000 		.4byte	0x88
+ 1515 0447 56020000 		.4byte	.LLST19
+ 1516 044b 0F       		.uleb128 0xf
+ 1517 044c 41000000 		.4byte	.LASF20
+ 1518 0450 01       		.byte	0x1
+ 1519 0451 90       		.byte	0x90
+ 1520 0452 D6030000 		.4byte	0x3d6
+ 1521 0456 03       		.uleb128 0x3
+ 1522 0457 91       		.byte	0x91
+ 1523 0458 B07F     		.sleb128 -80
+ 1524 045a 0F       		.uleb128 0xf
+ 1525 045b 1C000000 		.4byte	.LASF30
+ 1526 045f 01       		.byte	0x1
+ 1527 0460 91       		.byte	0x91
+ 1528 0461 D6030000 		.4byte	0x3d6
+ 1529 0465 03       		.uleb128 0x3
+ 1530 0466 91       		.byte	0x91
+ 1531 0467 F07E     		.sleb128 -144
+ 1532 0469 09       		.uleb128 0x9
+ 1533 046a 49000000 		.4byte	.LASF21
+ 1534 046e 01       		.byte	0x1
+ 1535 046f 92       		.byte	0x92
+ 1536 0470 88000000 		.4byte	0x88
+ 1537 0474 69020000 		.4byte	.LLST20
+ 1538 0478 17       		.uleb128 0x17
+ 1539 0479 8C020000 		.4byte	.LASF19
+ 1540 047d 01       		.byte	0x1
+ 1541 047e 93       		.byte	0x93
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 35
+
+
+ 1542 047f 6F000000 		.4byte	0x6f
+ 1543 0483 00       		.byte	0
+ 1544 0484 0F       		.uleb128 0xf
+ 1545 0485 0F030000 		.4byte	.LASF18
+ 1546 0489 01       		.byte	0x1
+ 1547 048a 94       		.byte	0x94
+ 1548 048b D6030000 		.4byte	0x3d6
+ 1549 048f 03       		.uleb128 0x3
+ 1550 0490 91       		.byte	0x91
+ 1551 0491 B07E     		.sleb128 -208
+ 1552 0493 0D       		.uleb128 0xd
+ 1553 0494 0A000000 		.4byte	.LVL78
+ 1554 0498 5A090000 		.4byte	0x95a
+ 1555 049c 0D       		.uleb128 0xd
+ 1556 049d 0E000000 		.4byte	.LVL79
+ 1557 04a1 65090000 		.4byte	0x965
+ 1558 04a5 0D       		.uleb128 0xd
+ 1559 04a6 12000000 		.4byte	.LVL80
+ 1560 04aa 70090000 		.4byte	0x970
+ 1561 04ae 11       		.uleb128 0x11
+ 1562 04af 18000000 		.4byte	.LVL81
+ 1563 04b3 7B090000 		.4byte	0x97b
+ 1564 04b7 C5040000 		.4byte	0x4c5
+ 1565 04bb 0B       		.uleb128 0xb
+ 1566 04bc 01       		.uleb128 0x1
+ 1567 04bd 50       		.byte	0x50
+ 1568 04be 05       		.uleb128 0x5
+ 1569 04bf 03       		.byte	0x3
+ 1570 04c0 00000000 		.4byte	inter
+ 1571 04c4 00       		.byte	0
+ 1572 04c5 0D       		.uleb128 0xd
+ 1573 04c6 1C000000 		.4byte	.LVL82
+ 1574 04ca 86090000 		.4byte	0x986
+ 1575 04ce 0D       		.uleb128 0xd
+ 1576 04cf 20000000 		.4byte	.LVL83
+ 1577 04d3 91090000 		.4byte	0x991
+ 1578 04d7 0D       		.uleb128 0xd
+ 1579 04d8 24000000 		.4byte	.LVL84
+ 1580 04dc 9C090000 		.4byte	0x99c
+ 1581 04e0 11       		.uleb128 0x11
+ 1582 04e1 2A000000 		.4byte	.LVL85
+ 1583 04e5 23090000 		.4byte	0x923
+ 1584 04e9 F7040000 		.4byte	0x4f7
+ 1585 04ed 0B       		.uleb128 0xb
+ 1586 04ee 01       		.uleb128 0x1
+ 1587 04ef 50       		.byte	0x50
+ 1588 04f0 05       		.uleb128 0x5
+ 1589 04f1 03       		.byte	0x3
+ 1590 04f2 44000000 		.4byte	.LC5
+ 1591 04f6 00       		.byte	0
+ 1592 04f7 11       		.uleb128 0x11
+ 1593 04f8 30000000 		.4byte	.LVL86
+ 1594 04fc A7090000 		.4byte	0x9a7
+ 1595 0500 0E050000 		.4byte	0x50e
+ 1596 0504 0B       		.uleb128 0xb
+ 1597 0505 01       		.uleb128 0x1
+ 1598 0506 50       		.byte	0x50
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 36
+
+
+ 1599 0507 05       		.uleb128 0x5
+ 1600 0508 03       		.byte	0x3
+ 1601 0509 5C000000 		.4byte	.LC6
+ 1602 050d 00       		.byte	0
+ 1603 050e 0D       		.uleb128 0xd
+ 1604 050f 36000000 		.4byte	.LVL88
+ 1605 0513 B2090000 		.4byte	0x9b2
+ 1606 0517 0D       		.uleb128 0xd
+ 1607 0518 42000000 		.4byte	.LVL89
+ 1608 051c E6030000 		.4byte	0x3e6
+ 1609 0520 11       		.uleb128 0x11
+ 1610 0521 48000000 		.4byte	.LVL90
+ 1611 0525 BD090000 		.4byte	0x9bd
+ 1612 0529 34050000 		.4byte	0x534
+ 1613 052d 0B       		.uleb128 0xb
+ 1614 052e 01       		.uleb128 0x1
+ 1615 052f 50       		.byte	0x50
+ 1616 0530 02       		.uleb128 0x2
+ 1617 0531 75       		.byte	0x75
+ 1618 0532 00       		.sleb128 0
+ 1619 0533 00       		.byte	0
+ 1620 0534 0D       		.uleb128 0xd
+ 1621 0535 5E000000 		.4byte	.LVL93
+ 1622 0539 E6030000 		.4byte	0x3e6
+ 1623 053d 11       		.uleb128 0x11
+ 1624 053e 64000000 		.4byte	.LVL94
+ 1625 0542 A7090000 		.4byte	0x9a7
+ 1626 0546 54050000 		.4byte	0x554
+ 1627 054a 0B       		.uleb128 0xb
+ 1628 054b 01       		.uleb128 0x1
+ 1629 054c 50       		.byte	0x50
+ 1630 054d 05       		.uleb128 0x5
+ 1631 054e 03       		.byte	0x3
+ 1632 054f 6C000000 		.4byte	.LC7
+ 1633 0553 00       		.byte	0
+ 1634 0554 11       		.uleb128 0x11
+ 1635 0555 9A000000 		.4byte	.LVL95
+ 1636 0559 C2000000 		.4byte	0xc2
+ 1637 055d 75050000 		.4byte	0x575
+ 1638 0561 0B       		.uleb128 0xb
+ 1639 0562 01       		.uleb128 0x1
+ 1640 0563 50       		.byte	0x50
+ 1641 0564 03       		.uleb128 0x3
+ 1642 0565 91       		.byte	0x91
+ 1643 0566 B07E     		.sleb128 -208
+ 1644 0568 0B       		.uleb128 0xb
+ 1645 0569 01       		.uleb128 0x1
+ 1646 056a 51       		.byte	0x51
+ 1647 056b 01       		.uleb128 0x1
+ 1648 056c 30       		.byte	0x30
+ 1649 056d 0B       		.uleb128 0xb
+ 1650 056e 01       		.uleb128 0x1
+ 1651 056f 52       		.byte	0x52
+ 1652 0570 03       		.uleb128 0x3
+ 1653 0571 91       		.byte	0x91
+ 1654 0572 B07F     		.sleb128 -80
+ 1655 0574 00       		.byte	0
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 37
+
+
+ 1656 0575 11       		.uleb128 0x11
+ 1657 0576 AC000000 		.4byte	.LVL97
+ 1658 057a 18090000 		.4byte	0x918
+ 1659 057e 93050000 		.4byte	0x593
+ 1660 0582 0B       		.uleb128 0xb
+ 1661 0583 01       		.uleb128 0x1
+ 1662 0584 50       		.byte	0x50
+ 1663 0585 03       		.uleb128 0x3
+ 1664 0586 91       		.byte	0x91
+ 1665 0587 F07E     		.sleb128 -144
+ 1666 0589 0B       		.uleb128 0xb
+ 1667 058a 01       		.uleb128 0x1
+ 1668 058b 51       		.byte	0x51
+ 1669 058c 05       		.uleb128 0x5
+ 1670 058d 03       		.byte	0x3
+ 1671 058e 7C000000 		.4byte	.LC8
+ 1672 0592 00       		.byte	0
+ 1673 0593 11       		.uleb128 0x11
+ 1674 0594 B2000000 		.4byte	.LVL98
+ 1675 0598 23090000 		.4byte	0x923
+ 1676 059c A8050000 		.4byte	0x5a8
+ 1677 05a0 0B       		.uleb128 0xb
+ 1678 05a1 01       		.uleb128 0x1
+ 1679 05a2 50       		.byte	0x50
+ 1680 05a3 03       		.uleb128 0x3
+ 1681 05a4 91       		.byte	0x91
+ 1682 05a5 F07E     		.sleb128 -144
+ 1683 05a7 00       		.byte	0
+ 1684 05a8 0D       		.uleb128 0xd
+ 1685 05a9 CA000000 		.4byte	.LVL102
+ 1686 05ad E6030000 		.4byte	0x3e6
+ 1687 05b1 11       		.uleb128 0x11
+ 1688 05b2 D0000000 		.4byte	.LVL103
+ 1689 05b6 A7090000 		.4byte	0x9a7
+ 1690 05ba C8050000 		.4byte	0x5c8
+ 1691 05be 0B       		.uleb128 0xb
+ 1692 05bf 01       		.uleb128 0x1
+ 1693 05c0 50       		.byte	0x50
+ 1694 05c1 05       		.uleb128 0x5
+ 1695 05c2 03       		.byte	0x3
+ 1696 05c3 98000000 		.4byte	.LC9
+ 1697 05c7 00       		.byte	0
+ 1698 05c8 11       		.uleb128 0x11
+ 1699 05c9 D6000000 		.4byte	.LVL104
+ 1700 05cd 23090000 		.4byte	0x923
+ 1701 05d1 DF050000 		.4byte	0x5df
+ 1702 05d5 0B       		.uleb128 0xb
+ 1703 05d6 01       		.uleb128 0x1
+ 1704 05d7 50       		.byte	0x50
+ 1705 05d8 05       		.uleb128 0x5
+ 1706 05d9 03       		.byte	0x3
+ 1707 05da A4000000 		.4byte	.LC10
+ 1708 05de 00       		.byte	0
+ 1709 05df 11       		.uleb128 0x11
+ 1710 05e0 DC000000 		.4byte	.LVL105
+ 1711 05e4 38010000 		.4byte	0x138
+ 1712 05e8 F3050000 		.4byte	0x5f3
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 38
+
+
+ 1713 05ec 0B       		.uleb128 0xb
+ 1714 05ed 01       		.uleb128 0x1
+ 1715 05ee 50       		.byte	0x50
+ 1716 05ef 02       		.uleb128 0x2
+ 1717 05f0 08       		.byte	0x8
+ 1718 05f1 32       		.byte	0x32
+ 1719 05f2 00       		.byte	0
+ 1720 05f3 11       		.uleb128 0x11
+ 1721 05f4 E2000000 		.4byte	.LVL106
+ 1722 05f8 39090000 		.4byte	0x939
+ 1723 05fc 07060000 		.4byte	0x607
+ 1724 0600 0B       		.uleb128 0xb
+ 1725 0601 01       		.uleb128 0x1
+ 1726 0602 50       		.byte	0x50
+ 1727 0603 02       		.uleb128 0x2
+ 1728 0604 74       		.byte	0x74
+ 1729 0605 00       		.sleb128 0
+ 1730 0606 00       		.byte	0
+ 1731 0607 11       		.uleb128 0x11
+ 1732 0608 E8000000 		.4byte	.LVL107
+ 1733 060c 39090000 		.4byte	0x939
+ 1734 0610 1A060000 		.4byte	0x61a
+ 1735 0614 0B       		.uleb128 0xb
+ 1736 0615 01       		.uleb128 0x1
+ 1737 0616 50       		.byte	0x50
+ 1738 0617 01       		.uleb128 0x1
+ 1739 0618 30       		.byte	0x30
+ 1740 0619 00       		.byte	0
+ 1741 061a 0D       		.uleb128 0xd
+ 1742 061b 00010000 		.4byte	.LVL110
+ 1743 061f E6030000 		.4byte	0x3e6
+ 1744 0623 11       		.uleb128 0x11
+ 1745 0624 06010000 		.4byte	.LVL111
+ 1746 0628 A7090000 		.4byte	0x9a7
+ 1747 062c 3A060000 		.4byte	0x63a
+ 1748 0630 0B       		.uleb128 0xb
+ 1749 0631 01       		.uleb128 0x1
+ 1750 0632 50       		.byte	0x50
+ 1751 0633 05       		.uleb128 0x5
+ 1752 0634 03       		.byte	0x3
+ 1753 0635 B4000000 		.4byte	.LC11
+ 1754 0639 00       		.byte	0
+ 1755 063a 11       		.uleb128 0x11
+ 1756 063b 0C010000 		.4byte	.LVL112
+ 1757 063f 38010000 		.4byte	0x138
+ 1758 0643 4E060000 		.4byte	0x64e
+ 1759 0647 0B       		.uleb128 0xb
+ 1760 0648 01       		.uleb128 0x1
+ 1761 0649 50       		.byte	0x50
+ 1762 064a 02       		.uleb128 0x2
+ 1763 064b 74       		.byte	0x74
+ 1764 064c 00       		.sleb128 0
+ 1765 064d 00       		.byte	0
+ 1766 064e 11       		.uleb128 0x11
+ 1767 064f 12010000 		.4byte	.LVL113
+ 1768 0653 23090000 		.4byte	0x923
+ 1769 0657 65060000 		.4byte	0x665
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 39
+
+
+ 1770 065b 0B       		.uleb128 0xb
+ 1771 065c 01       		.uleb128 0x1
+ 1772 065d 50       		.byte	0x50
+ 1773 065e 05       		.uleb128 0x5
+ 1774 065f 03       		.byte	0x3
+ 1775 0660 C4000000 		.4byte	.LC12
+ 1776 0664 00       		.byte	0
+ 1777 0665 0D       		.uleb128 0xd
+ 1778 0666 1E010000 		.4byte	.LVL115
+ 1779 066a E6030000 		.4byte	0x3e6
+ 1780 066e 11       		.uleb128 0x11
+ 1781 066f 28010000 		.4byte	.LVL116
+ 1782 0673 C2000000 		.4byte	0xc2
+ 1783 0677 8F060000 		.4byte	0x68f
+ 1784 067b 0B       		.uleb128 0xb
+ 1785 067c 01       		.uleb128 0x1
+ 1786 067d 50       		.byte	0x50
+ 1787 067e 03       		.uleb128 0x3
+ 1788 067f 91       		.byte	0x91
+ 1789 0680 B07E     		.sleb128 -208
+ 1790 0682 0B       		.uleb128 0xb
+ 1791 0683 01       		.uleb128 0x1
+ 1792 0684 51       		.byte	0x51
+ 1793 0685 01       		.uleb128 0x1
+ 1794 0686 30       		.byte	0x30
+ 1795 0687 0B       		.uleb128 0xb
+ 1796 0688 01       		.uleb128 0x1
+ 1797 0689 52       		.byte	0x52
+ 1798 068a 03       		.uleb128 0x3
+ 1799 068b 91       		.byte	0x91
+ 1800 068c B07F     		.sleb128 -80
+ 1801 068e 00       		.byte	0
+ 1802 068f 11       		.uleb128 0x11
+ 1803 0690 36010000 		.4byte	.LVL117
+ 1804 0694 18090000 		.4byte	0x918
+ 1805 0698 B4060000 		.4byte	0x6b4
+ 1806 069c 0B       		.uleb128 0xb
+ 1807 069d 01       		.uleb128 0x1
+ 1808 069e 50       		.byte	0x50
+ 1809 069f 03       		.uleb128 0x3
+ 1810 06a0 91       		.byte	0x91
+ 1811 06a1 F07E     		.sleb128 -144
+ 1812 06a3 0B       		.uleb128 0xb
+ 1813 06a4 01       		.uleb128 0x1
+ 1814 06a5 51       		.byte	0x51
+ 1815 06a6 05       		.uleb128 0x5
+ 1816 06a7 03       		.byte	0x3
+ 1817 06a8 D4000000 		.4byte	.LC13
+ 1818 06ac 0B       		.uleb128 0xb
+ 1819 06ad 01       		.uleb128 0x1
+ 1820 06ae 52       		.byte	0x52
+ 1821 06af 03       		.uleb128 0x3
+ 1822 06b0 91       		.byte	0x91
+ 1823 06b1 B07E     		.sleb128 -208
+ 1824 06b3 00       		.byte	0
+ 1825 06b4 11       		.uleb128 0x11
+ 1826 06b5 3C010000 		.4byte	.LVL118
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 40
+
+
+ 1827 06b9 23090000 		.4byte	0x923
+ 1828 06bd C9060000 		.4byte	0x6c9
+ 1829 06c1 0B       		.uleb128 0xb
+ 1830 06c2 01       		.uleb128 0x1
+ 1831 06c3 50       		.byte	0x50
+ 1832 06c4 03       		.uleb128 0x3
+ 1833 06c5 91       		.byte	0x91
+ 1834 06c6 F07E     		.sleb128 -144
+ 1835 06c8 00       		.byte	0
+ 1836 06c9 11       		.uleb128 0x11
+ 1837 06ca 42010000 		.4byte	.LVL119
+ 1838 06ce A7090000 		.4byte	0x9a7
+ 1839 06d2 DE060000 		.4byte	0x6de
+ 1840 06d6 0B       		.uleb128 0xb
+ 1841 06d7 01       		.uleb128 0x1
+ 1842 06d8 50       		.byte	0x50
+ 1843 06d9 03       		.uleb128 0x3
+ 1844 06da 91       		.byte	0x91
+ 1845 06db F07E     		.sleb128 -144
+ 1846 06dd 00       		.byte	0
+ 1847 06de 0D       		.uleb128 0xd
+ 1848 06df 4A010000 		.4byte	.LVL122
+ 1849 06e3 E6030000 		.4byte	0x3e6
+ 1850 06e7 11       		.uleb128 0x11
+ 1851 06e8 54010000 		.4byte	.LVL123
+ 1852 06ec C2000000 		.4byte	0xc2
+ 1853 06f0 08070000 		.4byte	0x708
+ 1854 06f4 0B       		.uleb128 0xb
+ 1855 06f5 01       		.uleb128 0x1
+ 1856 06f6 50       		.byte	0x50
+ 1857 06f7 03       		.uleb128 0x3
+ 1858 06f8 91       		.byte	0x91
+ 1859 06f9 B07E     		.sleb128 -208
+ 1860 06fb 0B       		.uleb128 0xb
+ 1861 06fc 01       		.uleb128 0x1
+ 1862 06fd 51       		.byte	0x51
+ 1863 06fe 01       		.uleb128 0x1
+ 1864 06ff 30       		.byte	0x30
+ 1865 0700 0B       		.uleb128 0xb
+ 1866 0701 01       		.uleb128 0x1
+ 1867 0702 52       		.byte	0x52
+ 1868 0703 03       		.uleb128 0x3
+ 1869 0704 91       		.byte	0x91
+ 1870 0705 B07F     		.sleb128 -80
+ 1871 0707 00       		.byte	0
+ 1872 0708 11       		.uleb128 0x11
+ 1873 0709 62010000 		.4byte	.LVL124
+ 1874 070d 18090000 		.4byte	0x918
+ 1875 0711 2D070000 		.4byte	0x72d
+ 1876 0715 0B       		.uleb128 0xb
+ 1877 0716 01       		.uleb128 0x1
+ 1878 0717 50       		.byte	0x50
+ 1879 0718 03       		.uleb128 0x3
+ 1880 0719 91       		.byte	0x91
+ 1881 071a F07E     		.sleb128 -144
+ 1882 071c 0B       		.uleb128 0xb
+ 1883 071d 01       		.uleb128 0x1
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 41
+
+
+ 1884 071e 51       		.byte	0x51
+ 1885 071f 05       		.uleb128 0x5
+ 1886 0720 03       		.byte	0x3
+ 1887 0721 DC000000 		.4byte	.LC14
+ 1888 0725 0B       		.uleb128 0xb
+ 1889 0726 01       		.uleb128 0x1
+ 1890 0727 52       		.byte	0x52
+ 1891 0728 03       		.uleb128 0x3
+ 1892 0729 91       		.byte	0x91
+ 1893 072a B07E     		.sleb128 -208
+ 1894 072c 00       		.byte	0
+ 1895 072d 11       		.uleb128 0x11
+ 1896 072e 68010000 		.4byte	.LVL125
+ 1897 0732 23090000 		.4byte	0x923
+ 1898 0736 42070000 		.4byte	0x742
+ 1899 073a 0B       		.uleb128 0xb
+ 1900 073b 01       		.uleb128 0x1
+ 1901 073c 50       		.byte	0x50
+ 1902 073d 03       		.uleb128 0x3
+ 1903 073e 91       		.byte	0x91
+ 1904 073f F07E     		.sleb128 -144
+ 1905 0741 00       		.byte	0
+ 1906 0742 11       		.uleb128 0x11
+ 1907 0743 6E010000 		.4byte	.LVL126
+ 1908 0747 A7090000 		.4byte	0x9a7
+ 1909 074b 57070000 		.4byte	0x757
+ 1910 074f 0B       		.uleb128 0xb
+ 1911 0750 01       		.uleb128 0x1
+ 1912 0751 50       		.byte	0x50
+ 1913 0752 03       		.uleb128 0x3
+ 1914 0753 91       		.byte	0x91
+ 1915 0754 F07E     		.sleb128 -144
+ 1916 0756 00       		.byte	0
+ 1917 0757 0D       		.uleb128 0xd
+ 1918 0758 76010000 		.4byte	.LVL129
+ 1919 075c E6030000 		.4byte	0x3e6
+ 1920 0760 11       		.uleb128 0x11
+ 1921 0761 80010000 		.4byte	.LVL130
+ 1922 0765 C2000000 		.4byte	0xc2
+ 1923 0769 81070000 		.4byte	0x781
+ 1924 076d 0B       		.uleb128 0xb
+ 1925 076e 01       		.uleb128 0x1
+ 1926 076f 50       		.byte	0x50
+ 1927 0770 03       		.uleb128 0x3
+ 1928 0771 91       		.byte	0x91
+ 1929 0772 B07E     		.sleb128 -208
+ 1930 0774 0B       		.uleb128 0xb
+ 1931 0775 01       		.uleb128 0x1
+ 1932 0776 51       		.byte	0x51
+ 1933 0777 01       		.uleb128 0x1
+ 1934 0778 30       		.byte	0x30
+ 1935 0779 0B       		.uleb128 0xb
+ 1936 077a 01       		.uleb128 0x1
+ 1937 077b 52       		.byte	0x52
+ 1938 077c 03       		.uleb128 0x3
+ 1939 077d 91       		.byte	0x91
+ 1940 077e B07F     		.sleb128 -80
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 42
+
+
+ 1941 0780 00       		.byte	0
+ 1942 0781 11       		.uleb128 0x11
+ 1943 0782 8E010000 		.4byte	.LVL131
+ 1944 0786 18090000 		.4byte	0x918
+ 1945 078a A6070000 		.4byte	0x7a6
+ 1946 078e 0B       		.uleb128 0xb
+ 1947 078f 01       		.uleb128 0x1
+ 1948 0790 50       		.byte	0x50
+ 1949 0791 03       		.uleb128 0x3
+ 1950 0792 91       		.byte	0x91
+ 1951 0793 F07E     		.sleb128 -144
+ 1952 0795 0B       		.uleb128 0xb
+ 1953 0796 01       		.uleb128 0x1
+ 1954 0797 51       		.byte	0x51
+ 1955 0798 05       		.uleb128 0x5
+ 1956 0799 03       		.byte	0x3
+ 1957 079a E4000000 		.4byte	.LC15
+ 1958 079e 0B       		.uleb128 0xb
+ 1959 079f 01       		.uleb128 0x1
+ 1960 07a0 52       		.byte	0x52
+ 1961 07a1 03       		.uleb128 0x3
+ 1962 07a2 91       		.byte	0x91
+ 1963 07a3 B07E     		.sleb128 -208
+ 1964 07a5 00       		.byte	0
+ 1965 07a6 11       		.uleb128 0x11
+ 1966 07a7 94010000 		.4byte	.LVL132
+ 1967 07ab 23090000 		.4byte	0x923
+ 1968 07af BB070000 		.4byte	0x7bb
+ 1969 07b3 0B       		.uleb128 0xb
+ 1970 07b4 01       		.uleb128 0x1
+ 1971 07b5 50       		.byte	0x50
+ 1972 07b6 03       		.uleb128 0x3
+ 1973 07b7 91       		.byte	0x91
+ 1974 07b8 F07E     		.sleb128 -144
+ 1975 07ba 00       		.byte	0
+ 1976 07bb 11       		.uleb128 0x11
+ 1977 07bc 9A010000 		.4byte	.LVL133
+ 1978 07c0 A7090000 		.4byte	0x9a7
+ 1979 07c4 D0070000 		.4byte	0x7d0
+ 1980 07c8 0B       		.uleb128 0xb
+ 1981 07c9 01       		.uleb128 0x1
+ 1982 07ca 50       		.byte	0x50
+ 1983 07cb 03       		.uleb128 0x3
+ 1984 07cc 91       		.byte	0x91
+ 1985 07cd F07E     		.sleb128 -144
+ 1986 07cf 00       		.byte	0
+ 1987 07d0 0D       		.uleb128 0xd
+ 1988 07d1 A2010000 		.4byte	.LVL136
+ 1989 07d5 E6030000 		.4byte	0x3e6
+ 1990 07d9 11       		.uleb128 0x11
+ 1991 07da D2010000 		.4byte	.LVL142
+ 1992 07de 18090000 		.4byte	0x918
+ 1993 07e2 03080000 		.4byte	0x803
+ 1994 07e6 0B       		.uleb128 0xb
+ 1995 07e7 01       		.uleb128 0x1
+ 1996 07e8 50       		.byte	0x50
+ 1997 07e9 03       		.uleb128 0x3
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 43
+
+
+ 1998 07ea 91       		.byte	0x91
+ 1999 07eb F07E     		.sleb128 -144
+ 2000 07ed 0B       		.uleb128 0xb
+ 2001 07ee 01       		.uleb128 0x1
+ 2002 07ef 51       		.byte	0x51
+ 2003 07f0 05       		.uleb128 0x5
+ 2004 07f1 03       		.byte	0x3
+ 2005 07f2 EC000000 		.4byte	.LC16
+ 2006 07f6 0B       		.uleb128 0xb
+ 2007 07f7 01       		.uleb128 0x1
+ 2008 07f8 52       		.byte	0x52
+ 2009 07f9 02       		.uleb128 0x2
+ 2010 07fa 75       		.byte	0x75
+ 2011 07fb 00       		.sleb128 0
+ 2012 07fc 0B       		.uleb128 0xb
+ 2013 07fd 01       		.uleb128 0x1
+ 2014 07fe 53       		.byte	0x53
+ 2015 07ff 02       		.uleb128 0x2
+ 2016 0800 76       		.byte	0x76
+ 2017 0801 00       		.sleb128 0
+ 2018 0802 00       		.byte	0
+ 2019 0803 11       		.uleb128 0x11
+ 2020 0804 D8010000 		.4byte	.LVL143
+ 2021 0808 23090000 		.4byte	0x923
+ 2022 080c 18080000 		.4byte	0x818
+ 2023 0810 0B       		.uleb128 0xb
+ 2024 0811 01       		.uleb128 0x1
+ 2025 0812 50       		.byte	0x50
+ 2026 0813 03       		.uleb128 0x3
+ 2027 0814 91       		.byte	0x91
+ 2028 0815 F07E     		.sleb128 -144
+ 2029 0817 00       		.byte	0
+ 2030 0818 11       		.uleb128 0x11
+ 2031 0819 DE010000 		.4byte	.LVL144
+ 2032 081d A7090000 		.4byte	0x9a7
+ 2033 0821 2D080000 		.4byte	0x82d
+ 2034 0825 0B       		.uleb128 0xb
+ 2035 0826 01       		.uleb128 0x1
+ 2036 0827 50       		.byte	0x50
+ 2037 0828 03       		.uleb128 0x3
+ 2038 0829 91       		.byte	0x91
+ 2039 082a F07E     		.sleb128 -144
+ 2040 082c 00       		.byte	0
+ 2041 082d 0D       		.uleb128 0xd
+ 2042 082e E6010000 		.4byte	.LVL146
+ 2043 0832 E6030000 		.4byte	0x3e6
+ 2044 0836 11       		.uleb128 0x11
+ 2045 0837 EC010000 		.4byte	.LVL147
+ 2046 083b A7090000 		.4byte	0x9a7
+ 2047 083f 4D080000 		.4byte	0x84d
+ 2048 0843 0B       		.uleb128 0xb
+ 2049 0844 01       		.uleb128 0x1
+ 2050 0845 50       		.byte	0x50
+ 2051 0846 05       		.uleb128 0x5
+ 2052 0847 03       		.byte	0x3
+ 2053 0848 14010000 		.4byte	.LC17
+ 2054 084c 00       		.byte	0
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 44
+
+
+ 2055 084d 0D       		.uleb128 0xd
+ 2056 084e 04020000 		.4byte	.LVL155
+ 2057 0852 E6030000 		.4byte	0x3e6
+ 2058 0856 11       		.uleb128 0x11
+ 2059 0857 0A020000 		.4byte	.LVL156
+ 2060 085b 23090000 		.4byte	0x923
+ 2061 085f 6B080000 		.4byte	0x86b
+ 2062 0863 0B       		.uleb128 0xb
+ 2063 0864 01       		.uleb128 0x1
+ 2064 0865 50       		.byte	0x50
+ 2065 0866 03       		.uleb128 0x3
+ 2066 0867 91       		.byte	0x91
+ 2067 0868 B07F     		.sleb128 -80
+ 2068 086a 00       		.byte	0
+ 2069 086b 0A       		.uleb128 0xa
+ 2070 086c 10020000 		.4byte	.LVL157
+ 2071 0870 A7090000 		.4byte	0x9a7
+ 2072 0874 0B       		.uleb128 0xb
+ 2073 0875 01       		.uleb128 0x1
+ 2074 0876 50       		.byte	0x50
+ 2075 0877 03       		.uleb128 0x3
+ 2076 0878 91       		.byte	0x91
+ 2077 0879 B07F     		.sleb128 -80
+ 2078 087b 00       		.byte	0
+ 2079 087c 00       		.byte	0
+ 2080 087d 18       		.uleb128 0x18
+ 2081 087e C3030000 		.4byte	.LASF38
+ 2082 0882 05       		.byte	0x5
+ 2083 0883 1207     		.2byte	0x712
+ 2084 0885 89080000 		.4byte	0x889
+ 2085 0889 19       		.uleb128 0x19
+ 2086 088a 7D000000 		.4byte	0x7d
+ 2087 088e 1A       		.uleb128 0x1a
+ 2088 088f E9030000 		.4byte	.LASF39
+ 2089 0893 01       		.byte	0x1
+ 2090 0894 1A       		.byte	0x1a
+ 2091 0895 6F000000 		.4byte	0x6f
+ 2092 0899 05       		.uleb128 0x5
+ 2093 089a 03       		.byte	0x3
+ 2094 089b 00000000 		.4byte	RUN_STATE
+ 2095 089f 1A       		.uleb128 0x1a
+ 2096 08a0 00000000 		.4byte	.LASF40
+ 2097 08a4 01       		.byte	0x1
+ 2098 08a5 1B       		.byte	0x1b
+ 2099 08a6 25000000 		.4byte	0x25
+ 2100 08aa 05       		.uleb128 0x5
+ 2101 08ab 03       		.byte	0x3
+ 2102 08ac 00000000 		.4byte	TARGET_SPEED
+ 2103 08b0 1B       		.uleb128 0x1b
+ 2104 08b1 6B7000   		.ascii	"kp\000"
+ 2105 08b4 01       		.byte	0x1
+ 2106 08b5 1C       		.byte	0x1c
+ 2107 08b6 25000000 		.4byte	0x25
+ 2108 08ba 05       		.uleb128 0x5
+ 2109 08bb 03       		.byte	0x3
+ 2110 08bc 00000000 		.4byte	kp
+ 2111 08c0 1B       		.uleb128 0x1b
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 45
+
+
+ 2112 08c1 6B6900   		.ascii	"ki\000"
+ 2113 08c4 01       		.byte	0x1
+ 2114 08c5 1D       		.byte	0x1d
+ 2115 08c6 25000000 		.4byte	0x25
+ 2116 08ca 05       		.uleb128 0x5
+ 2117 08cb 03       		.byte	0x3
+ 2118 08cc 00000000 		.4byte	ki
+ 2119 08d0 1B       		.uleb128 0x1b
+ 2120 08d1 6B6400   		.ascii	"kd\000"
+ 2121 08d4 01       		.byte	0x1
+ 2122 08d5 1E       		.byte	0x1e
+ 2123 08d6 25000000 		.4byte	0x25
+ 2124 08da 05       		.uleb128 0x5
+ 2125 08db 03       		.byte	0x3
+ 2126 08dc 00000000 		.4byte	kd
+ 2127 08e0 1A       		.uleb128 0x1a
+ 2128 08e1 B1000000 		.4byte	.LASF41
+ 2129 08e5 01       		.byte	0x1
+ 2130 08e6 1F       		.byte	0x1f
+ 2131 08e7 25000000 		.4byte	0x25
+ 2132 08eb 05       		.uleb128 0x5
+ 2133 08ec 03       		.byte	0x3
+ 2134 08ed 00000000 		.4byte	prev_error
+ 2135 08f1 1A       		.uleb128 0x1a
+ 2136 08f2 94000000 		.4byte	.LASF42
+ 2137 08f6 01       		.byte	0x1
+ 2138 08f7 20       		.byte	0x20
+ 2139 08f8 25000000 		.4byte	0x25
+ 2140 08fc 05       		.uleb128 0x5
+ 2141 08fd 03       		.byte	0x3
+ 2142 08fe 00000000 		.4byte	prev_i_term
+ 2143 0902 1C       		.uleb128 0x1c
+ 2144 0903 01010000 		.4byte	.LASF43
+ 2145 0907 01010000 		.4byte	.LASF43
+ 2146 090b 06       		.byte	0x6
+ 2147 090c 49       		.byte	0x49
+ 2148 090d 1C       		.uleb128 0x1c
+ 2149 090e 78000000 		.4byte	.LASF44
+ 2150 0912 78000000 		.4byte	.LASF44
+ 2151 0916 07       		.byte	0x7
+ 2152 0917 C3       		.byte	0xc3
+ 2153 0918 1C       		.uleb128 0x1c
+ 2154 0919 2F010000 		.4byte	.LASF45
+ 2155 091d 2F010000 		.4byte	.LASF45
+ 2156 0921 08       		.byte	0x8
+ 2157 0922 E7       		.byte	0xe7
+ 2158 0923 1C       		.uleb128 0x1c
+ 2159 0924 0D000000 		.4byte	.LASF46
+ 2160 0928 0D000000 		.4byte	.LASF46
+ 2161 092c 09       		.byte	0x9
+ 2162 092d 8B       		.byte	0x8b
+ 2163 092e 1C       		.uleb128 0x1c
+ 2164 092f 5A010000 		.4byte	.LASF47
+ 2165 0933 5A010000 		.4byte	.LASF47
+ 2166 0937 0A       		.byte	0xa
+ 2167 0938 6B       		.byte	0x6b
+ 2168 0939 1C       		.uleb128 0x1c
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 46
+
+
+ 2169 093a AE020000 		.4byte	.LASF48
+ 2170 093e AE020000 		.4byte	.LASF48
+ 2171 0942 0B       		.byte	0xb
+ 2172 0943 2F       		.byte	0x2f
+ 2173 0944 1C       		.uleb128 0x1c
+ 2174 0945 26000000 		.4byte	.LASF49
+ 2175 0949 26000000 		.4byte	.LASF49
+ 2176 094d 0C       		.byte	0xc
+ 2177 094e 3A       		.byte	0x3a
+ 2178 094f 1C       		.uleb128 0x1c
+ 2179 0950 90030000 		.4byte	.LASF50
+ 2180 0954 90030000 		.4byte	.LASF50
+ 2181 0958 0C       		.byte	0xc
+ 2182 0959 3D       		.byte	0x3d
+ 2183 095a 1C       		.uleb128 0x1c
+ 2184 095b D5020000 		.4byte	.LASF51
+ 2185 095f D5020000 		.4byte	.LASF51
+ 2186 0963 09       		.byte	0x9
+ 2187 0964 54       		.byte	0x54
+ 2188 0965 1C       		.uleb128 0x1c
+ 2189 0966 06010000 		.4byte	.LASF52
+ 2190 096a 06010000 		.4byte	.LASF52
+ 2191 096e 0C       		.byte	0xc
+ 2192 096f 38       		.byte	0x38
+ 2193 0970 1C       		.uleb128 0x1c
+ 2194 0971 91010000 		.4byte	.LASF53
+ 2195 0975 91010000 		.4byte	.LASF53
+ 2196 0979 0D       		.byte	0xd
+ 2197 097a 17       		.byte	0x17
+ 2198 097b 1C       		.uleb128 0x1c
+ 2199 097c 9D030000 		.4byte	.LASF54
+ 2200 0980 9D030000 		.4byte	.LASF54
+ 2201 0984 0D       		.byte	0xd
+ 2202 0985 1D       		.byte	0x1d
+ 2203 0986 1C       		.uleb128 0x1c
+ 2204 0987 52000000 		.4byte	.LASF55
+ 2205 098b 52000000 		.4byte	.LASF55
+ 2206 098f 0A       		.byte	0xa
+ 2207 0990 5A       		.byte	0x5a
+ 2208 0991 1C       		.uleb128 0x1c
+ 2209 0992 60000000 		.4byte	.LASF56
+ 2210 0996 60000000 		.4byte	.LASF56
+ 2211 099a 0E       		.byte	0xe
+ 2212 099b 17       		.byte	0x17
+ 2213 099c 1C       		.uleb128 0x1c
+ 2214 099d E0020000 		.4byte	.LASF57
+ 2215 09a1 E0020000 		.4byte	.LASF57
+ 2216 09a5 07       		.byte	0x7
+ 2217 09a6 92       		.byte	0x92
+ 2218 09a7 1C       		.uleb128 0x1c
+ 2219 09a8 7B010000 		.4byte	.LASF58
+ 2220 09ac 7B010000 		.4byte	.LASF58
+ 2221 09b0 0C       		.byte	0xc
+ 2222 09b1 3C       		.byte	0x3c
+ 2223 09b2 1C       		.uleb128 0x1c
+ 2224 09b3 DC030000 		.4byte	.LASF59
+ 2225 09b7 DC030000 		.4byte	.LASF59
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 47
+
+
+ 2226 09bb 09       		.byte	0x9
+ 2227 09bc 71       		.byte	0x71
+ 2228 09bd 1C       		.uleb128 0x1c
+ 2229 09be C9020000 		.4byte	.LASF60
+ 2230 09c2 C9020000 		.4byte	.LASF60
+ 2231 09c6 0C       		.byte	0xc
+ 2232 09c7 3E       		.byte	0x3e
+ 2233 09c8 00       		.byte	0
+ 2234              		.section	.debug_abbrev,"",%progbits
+ 2235              	.Ldebug_abbrev0:
+ 2236 0000 01       		.uleb128 0x1
+ 2237 0001 11       		.uleb128 0x11
+ 2238 0002 01       		.byte	0x1
+ 2239 0003 25       		.uleb128 0x25
+ 2240 0004 0E       		.uleb128 0xe
+ 2241 0005 13       		.uleb128 0x13
+ 2242 0006 0B       		.uleb128 0xb
+ 2243 0007 03       		.uleb128 0x3
+ 2244 0008 0E       		.uleb128 0xe
+ 2245 0009 1B       		.uleb128 0x1b
+ 2246 000a 0E       		.uleb128 0xe
+ 2247 000b 55       		.uleb128 0x55
+ 2248 000c 17       		.uleb128 0x17
+ 2249 000d 11       		.uleb128 0x11
+ 2250 000e 01       		.uleb128 0x1
+ 2251 000f 10       		.uleb128 0x10
+ 2252 0010 17       		.uleb128 0x17
+ 2253 0011 00       		.byte	0
+ 2254 0012 00       		.byte	0
+ 2255 0013 02       		.uleb128 0x2
+ 2256 0014 24       		.uleb128 0x24
+ 2257 0015 00       		.byte	0
+ 2258 0016 0B       		.uleb128 0xb
+ 2259 0017 0B       		.uleb128 0xb
+ 2260 0018 3E       		.uleb128 0x3e
+ 2261 0019 0B       		.uleb128 0xb
+ 2262 001a 03       		.uleb128 0x3
+ 2263 001b 0E       		.uleb128 0xe
+ 2264 001c 00       		.byte	0
+ 2265 001d 00       		.byte	0
+ 2266 001e 03       		.uleb128 0x3
+ 2267 001f 16       		.uleb128 0x16
+ 2268 0020 00       		.byte	0
+ 2269 0021 03       		.uleb128 0x3
+ 2270 0022 0E       		.uleb128 0xe
+ 2271 0023 3A       		.uleb128 0x3a
+ 2272 0024 0B       		.uleb128 0xb
+ 2273 0025 3B       		.uleb128 0x3b
+ 2274 0026 0B       		.uleb128 0xb
+ 2275 0027 49       		.uleb128 0x49
+ 2276 0028 13       		.uleb128 0x13
+ 2277 0029 00       		.byte	0
+ 2278 002a 00       		.byte	0
+ 2279 002b 04       		.uleb128 0x4
+ 2280 002c 24       		.uleb128 0x24
+ 2281 002d 00       		.byte	0
+ 2282 002e 0B       		.uleb128 0xb
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 48
+
+
+ 2283 002f 0B       		.uleb128 0xb
+ 2284 0030 3E       		.uleb128 0x3e
+ 2285 0031 0B       		.uleb128 0xb
+ 2286 0032 03       		.uleb128 0x3
+ 2287 0033 08       		.uleb128 0x8
+ 2288 0034 00       		.byte	0
+ 2289 0035 00       		.byte	0
+ 2290 0036 05       		.uleb128 0x5
+ 2291 0037 16       		.uleb128 0x16
+ 2292 0038 00       		.byte	0
+ 2293 0039 03       		.uleb128 0x3
+ 2294 003a 0E       		.uleb128 0xe
+ 2295 003b 3A       		.uleb128 0x3a
+ 2296 003c 0B       		.uleb128 0xb
+ 2297 003d 3B       		.uleb128 0x3b
+ 2298 003e 05       		.uleb128 0x5
+ 2299 003f 49       		.uleb128 0x49
+ 2300 0040 13       		.uleb128 0x13
+ 2301 0041 00       		.byte	0
+ 2302 0042 00       		.byte	0
+ 2303 0043 06       		.uleb128 0x6
+ 2304 0044 0F       		.uleb128 0xf
+ 2305 0045 00       		.byte	0
+ 2306 0046 0B       		.uleb128 0xb
+ 2307 0047 0B       		.uleb128 0xb
+ 2308 0048 49       		.uleb128 0x49
+ 2309 0049 13       		.uleb128 0x13
+ 2310 004a 00       		.byte	0
+ 2311 004b 00       		.byte	0
+ 2312 004c 07       		.uleb128 0x7
+ 2313 004d 2E       		.uleb128 0x2e
+ 2314 004e 01       		.byte	0x1
+ 2315 004f 03       		.uleb128 0x3
+ 2316 0050 0E       		.uleb128 0xe
+ 2317 0051 3A       		.uleb128 0x3a
+ 2318 0052 0B       		.uleb128 0xb
+ 2319 0053 3B       		.uleb128 0x3b
+ 2320 0054 0B       		.uleb128 0xb
+ 2321 0055 27       		.uleb128 0x27
+ 2322 0056 19       		.uleb128 0x19
+ 2323 0057 49       		.uleb128 0x49
+ 2324 0058 13       		.uleb128 0x13
+ 2325 0059 11       		.uleb128 0x11
+ 2326 005a 01       		.uleb128 0x1
+ 2327 005b 12       		.uleb128 0x12
+ 2328 005c 06       		.uleb128 0x6
+ 2329 005d 40       		.uleb128 0x40
+ 2330 005e 18       		.uleb128 0x18
+ 2331 005f 9642     		.uleb128 0x2116
+ 2332 0061 19       		.uleb128 0x19
+ 2333 0062 01       		.uleb128 0x1
+ 2334 0063 13       		.uleb128 0x13
+ 2335 0064 00       		.byte	0
+ 2336 0065 00       		.byte	0
+ 2337 0066 08       		.uleb128 0x8
+ 2338 0067 05       		.uleb128 0x5
+ 2339 0068 00       		.byte	0
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 49
+
+
+ 2340 0069 03       		.uleb128 0x3
+ 2341 006a 0E       		.uleb128 0xe
+ 2342 006b 3A       		.uleb128 0x3a
+ 2343 006c 0B       		.uleb128 0xb
+ 2344 006d 3B       		.uleb128 0x3b
+ 2345 006e 0B       		.uleb128 0xb
+ 2346 006f 49       		.uleb128 0x49
+ 2347 0070 13       		.uleb128 0x13
+ 2348 0071 02       		.uleb128 0x2
+ 2349 0072 17       		.uleb128 0x17
+ 2350 0073 00       		.byte	0
+ 2351 0074 00       		.byte	0
+ 2352 0075 09       		.uleb128 0x9
+ 2353 0076 34       		.uleb128 0x34
+ 2354 0077 00       		.byte	0
+ 2355 0078 03       		.uleb128 0x3
+ 2356 0079 0E       		.uleb128 0xe
+ 2357 007a 3A       		.uleb128 0x3a
+ 2358 007b 0B       		.uleb128 0xb
+ 2359 007c 3B       		.uleb128 0x3b
+ 2360 007d 0B       		.uleb128 0xb
+ 2361 007e 49       		.uleb128 0x49
+ 2362 007f 13       		.uleb128 0x13
+ 2363 0080 02       		.uleb128 0x2
+ 2364 0081 17       		.uleb128 0x17
+ 2365 0082 00       		.byte	0
+ 2366 0083 00       		.byte	0
+ 2367 0084 0A       		.uleb128 0xa
+ 2368 0085 898201   		.uleb128 0x4109
+ 2369 0088 01       		.byte	0x1
+ 2370 0089 11       		.uleb128 0x11
+ 2371 008a 01       		.uleb128 0x1
+ 2372 008b 31       		.uleb128 0x31
+ 2373 008c 13       		.uleb128 0x13
+ 2374 008d 00       		.byte	0
+ 2375 008e 00       		.byte	0
+ 2376 008f 0B       		.uleb128 0xb
+ 2377 0090 8A8201   		.uleb128 0x410a
+ 2378 0093 00       		.byte	0
+ 2379 0094 02       		.uleb128 0x2
+ 2380 0095 18       		.uleb128 0x18
+ 2381 0096 9142     		.uleb128 0x2111
+ 2382 0098 18       		.uleb128 0x18
+ 2383 0099 00       		.byte	0
+ 2384 009a 00       		.byte	0
+ 2385 009b 0C       		.uleb128 0xc
+ 2386 009c 2E       		.uleb128 0x2e
+ 2387 009d 01       		.byte	0x1
+ 2388 009e 3F       		.uleb128 0x3f
+ 2389 009f 19       		.uleb128 0x19
+ 2390 00a0 03       		.uleb128 0x3
+ 2391 00a1 0E       		.uleb128 0xe
+ 2392 00a2 3A       		.uleb128 0x3a
+ 2393 00a3 0B       		.uleb128 0xb
+ 2394 00a4 3B       		.uleb128 0x3b
+ 2395 00a5 0B       		.uleb128 0xb
+ 2396 00a6 27       		.uleb128 0x27
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 50
+
+
+ 2397 00a7 19       		.uleb128 0x19
+ 2398 00a8 11       		.uleb128 0x11
+ 2399 00a9 01       		.uleb128 0x1
+ 2400 00aa 12       		.uleb128 0x12
+ 2401 00ab 06       		.uleb128 0x6
+ 2402 00ac 40       		.uleb128 0x40
+ 2403 00ad 18       		.uleb128 0x18
+ 2404 00ae 9742     		.uleb128 0x2117
+ 2405 00b0 19       		.uleb128 0x19
+ 2406 00b1 01       		.uleb128 0x1
+ 2407 00b2 13       		.uleb128 0x13
+ 2408 00b3 00       		.byte	0
+ 2409 00b4 00       		.byte	0
+ 2410 00b5 0D       		.uleb128 0xd
+ 2411 00b6 898201   		.uleb128 0x4109
+ 2412 00b9 00       		.byte	0
+ 2413 00ba 11       		.uleb128 0x11
+ 2414 00bb 01       		.uleb128 0x1
+ 2415 00bc 31       		.uleb128 0x31
+ 2416 00bd 13       		.uleb128 0x13
+ 2417 00be 00       		.byte	0
+ 2418 00bf 00       		.byte	0
+ 2419 00c0 0E       		.uleb128 0xe
+ 2420 00c1 2E       		.uleb128 0x2e
+ 2421 00c2 01       		.byte	0x1
+ 2422 00c3 3F       		.uleb128 0x3f
+ 2423 00c4 19       		.uleb128 0x19
+ 2424 00c5 03       		.uleb128 0x3
+ 2425 00c6 0E       		.uleb128 0xe
+ 2426 00c7 3A       		.uleb128 0x3a
+ 2427 00c8 0B       		.uleb128 0xb
+ 2428 00c9 3B       		.uleb128 0x3b
+ 2429 00ca 0B       		.uleb128 0xb
+ 2430 00cb 27       		.uleb128 0x27
+ 2431 00cc 19       		.uleb128 0x19
+ 2432 00cd 49       		.uleb128 0x49
+ 2433 00ce 13       		.uleb128 0x13
+ 2434 00cf 11       		.uleb128 0x11
+ 2435 00d0 01       		.uleb128 0x1
+ 2436 00d1 12       		.uleb128 0x12
+ 2437 00d2 06       		.uleb128 0x6
+ 2438 00d3 40       		.uleb128 0x40
+ 2439 00d4 18       		.uleb128 0x18
+ 2440 00d5 9642     		.uleb128 0x2116
+ 2441 00d7 19       		.uleb128 0x19
+ 2442 00d8 01       		.uleb128 0x1
+ 2443 00d9 13       		.uleb128 0x13
+ 2444 00da 00       		.byte	0
+ 2445 00db 00       		.byte	0
+ 2446 00dc 0F       		.uleb128 0xf
+ 2447 00dd 34       		.uleb128 0x34
+ 2448 00de 00       		.byte	0
+ 2449 00df 03       		.uleb128 0x3
+ 2450 00e0 0E       		.uleb128 0xe
+ 2451 00e1 3A       		.uleb128 0x3a
+ 2452 00e2 0B       		.uleb128 0xb
+ 2453 00e3 3B       		.uleb128 0x3b
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 51
+
+
+ 2454 00e4 0B       		.uleb128 0xb
+ 2455 00e5 49       		.uleb128 0x49
+ 2456 00e6 13       		.uleb128 0x13
+ 2457 00e7 02       		.uleb128 0x2
+ 2458 00e8 18       		.uleb128 0x18
+ 2459 00e9 00       		.byte	0
+ 2460 00ea 00       		.byte	0
+ 2461 00eb 10       		.uleb128 0x10
+ 2462 00ec 34       		.uleb128 0x34
+ 2463 00ed 00       		.byte	0
+ 2464 00ee 03       		.uleb128 0x3
+ 2465 00ef 08       		.uleb128 0x8
+ 2466 00f0 3A       		.uleb128 0x3a
+ 2467 00f1 0B       		.uleb128 0xb
+ 2468 00f2 3B       		.uleb128 0x3b
+ 2469 00f3 0B       		.uleb128 0xb
+ 2470 00f4 49       		.uleb128 0x49
+ 2471 00f5 13       		.uleb128 0x13
+ 2472 00f6 02       		.uleb128 0x2
+ 2473 00f7 17       		.uleb128 0x17
+ 2474 00f8 00       		.byte	0
+ 2475 00f9 00       		.byte	0
+ 2476 00fa 11       		.uleb128 0x11
+ 2477 00fb 898201   		.uleb128 0x4109
+ 2478 00fe 01       		.byte	0x1
+ 2479 00ff 11       		.uleb128 0x11
+ 2480 0100 01       		.uleb128 0x1
+ 2481 0101 31       		.uleb128 0x31
+ 2482 0102 13       		.uleb128 0x13
+ 2483 0103 01       		.uleb128 0x1
+ 2484 0104 13       		.uleb128 0x13
+ 2485 0105 00       		.byte	0
+ 2486 0106 00       		.byte	0
+ 2487 0107 12       		.uleb128 0x12
+ 2488 0108 01       		.uleb128 0x1
+ 2489 0109 01       		.byte	0x1
+ 2490 010a 49       		.uleb128 0x49
+ 2491 010b 13       		.uleb128 0x13
+ 2492 010c 01       		.uleb128 0x1
+ 2493 010d 13       		.uleb128 0x13
+ 2494 010e 00       		.byte	0
+ 2495 010f 00       		.byte	0
+ 2496 0110 13       		.uleb128 0x13
+ 2497 0111 21       		.uleb128 0x21
+ 2498 0112 00       		.byte	0
+ 2499 0113 49       		.uleb128 0x49
+ 2500 0114 13       		.uleb128 0x13
+ 2501 0115 2F       		.uleb128 0x2f
+ 2502 0116 0B       		.uleb128 0xb
+ 2503 0117 00       		.byte	0
+ 2504 0118 00       		.byte	0
+ 2505 0119 14       		.uleb128 0x14
+ 2506 011a 2E       		.uleb128 0x2e
+ 2507 011b 01       		.byte	0x1
+ 2508 011c 3F       		.uleb128 0x3f
+ 2509 011d 19       		.uleb128 0x19
+ 2510 011e 03       		.uleb128 0x3
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 52
+
+
+ 2511 011f 0E       		.uleb128 0xe
+ 2512 0120 3A       		.uleb128 0x3a
+ 2513 0121 0B       		.uleb128 0xb
+ 2514 0122 3B       		.uleb128 0x3b
+ 2515 0123 0B       		.uleb128 0xb
+ 2516 0124 27       		.uleb128 0x27
+ 2517 0125 19       		.uleb128 0x19
+ 2518 0126 11       		.uleb128 0x11
+ 2519 0127 01       		.uleb128 0x1
+ 2520 0128 12       		.uleb128 0x12
+ 2521 0129 06       		.uleb128 0x6
+ 2522 012a 40       		.uleb128 0x40
+ 2523 012b 18       		.uleb128 0x18
+ 2524 012c 9642     		.uleb128 0x2116
+ 2525 012e 19       		.uleb128 0x19
+ 2526 012f 01       		.uleb128 0x1
+ 2527 0130 13       		.uleb128 0x13
+ 2528 0131 00       		.byte	0
+ 2529 0132 00       		.byte	0
+ 2530 0133 15       		.uleb128 0x15
+ 2531 0134 34       		.uleb128 0x34
+ 2532 0135 00       		.byte	0
+ 2533 0136 03       		.uleb128 0x3
+ 2534 0137 08       		.uleb128 0x8
+ 2535 0138 3A       		.uleb128 0x3a
+ 2536 0139 0B       		.uleb128 0xb
+ 2537 013a 3B       		.uleb128 0x3b
+ 2538 013b 0B       		.uleb128 0xb
+ 2539 013c 49       		.uleb128 0x49
+ 2540 013d 13       		.uleb128 0x13
+ 2541 013e 02       		.uleb128 0x2
+ 2542 013f 18       		.uleb128 0x18
+ 2543 0140 00       		.byte	0
+ 2544 0141 00       		.byte	0
+ 2545 0142 16       		.uleb128 0x16
+ 2546 0143 2E       		.uleb128 0x2e
+ 2547 0144 01       		.byte	0x1
+ 2548 0145 3F       		.uleb128 0x3f
+ 2549 0146 19       		.uleb128 0x19
+ 2550 0147 03       		.uleb128 0x3
+ 2551 0148 0E       		.uleb128 0xe
+ 2552 0149 3A       		.uleb128 0x3a
+ 2553 014a 0B       		.uleb128 0xb
+ 2554 014b 3B       		.uleb128 0x3b
+ 2555 014c 0B       		.uleb128 0xb
+ 2556 014d 27       		.uleb128 0x27
+ 2557 014e 19       		.uleb128 0x19
+ 2558 014f 49       		.uleb128 0x49
+ 2559 0150 13       		.uleb128 0x13
+ 2560 0151 8701     		.uleb128 0x87
+ 2561 0153 19       		.uleb128 0x19
+ 2562 0154 11       		.uleb128 0x11
+ 2563 0155 01       		.uleb128 0x1
+ 2564 0156 12       		.uleb128 0x12
+ 2565 0157 06       		.uleb128 0x6
+ 2566 0158 40       		.uleb128 0x40
+ 2567 0159 18       		.uleb128 0x18
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 53
+
+
+ 2568 015a 9642     		.uleb128 0x2116
+ 2569 015c 19       		.uleb128 0x19
+ 2570 015d 01       		.uleb128 0x1
+ 2571 015e 13       		.uleb128 0x13
+ 2572 015f 00       		.byte	0
+ 2573 0160 00       		.byte	0
+ 2574 0161 17       		.uleb128 0x17
+ 2575 0162 34       		.uleb128 0x34
+ 2576 0163 00       		.byte	0
+ 2577 0164 03       		.uleb128 0x3
+ 2578 0165 0E       		.uleb128 0xe
+ 2579 0166 3A       		.uleb128 0x3a
+ 2580 0167 0B       		.uleb128 0xb
+ 2581 0168 3B       		.uleb128 0x3b
+ 2582 0169 0B       		.uleb128 0xb
+ 2583 016a 49       		.uleb128 0x49
+ 2584 016b 13       		.uleb128 0x13
+ 2585 016c 1C       		.uleb128 0x1c
+ 2586 016d 0B       		.uleb128 0xb
+ 2587 016e 00       		.byte	0
+ 2588 016f 00       		.byte	0
+ 2589 0170 18       		.uleb128 0x18
+ 2590 0171 34       		.uleb128 0x34
+ 2591 0172 00       		.byte	0
+ 2592 0173 03       		.uleb128 0x3
+ 2593 0174 0E       		.uleb128 0xe
+ 2594 0175 3A       		.uleb128 0x3a
+ 2595 0176 0B       		.uleb128 0xb
+ 2596 0177 3B       		.uleb128 0x3b
+ 2597 0178 05       		.uleb128 0x5
+ 2598 0179 49       		.uleb128 0x49
+ 2599 017a 13       		.uleb128 0x13
+ 2600 017b 3F       		.uleb128 0x3f
+ 2601 017c 19       		.uleb128 0x19
+ 2602 017d 3C       		.uleb128 0x3c
+ 2603 017e 19       		.uleb128 0x19
+ 2604 017f 00       		.byte	0
+ 2605 0180 00       		.byte	0
+ 2606 0181 19       		.uleb128 0x19
+ 2607 0182 35       		.uleb128 0x35
+ 2608 0183 00       		.byte	0
+ 2609 0184 49       		.uleb128 0x49
+ 2610 0185 13       		.uleb128 0x13
+ 2611 0186 00       		.byte	0
+ 2612 0187 00       		.byte	0
+ 2613 0188 1A       		.uleb128 0x1a
+ 2614 0189 34       		.uleb128 0x34
+ 2615 018a 00       		.byte	0
+ 2616 018b 03       		.uleb128 0x3
+ 2617 018c 0E       		.uleb128 0xe
+ 2618 018d 3A       		.uleb128 0x3a
+ 2619 018e 0B       		.uleb128 0xb
+ 2620 018f 3B       		.uleb128 0x3b
+ 2621 0190 0B       		.uleb128 0xb
+ 2622 0191 49       		.uleb128 0x49
+ 2623 0192 13       		.uleb128 0x13
+ 2624 0193 3F       		.uleb128 0x3f
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 54
+
+
+ 2625 0194 19       		.uleb128 0x19
+ 2626 0195 02       		.uleb128 0x2
+ 2627 0196 18       		.uleb128 0x18
+ 2628 0197 00       		.byte	0
+ 2629 0198 00       		.byte	0
+ 2630 0199 1B       		.uleb128 0x1b
+ 2631 019a 34       		.uleb128 0x34
+ 2632 019b 00       		.byte	0
+ 2633 019c 03       		.uleb128 0x3
+ 2634 019d 08       		.uleb128 0x8
+ 2635 019e 3A       		.uleb128 0x3a
+ 2636 019f 0B       		.uleb128 0xb
+ 2637 01a0 3B       		.uleb128 0x3b
+ 2638 01a1 0B       		.uleb128 0xb
+ 2639 01a2 49       		.uleb128 0x49
+ 2640 01a3 13       		.uleb128 0x13
+ 2641 01a4 3F       		.uleb128 0x3f
+ 2642 01a5 19       		.uleb128 0x19
+ 2643 01a6 02       		.uleb128 0x2
+ 2644 01a7 18       		.uleb128 0x18
+ 2645 01a8 00       		.byte	0
+ 2646 01a9 00       		.byte	0
+ 2647 01aa 1C       		.uleb128 0x1c
+ 2648 01ab 2E       		.uleb128 0x2e
+ 2649 01ac 00       		.byte	0
+ 2650 01ad 3F       		.uleb128 0x3f
+ 2651 01ae 19       		.uleb128 0x19
+ 2652 01af 3C       		.uleb128 0x3c
+ 2653 01b0 19       		.uleb128 0x19
+ 2654 01b1 6E       		.uleb128 0x6e
+ 2655 01b2 0E       		.uleb128 0xe
+ 2656 01b3 03       		.uleb128 0x3
+ 2657 01b4 0E       		.uleb128 0xe
+ 2658 01b5 3A       		.uleb128 0x3a
+ 2659 01b6 0B       		.uleb128 0xb
+ 2660 01b7 3B       		.uleb128 0x3b
+ 2661 01b8 0B       		.uleb128 0xb
+ 2662 01b9 00       		.byte	0
+ 2663 01ba 00       		.byte	0
+ 2664 01bb 00       		.byte	0
+ 2665              		.section	.debug_loc,"",%progbits
+ 2666              	.Ldebug_loc0:
+ 2667              	.LLST0:
+ 2668 0000 00000000 		.4byte	.LVL0
+ 2669 0004 1D000000 		.4byte	.LVL9-1
+ 2670 0008 0100     		.2byte	0x1
+ 2671 000a 50       		.byte	0x50
+ 2672 000b 1D000000 		.4byte	.LVL9-1
+ 2673 000f 24000000 		.4byte	.LFE68
+ 2674 0013 0400     		.2byte	0x4
+ 2675 0015 F3       		.byte	0xf3
+ 2676 0016 01       		.uleb128 0x1
+ 2677 0017 50       		.byte	0x50
+ 2678 0018 9F       		.byte	0x9f
+ 2679 0019 00000000 		.4byte	0
+ 2680 001d 00000000 		.4byte	0
+ 2681              	.LLST1:
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 55
+
+
+ 2682 0021 00000000 		.4byte	.LVL0
+ 2683 0025 0E000000 		.4byte	.LVL5
+ 2684 0029 0100     		.2byte	0x1
+ 2685 002b 51       		.byte	0x51
+ 2686 002c 0E000000 		.4byte	.LVL5
+ 2687 0030 1D000000 		.4byte	.LVL9-1
+ 2688 0034 0100     		.2byte	0x1
+ 2689 0036 51       		.byte	0x51
+ 2690 0037 00000000 		.4byte	0
+ 2691 003b 00000000 		.4byte	0
+ 2692              	.LLST2:
+ 2693 003f 00000000 		.4byte	.LVL0
+ 2694 0043 1D000000 		.4byte	.LVL9-1
+ 2695 0047 0100     		.2byte	0x1
+ 2696 0049 52       		.byte	0x52
+ 2697 004a 1D000000 		.4byte	.LVL9-1
+ 2698 004e 24000000 		.4byte	.LFE68
+ 2699 0052 0400     		.2byte	0x4
+ 2700 0054 F3       		.byte	0xf3
+ 2701 0055 01       		.uleb128 0x1
+ 2702 0056 52       		.byte	0x52
+ 2703 0057 9F       		.byte	0x9f
+ 2704 0058 00000000 		.4byte	0
+ 2705 005c 00000000 		.4byte	0
+ 2706              	.LLST3:
+ 2707 0060 02000000 		.4byte	.LVL1
+ 2708 0064 08000000 		.4byte	.LVL3
+ 2709 0068 0200     		.2byte	0x2
+ 2710 006a 32       		.byte	0x32
+ 2711 006b 9F       		.byte	0x9f
+ 2712 006c 08000000 		.4byte	.LVL3
+ 2713 0070 18000000 		.4byte	.LVL8
+ 2714 0074 0100     		.2byte	0x1
+ 2715 0076 53       		.byte	0x53
+ 2716 0077 00000000 		.4byte	0
+ 2717 007b 00000000 		.4byte	0
+ 2718              	.LLST4:
+ 2719 007f 04000000 		.4byte	.LVL2
+ 2720 0083 0A000000 		.4byte	.LVL4
+ 2721 0087 0100     		.2byte	0x1
+ 2722 0089 54       		.byte	0x54
+ 2723 008a 12000000 		.4byte	.LVL7
+ 2724 008e 24000000 		.4byte	.LFE68
+ 2725 0092 0100     		.2byte	0x1
+ 2726 0094 54       		.byte	0x54
+ 2727 0095 00000000 		.4byte	0
+ 2728 0099 00000000 		.4byte	0
+ 2729              	.LLST5:
+ 2730 009d 00000000 		.4byte	.LVL11
+ 2731 00a1 05000000 		.4byte	.LVL12-1
+ 2732 00a5 0100     		.2byte	0x1
+ 2733 00a7 50       		.byte	0x50
+ 2734 00a8 05000000 		.4byte	.LVL12-1
+ 2735 00ac 08000000 		.4byte	.LFE64
+ 2736 00b0 0400     		.2byte	0x4
+ 2737 00b2 F3       		.byte	0xf3
+ 2738 00b3 01       		.uleb128 0x1
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 56
+
+
+ 2739 00b4 50       		.byte	0x50
+ 2740 00b5 9F       		.byte	0x9f
+ 2741 00b6 00000000 		.4byte	0
+ 2742 00ba 00000000 		.4byte	0
+ 2743              	.LLST6:
+ 2744 00be 00000000 		.4byte	.LVL13
+ 2745 00c2 0E000000 		.4byte	.LVL15
+ 2746 00c6 0100     		.2byte	0x1
+ 2747 00c8 50       		.byte	0x50
+ 2748 00c9 0E000000 		.4byte	.LVL15
+ 2749 00cd 11000000 		.4byte	.LVL16-1
+ 2750 00d1 0100     		.2byte	0x1
+ 2751 00d3 51       		.byte	0x51
+ 2752 00d4 11000000 		.4byte	.LVL16-1
+ 2753 00d8 F8000000 		.4byte	.LFE65
+ 2754 00dc 0600     		.2byte	0x6
+ 2755 00de F3       		.byte	0xf3
+ 2756 00df 03       		.uleb128 0x3
+ 2757 00e0 F5       		.byte	0xf5
+ 2758 00e1 00       		.uleb128 0
+ 2759 00e2 25       		.uleb128 0x25
+ 2760 00e3 9F       		.byte	0x9f
+ 2761 00e4 00000000 		.4byte	0
+ 2762 00e8 00000000 		.4byte	0
+ 2763              	.LLST7:
+ 2764 00ec 00000000 		.4byte	.LVL13
+ 2765 00f0 0C000000 		.4byte	.LVL14
+ 2766 00f4 0100     		.2byte	0x1
+ 2767 00f6 51       		.byte	0x51
+ 2768 00f7 0C000000 		.4byte	.LVL14
+ 2769 00fb F8000000 		.4byte	.LFE65
+ 2770 00ff 0400     		.2byte	0x4
+ 2771 0101 F3       		.byte	0xf3
+ 2772 0102 01       		.uleb128 0x1
+ 2773 0103 51       		.byte	0x51
+ 2774 0104 9F       		.byte	0x9f
+ 2775 0105 00000000 		.4byte	0
+ 2776 0109 00000000 		.4byte	0
+ 2777              	.LLST8:
+ 2778 010d 28000000 		.4byte	.LVL20
+ 2779 0111 2C000000 		.4byte	.LVL21
+ 2780 0115 0100     		.2byte	0x1
+ 2781 0117 50       		.byte	0x50
+ 2782 0118 2C000000 		.4byte	.LVL21
+ 2783 011c DA000000 		.4byte	.LVL50
+ 2784 0120 0100     		.2byte	0x1
+ 2785 0122 58       		.byte	0x58
+ 2786 0123 00000000 		.4byte	0
+ 2787 0127 00000000 		.4byte	0
+ 2788              	.LLST9:
+ 2789 012b 54000000 		.4byte	.LVL28
+ 2790 012f 58000000 		.4byte	.LVL29
+ 2791 0133 0100     		.2byte	0x1
+ 2792 0135 50       		.byte	0x50
+ 2793 0136 58000000 		.4byte	.LVL29
+ 2794 013a DA000000 		.4byte	.LVL50
+ 2795 013e 0100     		.2byte	0x1
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 57
+
+
+ 2796 0140 55       		.byte	0x55
+ 2797 0141 00000000 		.4byte	0
+ 2798 0145 00000000 		.4byte	0
+ 2799              	.LLST10:
+ 2800 0149 6A000000 		.4byte	.LVL33
+ 2801 014d 6C000000 		.4byte	.LVL34
+ 2802 0151 0100     		.2byte	0x1
+ 2803 0153 50       		.byte	0x50
+ 2804 0154 6C000000 		.4byte	.LVL34
+ 2805 0158 BE000000 		.4byte	.LVL46
+ 2806 015c 0100     		.2byte	0x1
+ 2807 015e 57       		.byte	0x57
+ 2808 015f 00000000 		.4byte	0
+ 2809 0163 00000000 		.4byte	0
+ 2810              	.LLST11:
+ 2811 0167 BE000000 		.4byte	.LVL46
+ 2812 016b C7000000 		.4byte	.LVL47-1
+ 2813 016f 0100     		.2byte	0x1
+ 2814 0171 50       		.byte	0x50
+ 2815 0172 C7000000 		.4byte	.LVL47-1
+ 2816 0176 DA000000 		.4byte	.LVL50
+ 2817 017a 0100     		.2byte	0x1
+ 2818 017c 57       		.byte	0x57
+ 2819 017d 00000000 		.4byte	0
+ 2820 0181 00000000 		.4byte	0
+ 2821              	.LLST12:
+ 2822 0185 14000000 		.4byte	.LVL17
+ 2823 0189 25000000 		.4byte	.LVL19-1
+ 2824 018d 0100     		.2byte	0x1
+ 2825 018f 50       		.byte	0x50
+ 2826 0190 25000000 		.4byte	.LVL19-1
+ 2827 0194 DA000000 		.4byte	.LVL50
+ 2828 0198 0100     		.2byte	0x1
+ 2829 019a 56       		.byte	0x56
+ 2830 019b 00000000 		.4byte	0
+ 2831 019f 00000000 		.4byte	0
+ 2832              	.LLST13:
+ 2833 01a3 20000000 		.4byte	.LVL18
+ 2834 01a7 44000000 		.4byte	.LVL25
+ 2835 01ab 0100     		.2byte	0x1
+ 2836 01ad 54       		.byte	0x54
+ 2837 01ae 00000000 		.4byte	0
+ 2838 01b2 00000000 		.4byte	0
+ 2839              	.LLST14:
+ 2840 01b6 10000000 		.4byte	.LVL51
+ 2841 01ba 12000000 		.4byte	.LVL52
+ 2842 01be 0100     		.2byte	0x1
+ 2843 01c0 50       		.byte	0x50
+ 2844 01c1 14000000 		.4byte	.LVL53
+ 2845 01c5 3C000000 		.4byte	.LVL61
+ 2846 01c9 0100     		.2byte	0x1
+ 2847 01cb 54       		.byte	0x54
+ 2848 01cc 00000000 		.4byte	0
+ 2849 01d0 00000000 		.4byte	0
+ 2850              	.LLST15:
+ 2851 01d4 14000000 		.4byte	.LVL53
+ 2852 01d8 1A000000 		.4byte	.LVL54
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 58
+
+
+ 2853 01dc 0600     		.2byte	0x6
+ 2854 01de 74       		.byte	0x74
+ 2855 01df 00       		.sleb128 0
+ 2856 01e0 08       		.byte	0x8
+ 2857 01e1 64       		.byte	0x64
+ 2858 01e2 1E       		.byte	0x1e
+ 2859 01e3 9F       		.byte	0x9f
+ 2860 01e4 1A000000 		.4byte	.LVL54
+ 2861 01e8 1D000000 		.4byte	.LVL55-1
+ 2862 01ec 0100     		.2byte	0x1
+ 2863 01ee 50       		.byte	0x50
+ 2864 01ef 1D000000 		.4byte	.LVL55-1
+ 2865 01f3 3C000000 		.4byte	.LVL61
+ 2866 01f7 0600     		.2byte	0x6
+ 2867 01f9 74       		.byte	0x74
+ 2868 01fa 00       		.sleb128 0
+ 2869 01fb 08       		.byte	0x8
+ 2870 01fc 64       		.byte	0x64
+ 2871 01fd 1E       		.byte	0x1e
+ 2872 01fe 9F       		.byte	0x9f
+ 2873 01ff 00000000 		.4byte	0
+ 2874 0203 00000000 		.4byte	0
+ 2875              	.LLST16:
+ 2876 0207 24000000 		.4byte	.LVL56
+ 2877 020b 29000000 		.4byte	.LVL57-1
+ 2878 020f 0100     		.2byte	0x1
+ 2879 0211 50       		.byte	0x50
+ 2880 0212 00000000 		.4byte	0
+ 2881 0216 00000000 		.4byte	0
+ 2882              	.LLST17:
+ 2883 021a 34000000 		.4byte	.LVL59
+ 2884 021e 39000000 		.4byte	.LVL60-1
+ 2885 0222 0100     		.2byte	0x1
+ 2886 0224 50       		.byte	0x50
+ 2887 0225 39000000 		.4byte	.LVL60-1
+ 2888 0229 70000000 		.4byte	.LVL69
+ 2889 022d 0100     		.2byte	0x1
+ 2890 022f 55       		.byte	0x55
+ 2891 0230 00000000 		.4byte	0
+ 2892 0234 00000000 		.4byte	0
+ 2893              	.LLST18:
+ 2894 0238 3C000000 		.4byte	.LVL61
+ 2895 023c 70000000 		.4byte	.LVL69
+ 2896 0240 0100     		.2byte	0x1
+ 2897 0242 54       		.byte	0x54
+ 2898 0243 72000000 		.4byte	.LVL70
+ 2899 0247 88000000 		.4byte	.LVL74
+ 2900 024b 0100     		.2byte	0x1
+ 2901 024d 54       		.byte	0x54
+ 2902 024e 00000000 		.4byte	0
+ 2903 0252 00000000 		.4byte	0
+ 2904              	.LLST19:
+ 2905 0256 36000000 		.4byte	.LVL88
+ 2906 025a 41000000 		.4byte	.LVL89-1
+ 2907 025e 0100     		.2byte	0x1
+ 2908 0260 50       		.byte	0x50
+ 2909 0261 00000000 		.4byte	0
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 59
+
+
+ 2910 0265 00000000 		.4byte	0
+ 2911              	.LLST20:
+ 2912 0269 04000000 		.4byte	.LVL77
+ 2913 026d 32000000 		.4byte	.LVL87
+ 2914 0271 0200     		.2byte	0x2
+ 2915 0273 30       		.byte	0x30
+ 2916 0274 9F       		.byte	0x9f
+ 2917 0275 32000000 		.4byte	.LVL87
+ 2918 0279 52000000 		.4byte	.LVL91
+ 2919 027d 0100     		.2byte	0x1
+ 2920 027f 54       		.byte	0x54
+ 2921 0280 54000000 		.4byte	.LVL92
+ 2922 0284 B4000000 		.4byte	.LVL99
+ 2923 0288 0100     		.2byte	0x1
+ 2924 028a 54       		.byte	0x54
+ 2925 028b B6000000 		.4byte	.LVL100
+ 2926 028f C2000000 		.4byte	.LVL101
+ 2927 0293 0100     		.2byte	0x1
+ 2928 0295 54       		.byte	0x54
+ 2929 0296 EC000000 		.4byte	.LVL108
+ 2930 029a FA000000 		.4byte	.LVL109
+ 2931 029e 0100     		.2byte	0x1
+ 2932 02a0 54       		.byte	0x54
+ 2933 02a1 1A010000 		.4byte	.LVL114
+ 2934 02a5 44010000 		.4byte	.LVL120
+ 2935 02a9 0100     		.2byte	0x1
+ 2936 02ab 54       		.byte	0x54
+ 2937 02ac 46010000 		.4byte	.LVL121
+ 2938 02b0 70010000 		.4byte	.LVL127
+ 2939 02b4 0100     		.2byte	0x1
+ 2940 02b6 54       		.byte	0x54
+ 2941 02b7 72010000 		.4byte	.LVL128
+ 2942 02bb 9C010000 		.4byte	.LVL134
+ 2943 02bf 0100     		.2byte	0x1
+ 2944 02c1 54       		.byte	0x54
+ 2945 02c2 9E010000 		.4byte	.LVL135
+ 2946 02c6 A4010000 		.4byte	.LVL137
+ 2947 02ca 0100     		.2byte	0x1
+ 2948 02cc 54       		.byte	0x54
+ 2949 02cd E2010000 		.4byte	.LVL145
+ 2950 02d1 EE010000 		.4byte	.LVL148
+ 2951 02d5 0100     		.2byte	0x1
+ 2952 02d7 54       		.byte	0x54
+ 2953 02d8 F0010000 		.4byte	.LVL149
+ 2954 02dc F2010000 		.4byte	.LVL150
+ 2955 02e0 0100     		.2byte	0x1
+ 2956 02e2 54       		.byte	0x54
+ 2957 02e3 F4010000 		.4byte	.LVL151
+ 2958 02e7 F6010000 		.4byte	.LVL152
+ 2959 02eb 0100     		.2byte	0x1
+ 2960 02ed 54       		.byte	0x54
+ 2961 02ee F8010000 		.4byte	.LVL153
+ 2962 02f2 10020000 		.4byte	.LVL157
+ 2963 02f6 0100     		.2byte	0x1
+ 2964 02f8 54       		.byte	0x54
+ 2965 02f9 10020000 		.4byte	.LVL157
+ 2966 02fd 54020000 		.4byte	.LFE69
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 60
+
+
+ 2967 0301 0200     		.2byte	0x2
+ 2968 0303 30       		.byte	0x30
+ 2969 0304 9F       		.byte	0x9f
+ 2970 0305 00000000 		.4byte	0
+ 2971 0309 00000000 		.4byte	0
+ 2972              		.section	.debug_aranges,"",%progbits
+ 2973 0000 44000000 		.4byte	0x44
+ 2974 0004 0200     		.2byte	0x2
+ 2975 0006 00000000 		.4byte	.Ldebug_info0
+ 2976 000a 04       		.byte	0x4
+ 2977 000b 00       		.byte	0
+ 2978 000c 0000     		.2byte	0
+ 2979 000e 0000     		.2byte	0
+ 2980 0010 00000000 		.4byte	.LFB68
+ 2981 0014 24000000 		.4byte	.LFE68-.LFB68
+ 2982 0018 00000000 		.4byte	.LFB64
+ 2983 001c 08000000 		.4byte	.LFE64-.LFB64
+ 2984 0020 00000000 		.4byte	.LFB65
+ 2985 0024 F8000000 		.4byte	.LFE65-.LFB65
+ 2986 0028 00000000 		.4byte	.LFB67
+ 2987 002c A4000000 		.4byte	.LFE67-.LFB67
+ 2988 0030 00000000 		.4byte	.LFB66
+ 2989 0034 12000000 		.4byte	.LFE66-.LFB66
+ 2990 0038 00000000 		.4byte	.LFB69
+ 2991 003c 54020000 		.4byte	.LFE69-.LFB69
+ 2992 0040 00000000 		.4byte	0
+ 2993 0044 00000000 		.4byte	0
+ 2994              		.section	.debug_ranges,"",%progbits
+ 2995              	.Ldebug_ranges0:
+ 2996 0000 00000000 		.4byte	.LFB68
+ 2997 0004 24000000 		.4byte	.LFE68
+ 2998 0008 00000000 		.4byte	.LFB64
+ 2999 000c 08000000 		.4byte	.LFE64
+ 3000 0010 00000000 		.4byte	.LFB65
+ 3001 0014 F8000000 		.4byte	.LFE65
+ 3002 0018 00000000 		.4byte	.LFB67
+ 3003 001c A4000000 		.4byte	.LFE67
+ 3004 0020 00000000 		.4byte	.LFB66
+ 3005 0024 12000000 		.4byte	.LFE66
+ 3006 0028 00000000 		.4byte	.LFB69
+ 3007 002c 54020000 		.4byte	.LFE69
+ 3008 0030 00000000 		.4byte	0
+ 3009 0034 00000000 		.4byte	0
+ 3010              		.section	.debug_line,"",%progbits
+ 3011              	.Ldebug_line0:
+ 3012 0000 3E030000 		.section	.debug_str,"MS",%progbits,1
+ 3012      02003802 
+ 3012      00000201 
+ 3012      FB0E0D00 
+ 3012      01010101 
+ 3013              	.LASF40:
+ 3014 0000 54415247 		.ascii	"TARGET_SPEED\000"
+ 3014      45545F53 
+ 3014      50454544 
+ 3014      00
+ 3015              	.LASF46:
+ 3016 000d 58424545 		.ascii	"XBEE_PutString\000"
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 61
+
+
+ 3016      5F507574 
+ 3016      53747269 
+ 3016      6E6700
+ 3017              	.LASF30:
+ 3018 001c 6F757470 		.ascii	"outputBuf\000"
+ 3018      75744275 
+ 3018      6600
+ 3019              	.LASF49:
+ 3020 0026 4C43445F 		.ascii	"LCD_WriteControl\000"
+ 3020      57726974 
+ 3020      65436F6E 
+ 3020      74726F6C 
+ 3020      00
+ 3021              	.LASF3:
+ 3022 0037 73686F72 		.ascii	"short int\000"
+ 3022      7420696E 
+ 3022      7400
+ 3023              	.LASF20:
+ 3024 0041 72656164 		.ascii	"readBuf\000"
+ 3024      42756600 
+ 3025              	.LASF21:
+ 3026 0049 62756649 		.ascii	"bufIndex\000"
+ 3026      6E646578 
+ 3026      00
+ 3027              	.LASF55:
+ 3028 0052 436F756E 		.ascii	"Counter_Start\000"
+ 3028      7465725F 
+ 3028      53746172 
+ 3028      7400
+ 3029              	.LASF56:
+ 3030 0060 436F756E 		.ascii	"Counter_Interrupt_Start\000"
+ 3030      7465725F 
+ 3030      496E7465 
+ 3030      72727570 
+ 3030      745F5374 
+ 3031              	.LASF44:
+ 3032 0078 50574D5F 		.ascii	"PWM_Motor_WriteCompare\000"
+ 3032      4D6F746F 
+ 3032      725F5772 
+ 3032      69746543 
+ 3032      6F6D7061 
+ 3033              	.LASF66:
+ 3034 008f 6D61696E 		.ascii	"main\000"
+ 3034      00
+ 3035              	.LASF42:
+ 3036 0094 70726576 		.ascii	"prev_i_term\000"
+ 3036      5F695F74 
+ 3036      65726D00 
+ 3037              	.LASF36:
+ 3038 00a0 70776D5F 		.ascii	"pwm_value\000"
+ 3038      76616C75 
+ 3038      6500
+ 3039              	.LASF28:
+ 3040 00aa 645F7465 		.ascii	"d_term\000"
+ 3040      726D00
+ 3041              	.LASF41:
+ 3042 00b1 70726576 		.ascii	"prev_error\000"
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 62
+
+
+ 3042      5F657272 
+ 3042      6F7200
+ 3043              	.LASF13:
+ 3044 00bc 75696E74 		.ascii	"uint16\000"
+ 3044      313600
+ 3045              	.LASF22:
+ 3046 00c3 72656164 		.ascii	"readChar\000"
+ 3046      43686172 
+ 3046      00
+ 3047              	.LASF12:
+ 3048 00cc 75696E74 		.ascii	"uint8\000"
+ 3048      3800
+ 3049              	.LASF0:
+ 3050 00d2 666C6F61 		.ascii	"float\000"
+ 3050      7400
+ 3051              	.LASF7:
+ 3052 00d8 6C6F6E67 		.ascii	"long long int\000"
+ 3052      206C6F6E 
+ 3052      6720696E 
+ 3052      7400
+ 3053              	.LASF33:
+ 3054 00e6 696E7465 		.ascii	"inter\000"
+ 3054      7200
+ 3055              	.LASF5:
+ 3056 00ec 6C6F6E67 		.ascii	"long int\000"
+ 3056      20696E74 
+ 3056      00
+ 3057              	.LASF32:
+ 3058 00f5 50574D5F 		.ascii	"PWM_Control\000"
+ 3058      436F6E74 
+ 3058      726F6C00 
+ 3059              	.LASF43:
+ 3060 0101 61746F66 		.ascii	"atof\000"
+ 3060      00
+ 3061              	.LASF52:
+ 3062 0106 4C43445F 		.ascii	"LCD_Start\000"
+ 3062      53746172 
+ 3062      7400
+ 3063              	.LASF16:
+ 3064 0110 6C6F6E67 		.ascii	"long double\000"
+ 3064      20646F75 
+ 3064      626C6500 
+ 3065              	.LASF2:
+ 3066 011c 756E7369 		.ascii	"unsigned char\000"
+ 3066      676E6564 
+ 3066      20636861 
+ 3066      7200
+ 3067              	.LASF23:
+ 3068 012a 64757479 		.ascii	"duty\000"
+ 3068      00
+ 3069              	.LASF45:
+ 3070 012f 73707269 		.ascii	"sprintf\000"
+ 3070      6E746600 
+ 3071              	.LASF1:
+ 3072 0137 7369676E 		.ascii	"signed char\000"
+ 3072      65642063 
+ 3072      68617200 
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 63
+
+
+ 3073              	.LASF8:
+ 3074 0143 6C6F6E67 		.ascii	"long long unsigned int\000"
+ 3074      206C6F6E 
+ 3074      6720756E 
+ 3074      7369676E 
+ 3074      65642069 
+ 3075              	.LASF47:
+ 3076 015a 436F756E 		.ascii	"Counter_ReadCapture\000"
+ 3076      7465725F 
+ 3076      52656164 
+ 3076      43617074 
+ 3076      75726500 
+ 3077              	.LASF9:
+ 3078 016e 756E7369 		.ascii	"unsigned int\000"
+ 3078      676E6564 
+ 3078      20696E74 
+ 3078      00
+ 3079              	.LASF58:
+ 3080 017b 4C43445F 		.ascii	"LCD_PrintString\000"
+ 3080      5072696E 
+ 3080      74537472 
+ 3080      696E6700 
+ 3081              	.LASF24:
+ 3082 018b 73706565 		.ascii	"speed\000"
+ 3082      6400
+ 3083              	.LASF53:
+ 3084 0191 48616C6C 		.ascii	"Hall_Interrupt_Start\000"
+ 3084      5F496E74 
+ 3084      65727275 
+ 3084      70745F53 
+ 3084      74617274 
+ 3085              	.LASF26:
+ 3086 01a6 705F7465 		.ascii	"p_term\000"
+ 3086      726D00
+ 3087              	.LASF4:
+ 3088 01ad 73686F72 		.ascii	"short unsigned int\000"
+ 3088      7420756E 
+ 3088      7369676E 
+ 3088      65642069 
+ 3088      6E7400
+ 3089              	.LASF61:
+ 3090 01c0 474E5520 		.ascii	"GNU C11 5.4.1 20160609 (release) [ARM/embedded-5-br"
+ 3090      43313120 
+ 3090      352E342E 
+ 3090      31203230 
+ 3090      31363036 
+ 3091 01f3 616E6368 		.ascii	"anch revision 237715] -mcpu=cortex-m3 -mthumb -g -O"
+ 3091      20726576 
+ 3091      6973696F 
+ 3091      6E203233 
+ 3091      37373135 
+ 3092 0226 67202D66 		.ascii	"g -ffunction-sections -ffat-lto-objects\000"
+ 3092      66756E63 
+ 3092      74696F6E 
+ 3092      2D736563 
+ 3092      74696F6E 
+ 3093              	.LASF15:
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 64
+
+
+ 3094 024e 63686172 		.ascii	"char\000"
+ 3094      00
+ 3095              	.LASF34:
+ 3096 0253 656C6170 		.ascii	"elapsed_time_micro_s\000"
+ 3096      7365645F 
+ 3096      74696D65 
+ 3096      5F6D6963 
+ 3096      726F5F73 
+ 3097              	.LASF27:
+ 3098 0268 695F7465 		.ascii	"i_term\000"
+ 3098      726D00
+ 3099              	.LASF11:
+ 3100 026f 696E7433 		.ascii	"int32_t\000"
+ 3100      325F7400 
+ 3101              	.LASF37:
+ 3102 0277 4C43445F 		.ascii	"LCD_Reset\000"
+ 3102      52657365 
+ 3102      7400
+ 3103              	.LASF64:
+ 3104 0281 5049445F 		.ascii	"PID_SetVal\000"
+ 3104      53657456 
+ 3104      616C00
+ 3105              	.LASF19:
+ 3106 028c 6E756D49 		.ascii	"numIndex\000"
+ 3106      6E646578 
+ 3106      00
+ 3107              	.LASF62:
+ 3108 0295 6D61696E 		.ascii	"main.c\000"
+ 3108      2E6300
+ 3109              	.LASF6:
+ 3110 029c 6C6F6E67 		.ascii	"long unsigned int\000"
+ 3110      20756E73 
+ 3110      69676E65 
+ 3110      6420696E 
+ 3110      7400
+ 3111              	.LASF48:
+ 3112 02ae 436F756E 		.ascii	"Counter_Reset_Write\000"
+ 3112      7465725F 
+ 3112      52657365 
+ 3112      745F5772 
+ 3112      69746500 
+ 3113              	.LASF14:
+ 3114 02c2 646F7562 		.ascii	"double\000"
+ 3114      6C6500
+ 3115              	.LASF60:
+ 3116 02c9 4C43445F 		.ascii	"LCD_PutChar\000"
+ 3116      50757443 
+ 3116      68617200 
+ 3117              	.LASF51:
+ 3118 02d5 58424545 		.ascii	"XBEE_Start\000"
+ 3118      5F537461 
+ 3118      727400
+ 3119              	.LASF57:
+ 3120 02e0 50574D5F 		.ascii	"PWM_Motor_Start\000"
+ 3120      4D6F746F 
+ 3120      725F5374 
+ 3120      61727400 
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 65
+
+
+ 3121              	.LASF25:
+ 3122 02f0 636F756E 		.ascii	"count\000"
+ 3122      7400
+ 3123              	.LASF10:
+ 3124 02f6 5F5F696E 		.ascii	"__int32_t\000"
+ 3124      7433325F 
+ 3124      7400
+ 3125              	.LASF35:
+ 3126 0300 656C6170 		.ascii	"elapsed_time_s\000"
+ 3126      7365645F 
+ 3126      74696D65 
+ 3126      5F7300
+ 3127              	.LASF18:
+ 3128 030f 6E756D42 		.ascii	"numBuf\000"
+ 3128      756600
+ 3129              	.LASF63:
+ 3130 0316 433A5C55 		.ascii	"C:\\Users\\ryant\\Documents\\Princeton\\!S20-21\\EL"
+ 3130      73657273 
+ 3130      5C727961 
+ 3130      6E745C44 
+ 3130      6F63756D 
+ 3131 0343 45333032 		.ascii	"E302\\current_speed_control\\carlab\\speed_control\\"
+ 3131      5C637572 
+ 3131      72656E74 
+ 3131      5F737065 
+ 3131      65645F63 
+ 3132 0373 73706565 		.ascii	"speed_control.cydsn\000"
+ 3132      645F636F 
+ 3132      6E74726F 
+ 3132      6C2E6379 
+ 3132      64736E00 
+ 3133              	.LASF17:
+ 3134 0387 73697A65 		.ascii	"sizetype\000"
+ 3134      74797065 
+ 3134      00
+ 3135              	.LASF50:
+ 3136 0390 4C43445F 		.ascii	"LCD_Position\000"
+ 3136      506F7369 
+ 3136      74696F6E 
+ 3136      00
+ 3137              	.LASF54:
+ 3138 039d 48616C6C 		.ascii	"Hall_Interrupt_SetVector\000"
+ 3138      5F496E74 
+ 3138      65727275 
+ 3138      70745F53 
+ 3138      65745665 
+ 3139              	.LASF29:
+ 3140 03b6 6F757470 		.ascii	"output\000"
+ 3140      757400
+ 3141              	.LASF31:
+ 3142 03bd 6572726F 		.ascii	"error\000"
+ 3142      7200
+ 3143              	.LASF38:
+ 3144 03c3 49544D5F 		.ascii	"ITM_RxBuffer\000"
+ 3144      52784275 
+ 3144      66666572 
+ 3144      00
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccCmfcIi.s 			page 66
+
+
+ 3145              	.LASF65:
+ 3146 03d0 5049445F 		.ascii	"PID_Control\000"
+ 3146      436F6E74 
+ 3146      726F6C00 
+ 3147              	.LASF59:
+ 3148 03dc 58424545 		.ascii	"XBEE_GetChar\000"
+ 3148      5F476574 
+ 3148      43686172 
+ 3148      00
+ 3149              	.LASF39:
+ 3150 03e9 52554E5F 		.ascii	"RUN_STATE\000"
+ 3150      53544154 
+ 3150      4500
+ 3151              		.ident	"GCC: (GNU Tools for ARM Embedded Processors) 5.4.1 20160609 (release) [ARM/embedded-5-bran

@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CyXmlSerializer>
+<!--This file is machine generated and read. It is not intended to be edited by hand.-->
+<!--Due to this, there is no schema for this file.-->
+<CyGuid_843a90a4-0c4b-4e44-991d-05e7fb117a21 type_name="CyDesigner.Common.ProjMgmt.Model.CyPrjMgmtWrkspcCustomData" version="4">
+<CyGuid_fdba8dfd-b15b-4469-9bbb-9e40c3e70997 type_name="CyDesigner.Common.Base.CyCustomData" version="2">
+<userData>
+<dataGuid v="1b906a0f-a7b6-4e4d-a428-82f98b53cb35">
+<CyGuid_1b906a0f-a7b6-4e4d-a428-82f98b53cb35 type_name="CyDesigner.Common.ProjMgmt.GUI.CyExplorerWindow+CyExplorerWindowState" version="3" SelectedTab="Source">
+<TreeKeys>
+<v>Source</v>
+<v>Components</v>
+<v>Output</v>
+</TreeKeys>
+<TreeStates>
+<CyGuid_2a325b3b-c96a-4e9f-b7a0-2c44ecb5f237 type_name="CyDesigner.Common.Base.Controls.CyTreeViewState" version="1" SelectedNodeId="speed_control\speed_control\speed_control.cydwr">
+<ExpandedNodeIds>
+<v>speed_control</v>
+<v>speed_control\speed_control</v>
+<v>speed_control\speed_control\TopDesign</v>
+<v>speed_control\speed_control\speed_control.cydwr</v>
+<v>speed_control\speed_control\speed_control.cydwr\Pins</v>
+<v>speed_control\speed_control\speed_control.cydwr\Analog</v>
+<v>speed_control\speed_control\speed_control.cydwr\Clocks</v>
+<v>speed_control\speed_control\speed_control.cydwr\Interrupts</v>
+<v>speed_control\speed_control\speed_control.cydwr\DMA</v>
+<v>speed_control\speed_control\speed_control.cydwr\System</v>
+<v>speed_control\speed_control\speed_control.cydwr\Directives</v>
+<v>speed_control\speed_control\speed_control.cydwr\Flash Security</v>
+<v>speed_control\speed_control\speed_control.cydwr\EEPROM</v>
+<v>speed_control\speed_control\Header Files</v>
+<v>speed_control\speed_control\Header Files\cyapicallbacks.h</v>
+<v>speed_control\speed_control\Source Files</v>
+<v>speed_control\speed_control\Source Files\main.c</v>
+<v>speed_control\speed_control\Generated_Source</v>
+<v>speed_control\speed_control\Generated_Source\PSoC5</v>
+</ExpandedNodeIds>
+<VisibleNodeIds>
+<v>speed_control</v>
+<v>speed_control\speed_control</v>
+<v>speed_control\speed_control\TopDesign</v>
+<v>speed_control\speed_control\speed_control.cydwr</v>
+<v>speed_control\speed_control\speed_control.cydwr\Pins</v>
+<v>speed_control\speed_control\speed_control.cydwr\Analog</v>
+<v>speed_control\speed_control\speed_control.cydwr\Clocks</v>
+<v>speed_control\speed_control\speed_control.cydwr\Interrupts</v>
+<v>speed_control\speed_control\speed_control.cydwr\DMA</v>
+<v>speed_control\speed_control\speed_control.cydwr\System</v>
+<v>speed_control\speed_control\speed_control.cydwr\Directives</v>
+<v>speed_control\speed_control\speed_control.cydwr\Flash Security</v>
+<v>speed_control\speed_control\speed_control.cydwr\EEPROM</v>
+<v>speed_control\speed_control\Header Files</v>
+<v>speed_control\speed_control\Header Files\cyapicallbacks.h</v>
+<v>speed_control\speed_control\Source Files</v>
+<v>speed_control\speed_control\Source Files\main.c</v>
+<v>speed_control\speed_control\Generated_Source</v>
+<v>speed_control\speed_control\Generated_Source\PSoC5</v>
+<v>speed_control\speed_control\Generated_Source\PSoC5\Clock</v>
+<v>speed_control\speed_control\Generated_Source\PSoC5\Counter</v>
+<v>speed_control\speed_control\Generated_Source\PSoC5\Counter_Interrupt</v>
+<v>speed_control\speed_control\Generated_Source\PSoC5\Counter_Reset</v>
+<v>speed_control\speed_control\Generated_Source\PSoC5\cy_boot</v>
+<v>speed_control\speed_control\Generated_Source\PSoC5\Em_EEPROM_Dynamic</v>
+<v>speed_control\speed_control\Generated_Source\PSoC5\Hall</v>
+<v>speed_control\speed_control\Generated_Source\PSoC5\Hall_Interrupt</v>
+<v>speed_control\speed_control\Generated_Source\PSoC5\LCD</v>
+<v>speed_control\speed_control\Generated_Source\PSoC5\LCD_LCDPort</v>
+<v>speed_control\speed_control\Generated_Source\PSoC5\LED4</v>
+<v>speed_control\speed_control\Generated_Source\PSoC5\PWM_Clock</v>
+<v>speed_control\speed_control\Generated_Source\PSoC5\PWM_Motor</v>
+<v>speed_control\speed_control\Generated_Source\PSoC5\PWM_Output</v>
+<v>speed_control\speed_control\Generated_Source\PSoC5\Reset_Clock</v>
+<v>speed_control\speed_control\Generated_Source\PSoC5\XBEE</v>
+<v>speed_control\speed_control\Generated_Source\PSoC5\XBEE_IntClock</v>
+<v>speed_control\speed_control\Generated_Source\PSoC5\cycodeshareexport.ld</v>
+<v>speed_control\speed_control\Generated_Source\PSoC5\cycodeshareimport.ld</v>
+<v>speed_control\speed_control\Generated_Source\PSoC5\cycodeshareimport.scat</v>
+<v>speed_control\speed_control\Generated_Source\PSoC5\cydevice.h</v>
+<v>speed_control\speed_control\Generated_Source\PSoC5\cydevice_trm.h</v>
+<v>speed_control\speed_control\Generated_Source\PSoC5\cydevicegnu.inc</v>
+<v>speed_control\speed_control\Generated_Source\PSoC5\cydevicegnu_trm.inc</v>
+</VisibleNodeIds>
+</CyGuid_2a325b3b-c96a-4e9f-b7a0-2c44ecb5f237>
+<CyGuid_2a325b3b-c96a-4e9f-b7a0-2c44ecb5f237 type_name="CyDesigner.Common.Base.Controls.CyTreeViewState" version="1" SelectedNodeId="">
+<ExpandedNodeIds>
+<v>speed_control</v>
+<v>speed_control\speed_control</v>
+<v>speed_control\speed_control\TopDesign</v>
+<v>speed_control\speed_control\TopDesign\TopDesign.cysch</v>
+</ExpandedNodeIds>
+<VisibleNodeIds>
+<v>speed_control</v>
+<v>speed_control\speed_control</v>
+<v>speed_control\speed_control\TopDesign</v>
+<v>speed_control\speed_control\TopDesign\TopDesign.cysch</v>
+</VisibleNodeIds>
+</CyGuid_2a325b3b-c96a-4e9f-b7a0-2c44ecb5f237>
+<CyGuid_2a325b3b-c96a-4e9f-b7a0-2c44ecb5f237 type_name="CyDesigner.Common.Base.Controls.CyTreeViewState" version="1" SelectedNodeId="">
+<ExpandedNodeIds>
+<v>speed_control</v>
+<v>speed_control\speed_control</v>
+<v>speed_control\speed_control\CortexM3</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\Clock.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\Cm3Start.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\Counter.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\Counter_Interrupt.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\Counter_PM.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\Counter_Reset.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\Counter_Reset_PM.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\cy_em_eeprom.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\CyBootAsmGnu.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\CyDmac.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\cyfitter_cfg.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\CyFlash.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\CyLib.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\cymetadata.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\cyPm.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\CySpc.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\cyutils.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\Hall.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\Hall_Interrupt.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\LCD.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\LCD_LCDPort.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\LCD_PM.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\LED4.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\main.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\PWM_Clock.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\PWM_Motor.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\PWM_Motor_PM.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\PWM_Output.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\Reset_Clock.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\XBEE.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\XBEE_BOOT.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\XBEE_INT.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\XBEE_IntClock.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\XBEE_PM.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\speed_control.elf</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\speed_control.hex</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\speed_control.map</v>
+<v>speed_control\speed_control\speed_control.gpdsc</v>
+<v>speed_control\speed_control\speed_control.rpt</v>
+<v>speed_control\speed_control\speed_control_timing.html</v>
+</ExpandedNodeIds>
+<VisibleNodeIds>
+<v>speed_control</v>
+<v>speed_control\speed_control</v>
+<v>speed_control\speed_control\CortexM3</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\Clock.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\Cm3Start.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\Counter.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\Counter_Interrupt.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\Counter_PM.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\Counter_Reset.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\Counter_Reset_PM.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\cy_em_eeprom.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\CyBootAsmGnu.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\CyDmac.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\cyfitter_cfg.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\CyFlash.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\CyLib.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\cymetadata.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\cyPm.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\CySpc.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\cyutils.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\Hall.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\Hall_Interrupt.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\LCD.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\LCD_LCDPort.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\LCD_PM.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\LED4.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\main.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\PWM_Clock.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\PWM_Motor.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\PWM_Motor_PM.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\PWM_Output.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\Reset_Clock.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\XBEE.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\XBEE_BOOT.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\XBEE_INT.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\XBEE_IntClock.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\Listing Files\XBEE_PM.lst</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\speed_control.elf</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\speed_control.hex</v>
+<v>speed_control\speed_control\CortexM3\ARM_GCC_541\Debug\speed_control.map</v>
+</VisibleNodeIds>
+</CyGuid_2a325b3b-c96a-4e9f-b7a0-2c44ecb5f237>
+</TreeStates>
+<TreeKeysV2>
+<v>Datasheet</v>
+</TreeKeysV2>
+<TreeStatesV2>
+<CyGuid_2a325b3b-c96a-4e9f-b7a0-2c44ecb5f237 type_name="CyDesigner.Common.Base.Controls.CyTreeViewState" version="1" SelectedNodeId="">
+<ExpandedNodeIds>
+<v>speed_control</v>
+<v>speed_control\speed_control</v>
+<v>speed_control\speed_control\PSoC 5LP Architecture TRM</v>
+<v>speed_control\speed_control\CY8C58LP Family Datasheet</v>
+<v>speed_control\speed_control\System Reference Guides</v>
+</ExpandedNodeIds>
+<VisibleNodeIds>
+<v>speed_control</v>
+<v>speed_control\speed_control</v>
+<v>speed_control\speed_control\PSoC 5LP Architecture TRM</v>
+<v>speed_control\speed_control\CY8C58LP Family Datasheet</v>
+<v>speed_control\speed_control\System Reference Guides</v>
+</VisibleNodeIds>
+</CyGuid_2a325b3b-c96a-4e9f-b7a0-2c44ecb5f237>
+</TreeStatesV2>
+</CyGuid_1b906a0f-a7b6-4e4d-a428-82f98b53cb35>
+</dataGuid>
+</userData>
+</CyGuid_fdba8dfd-b15b-4469-9bbb-9e40c3e70997>
+<Unloaded />
+<OpenDocs>
+<name v=".\speed_control.cydsn\main.c" />
+<name v=".\speed_control.cydsn\TopDesign\TopDesign.cysch" />
+<name v=".\speed_control.cydsn\speed_control.cydwr" />
+</OpenDocs>
+<OpenDocsLayout><![CDATA[<?xml version="1.0"?><!--
+
+  Actipro Docking/MDI for WinForms
+  Copyright (c) 2001-2016 Actipro Software LLC.  All rights reserved.
+  http://www.actiprosoftware.com
+
+--><DocumentLayout Version="1.0"><LayoutData><TabbedMdiRootContainer Orientation="Horizontal"><TabbedMdiContainer Size="1396, 528" SelectedTabbedMdiWindow="a430a24a-508e-4a35-9043-b8e2639f5b7b"><ToolWindow Key="Start Page:bd4649ab-da6b-4d04-a663-c722b8bf99db:Start Page" Guid="a337ba15-bf9b-4c72-b229-8b70feca1b34" /><DocumentWindow Key="C:\Users\ryant\Documents\Princeton\!S20-21\ELE302\current_speed_control\carlab\speed_control\speed_control.cydsn\main.c" Guid="b4f34023-19a5-45da-9d2e-977cf4c208da" /><DocumentWindow Key="C:\Users\ryant\Documents\Princeton\!S20-21\ELE302\current_speed_control\carlab\speed_control\speed_control.cydsn\TopDesign\TopDesign.cysch" Guid="af94acab-36dc-4706-ac5d-01ea0e73b891" /><DocumentWindow Key="C:\Users\ryant\Documents\Princeton\!S20-21\ELE302\current_speed_control\carlab\speed_control\speed_control.cydsn\speed_control.cydwr" Guid="a430a24a-508e-4a35-9043-b8e2639f5b7b" /></TabbedMdiContainer></TabbedMdiRootContainer><FloatingContainers /></LayoutData></DocumentLayout>]]></OpenDocsLayout>
+<config v="" />
+<AutoUpdate v="true" />
+</CyGuid_843a90a4-0c4b-4e44-991d-05e7fb117a21>
+</CyXmlSerializer>

@@ -1,0 +1,1943 @@
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccuv5JGI.s 			page 1
+
+
+   1              		.syntax unified
+   2              		.cpu cortex-m3
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 1
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.thumb
+  14              		.syntax unified
+  15              		.file	"cymetadata.c"
+  16              		.text
+  17              	.Ltext0:
+  18              		.cfi_sections	.debug_frame
+  19              		.global	cy_metadata
+  20              		.global	cy_meta_flashprotect
+  21              		.global	cy_meta_wonvl
+  22              		.global	cy_meta_custnvl
+  23              		.global	cy_meta_configecc
+  24              		.section	.cyconfigecc,"a",%progbits
+  25              		.align	2
+  26              		.type	cy_meta_configecc, %object
+  27              		.size	cy_meta_configecc, 1360
+  28              	cy_meta_configecc:
+  29 0000 04       		.byte	4
+  30 0001 52       		.byte	82
+  31 0002 00       		.byte	0
+  32 0003 40       		.byte	64
+  33 0004 05       		.byte	5
+  34 0005 64       		.byte	100
+  35 0006 00       		.byte	0
+  36 0007 40       		.byte	64
+  37 0008 53       		.byte	83
+  38 0009 02       		.byte	2
+  39 000a 01       		.byte	1
+  40 000b 40       		.byte	64
+  41 000c 3C       		.byte	60
+  42 000d 03       		.byte	3
+  43 000e 01       		.byte	1
+  44 000f 40       		.byte	64
+  45 0010 01       		.byte	1
+  46 0011 05       		.byte	5
+  47 0012 01       		.byte	1
+  48 0013 40       		.byte	64
+  49 0014 58       		.byte	88
+  50 0015 0A       		.byte	10
+  51 0016 01       		.byte	1
+  52 0017 40       		.byte	64
+  53 0018 40       		.byte	64
+  54 0019 0B       		.byte	11
+  55 001a 01       		.byte	1
+  56 001b 40       		.byte	64
+  57 001c 46       		.byte	70
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccuv5JGI.s 			page 2
+
+
+  58 001d 0C       		.byte	12
+  59 001e 01       		.byte	1
+  60 001f 40       		.byte	64
+  61 0020 44       		.byte	68
+  62 0021 0D       		.byte	13
+  63 0022 01       		.byte	1
+  64 0023 40       		.byte	64
+  65 0024 61       		.byte	97
+  66 0025 0E       		.byte	14
+  67 0026 01       		.byte	1
+  68 0027 40       		.byte	64
+  69 0028 37       		.byte	55
+  70 0029 0F       		.byte	15
+  71 002a 01       		.byte	1
+  72 002b 40       		.byte	64
+  73 002c 07       		.byte	7
+  74 002d 40       		.byte	64
+  75 002e 01       		.byte	1
+  76 002f 40       		.byte	64
+  77 0030 07       		.byte	7
+  78 0031 41       		.byte	65
+  79 0032 01       		.byte	1
+  80 0033 40       		.byte	64
+  81 0034 06       		.byte	6
+  82 0035 44       		.byte	68
+  83 0036 01       		.byte	1
+  84 0037 40       		.byte	64
+  85 0038 04       		.byte	4
+  86 0039 45       		.byte	69
+  87 003a 01       		.byte	1
+  88 003b 40       		.byte	64
+  89 003c 02       		.byte	2
+  90 003d 46       		.byte	70
+  91 003e 01       		.byte	1
+  92 003f 40       		.byte	64
+  93 0040 04       		.byte	4
+  94 0041 50       		.byte	80
+  95 0042 01       		.byte	1
+  96 0043 40       		.byte	64
+  97 0044 01       		.byte	1
+  98 0045 51       		.byte	81
+  99 0046 01       		.byte	1
+ 100 0047 40       		.byte	64
+ 101 0048 21       		.byte	33
+ 102 0049 10       		.byte	16
+ 103 004a 30       		.byte	48
+ 104 004b 08       		.byte	8
+ 105 004c 31       		.byte	49
+ 106 004d 40       		.byte	64
+ 107 004e 34       		.byte	52
+ 108 004f 01       		.byte	1
+ 109 0050 83       		.byte	-125
+ 110 0051 0F       		.byte	15
+ 111 0052 8A       		.byte	-118
+ 112 0053 38       		.byte	56
+ 113 0054 8D       		.byte	-115
+ 114 0055 72       		.byte	114
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccuv5JGI.s 			page 3
+
+
+ 115 0056 8E       		.byte	-114
+ 116 0057 0D       		.byte	13
+ 117 0058 8F       		.byte	-113
+ 118 0059 0F       		.byte	15
+ 119 005a 0A       		.byte	10
+ 120 005b 02       		.byte	2
+ 121 005c 12       		.byte	18
+ 122 005d 04       		.byte	4
+ 123 005e 1C       		.byte	28
+ 124 005f 02       		.byte	2
+ 125 0060 20       		.byte	32
+ 126 0061 04       		.byte	4
+ 127 0062 24       		.byte	36
+ 128 0063 04       		.byte	4
+ 129 0064 25       		.byte	37
+ 130 0065 01       		.byte	1
+ 131 0066 2E       		.byte	46
+ 132 0067 01       		.byte	1
+ 133 0068 30       		.byte	48
+ 134 0069 04       		.byte	4
+ 135 006a 34       		.byte	52
+ 136 006b 03       		.byte	3
+ 137 006c 37       		.byte	55
+ 138 006d 01       		.byte	1
+ 139 006e 3E       		.byte	62
+ 140 006f 01       		.byte	1
+ 141 0070 40       		.byte	64
+ 142 0071 46       		.byte	70
+ 143 0072 41       		.byte	65
+ 144 0073 03       		.byte	3
+ 145 0074 42       		.byte	66
+ 146 0075 02       		.byte	2
+ 147 0076 49       		.byte	73
+ 148 0077 FF       		.byte	-1
+ 149 0078 4A       		.byte	74
+ 150 0079 FF       		.byte	-1
+ 151 007a 4B       		.byte	75
+ 152 007b FF       		.byte	-1
+ 153 007c 4F       		.byte	79
+ 154 007d 01       		.byte	1
+ 155 007e 50       		.byte	80
+ 156 007f 18       		.byte	24
+ 157 0080 58       		.byte	88
+ 158 0081 04       		.byte	4
+ 159 0082 59       		.byte	89
+ 160 0083 04       		.byte	4
+ 161 0084 5A       		.byte	90
+ 162 0085 04       		.byte	4
+ 163 0086 5B       		.byte	91
+ 164 0087 04       		.byte	4
+ 165 0088 5C       		.byte	92
+ 166 0089 20       		.byte	32
+ 167 008a 5D       		.byte	93
+ 168 008b 02       		.byte	2
+ 169 008c 5F       		.byte	95
+ 170 008d 01       		.byte	1
+ 171 008e 60       		.byte	96
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccuv5JGI.s 			page 4
+
+
+ 172 008f 40       		.byte	64
+ 173 0090 62       		.byte	98
+ 174 0091 40       		.byte	64
+ 175 0092 64       		.byte	100
+ 176 0093 40       		.byte	64
+ 177 0094 65       		.byte	101
+ 178 0095 40       		.byte	64
+ 179 0096 66       		.byte	102
+ 180 0097 80       		.byte	-128
+ 181 0098 68       		.byte	104
+ 182 0099 80       		.byte	-128
+ 183 009a 6A       		.byte	106
+ 184 009b 80       		.byte	-128
+ 185 009c 6C       		.byte	108
+ 186 009d 80       		.byte	-128
+ 187 009e 6E       		.byte	110
+ 188 009f 80       		.byte	-128
+ 189 00a0 86       		.byte	-122
+ 190 00a1 02       		.byte	2
+ 191 00a2 87       		.byte	-121
+ 192 00a3 04       		.byte	4
+ 193 00a4 8F       		.byte	-113
+ 194 00a5 01       		.byte	1
+ 195 00a6 90       		.byte	-112
+ 196 00a7 02       		.byte	2
+ 197 00a8 93       		.byte	-109
+ 198 00a9 04       		.byte	4
+ 199 00aa 98       		.byte	-104
+ 200 00ab 04       		.byte	4
+ 201 00ac A4       		.byte	-92
+ 202 00ad 02       		.byte	2
+ 203 00ae AB       		.byte	-85
+ 204 00af 02       		.byte	2
+ 205 00b0 AD       		.byte	-83
+ 206 00b1 03       		.byte	3
+ 207 00b2 AE       		.byte	-82
+ 208 00b3 01       		.byte	1
+ 209 00b4 B0       		.byte	-80
+ 210 00b5 03       		.byte	3
+ 211 00b6 B1       		.byte	-79
+ 212 00b7 04       		.byte	4
+ 213 00b8 B2       		.byte	-78
+ 214 00b9 04       		.byte	4
+ 215 00ba B5       		.byte	-75
+ 216 00bb 03       		.byte	3
+ 217 00bc BE       		.byte	-66
+ 218 00bd 04       		.byte	4
+ 219 00be BF       		.byte	-65
+ 220 00bf 01       		.byte	1
+ 221 00c0 C0       		.byte	-64
+ 222 00c1 53       		.byte	83
+ 223 00c2 C1       		.byte	-63
+ 224 00c3 02       		.byte	2
+ 225 00c4 C2       		.byte	-62
+ 226 00c5 04       		.byte	4
+ 227 00c6 C5       		.byte	-59
+ 228 00c7 EC       		.byte	-20
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccuv5JGI.s 			page 5
+
+
+ 229 00c8 C7       		.byte	-57
+ 230 00c9 02       		.byte	2
+ 231 00ca C8       		.byte	-56
+ 232 00cb 13       		.byte	19
+ 233 00cc C9       		.byte	-55
+ 234 00cd FF       		.byte	-1
+ 235 00ce CA       		.byte	-54
+ 236 00cf FF       		.byte	-1
+ 237 00d0 CB       		.byte	-53
+ 238 00d1 FF       		.byte	-1
+ 239 00d2 CD       		.byte	-51
+ 240 00d3 83       		.byte	-125
+ 241 00d4 CE       		.byte	-50
+ 242 00d5 03       		.byte	3
+ 243 00d6 CF       		.byte	-49
+ 244 00d7 01       		.byte	1
+ 245 00d8 D0       		.byte	-48
+ 246 00d9 18       		.byte	24
+ 247 00da D2       		.byte	-46
+ 248 00db 80       		.byte	-128
+ 249 00dc D4       		.byte	-44
+ 250 00dd 03       		.byte	3
+ 251 00de D6       		.byte	-42
+ 252 00df 04       		.byte	4
+ 253 00e0 D8       		.byte	-40
+ 254 00e1 04       		.byte	4
+ 255 00e2 D9       		.byte	-39
+ 256 00e3 04       		.byte	4
+ 257 00e4 DA       		.byte	-38
+ 258 00e5 04       		.byte	4
+ 259 00e6 DB       		.byte	-37
+ 260 00e7 04       		.byte	4
+ 261 00e8 DC       		.byte	-36
+ 262 00e9 22       		.byte	34
+ 263 00ea DD       		.byte	-35
+ 264 00eb 22       		.byte	34
+ 265 00ec DF       		.byte	-33
+ 266 00ed 05       		.byte	5
+ 267 00ee E0       		.byte	-32
+ 268 00ef 40       		.byte	64
+ 269 00f0 E2       		.byte	-30
+ 270 00f1 40       		.byte	64
+ 271 00f2 E4       		.byte	-28
+ 272 00f3 40       		.byte	64
+ 273 00f4 E5       		.byte	-27
+ 274 00f5 40       		.byte	64
+ 275 00f6 E6       		.byte	-26
+ 276 00f7 80       		.byte	-128
+ 277 00f8 E8       		.byte	-24
+ 278 00f9 80       		.byte	-128
+ 279 00fa EA       		.byte	-22
+ 280 00fb 80       		.byte	-128
+ 281 00fc EC       		.byte	-20
+ 282 00fd 80       		.byte	-128
+ 283 00fe EE       		.byte	-18
+ 284 00ff 80       		.byte	-128
+ 285 0100 00       		.byte	0
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccuv5JGI.s 			page 6
+
+
+ 286 0101 04       		.byte	4
+ 287 0102 05       		.byte	5
+ 288 0103 10       		.byte	16
+ 289 0104 08       		.byte	8
+ 290 0105 10       		.byte	16
+ 291 0106 0A       		.byte	10
+ 292 0107 40       		.byte	64
+ 293 0108 0D       		.byte	13
+ 294 0109 02       		.byte	2
+ 295 010a 0F       		.byte	15
+ 296 010b 02       		.byte	2
+ 297 010c 11       		.byte	17
+ 298 010d 80       		.byte	-128
+ 299 010e 13       		.byte	19
+ 300 010f 08       		.byte	8
+ 301 0110 14       		.byte	20
+ 302 0111 10       		.byte	16
+ 303 0112 15       		.byte	21
+ 304 0113 40       		.byte	64
+ 305 0114 17       		.byte	23
+ 306 0115 02       		.byte	2
+ 307 0116 1A       		.byte	26
+ 308 0117 50       		.byte	80
+ 309 0118 1B       		.byte	27
+ 310 0119 01       		.byte	1
+ 311 011a 1C       		.byte	28
+ 312 011b 04       		.byte	4
+ 313 011c 1D       		.byte	29
+ 314 011d 10       		.byte	16
+ 315 011e 1F       		.byte	31
+ 316 011f 02       		.byte	2
+ 317 0120 21       		.byte	33
+ 318 0121 10       		.byte	16
+ 319 0122 23       		.byte	35
+ 320 0123 88       		.byte	-120
+ 321 0124 27       		.byte	39
+ 322 0125 02       		.byte	2
+ 323 0126 29       		.byte	41
+ 324 0127 10       		.byte	16
+ 325 0128 2B       		.byte	43
+ 326 0129 01       		.byte	1
+ 327 012a 2C       		.byte	44
+ 328 012b 10       		.byte	16
+ 329 012c 31       		.byte	49
+ 330 012d 02       		.byte	2
+ 331 012e 38       		.byte	56
+ 332 012f 08       		.byte	8
+ 333 0130 39       		.byte	57
+ 334 0131 40       		.byte	64
+ 335 0132 41       		.byte	65
+ 336 0133 10       		.byte	16
+ 337 0134 43       		.byte	67
+ 338 0135 0A       		.byte	10
+ 339 0136 45       		.byte	69
+ 340 0137 02       		.byte	2
+ 341 0138 47       		.byte	71
+ 342 0139 18       		.byte	24
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccuv5JGI.s 			page 7
+
+
+ 343 013a 49       		.byte	73
+ 344 013b 06       		.byte	6
+ 345 013c 4B       		.byte	75
+ 346 013d 40       		.byte	64
+ 347 013e 4C       		.byte	76
+ 348 013f 04       		.byte	4
+ 349 0140 50       		.byte	80
+ 350 0141 04       		.byte	4
+ 351 0142 53       		.byte	83
+ 352 0143 08       		.byte	8
+ 353 0144 59       		.byte	89
+ 354 0145 06       		.byte	6
+ 355 0146 5B       		.byte	91
+ 356 0147 90       		.byte	-112
+ 357 0148 60       		.byte	96
+ 358 0149 40       		.byte	64
+ 359 014a 6D       		.byte	109
+ 360 014b C0       		.byte	-64
+ 361 014c 71       		.byte	113
+ 362 014d 02       		.byte	2
+ 363 014e 73       		.byte	115
+ 364 014f 40       		.byte	64
+ 365 0150 79       		.byte	121
+ 366 0151 20       		.byte	32
+ 367 0152 8C       		.byte	-116
+ 368 0153 40       		.byte	64
+ 369 0154 8E       		.byte	-114
+ 370 0155 10       		.byte	16
+ 371 0156 98       		.byte	-104
+ 372 0157 10       		.byte	16
+ 373 0158 B0       		.byte	-80
+ 374 0159 10       		.byte	16
+ 375 015a C0       		.byte	-64
+ 376 015b 44       		.byte	68
+ 377 015c C2       		.byte	-62
+ 378 015d 9A       		.byte	-102
+ 379 015e C4       		.byte	-60
+ 380 015f B5       		.byte	-75
+ 381 0160 CA       		.byte	-54
+ 382 0161 4C       		.byte	76
+ 383 0162 CC       		.byte	-52
+ 384 0163 01       		.byte	1
+ 385 0164 CE       		.byte	-50
+ 386 0165 0A       		.byte	10
+ 387 0166 D0       		.byte	-48
+ 388 0167 E7       		.byte	-25
+ 389 0168 D2       		.byte	-46
+ 390 0169 28       		.byte	40
+ 391 016a D6       		.byte	-42
+ 392 016b 0F       		.byte	15
+ 393 016c D8       		.byte	-40
+ 394 016d 01       		.byte	1
+ 395 016e DE       		.byte	-34
+ 396 016f 04       		.byte	4
+ 397 0170 E2       		.byte	-30
+ 398 0171 40       		.byte	64
+ 399 0172 E6       		.byte	-26
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccuv5JGI.s 			page 8
+
+
+ 400 0173 10       		.byte	16
+ 401 0174 E8       		.byte	-24
+ 402 0175 20       		.byte	32
+ 403 0176 EA       		.byte	-22
+ 404 0177 04       		.byte	4
+ 405 0178 AB       		.byte	-85
+ 406 0179 12       		.byte	18
+ 407 017a 02       		.byte	2
+ 408 017b 02       		.byte	2
+ 409 017c 07       		.byte	7
+ 410 017d 01       		.byte	1
+ 411 017e 0B       		.byte	11
+ 412 017f 04       		.byte	4
+ 413 0180 0D       		.byte	13
+ 414 0181 01       		.byte	1
+ 415 0182 13       		.byte	19
+ 416 0183 08       		.byte	8
+ 417 0184 17       		.byte	23
+ 418 0185 04       		.byte	4
+ 419 0186 1A       		.byte	26
+ 420 0187 01       		.byte	1
+ 421 0188 1B       		.byte	27
+ 422 0189 02       		.byte	2
+ 423 018a 1F       		.byte	31
+ 424 018b 08       		.byte	8
+ 425 018c 27       		.byte	39
+ 426 018d 02       		.byte	2
+ 427 018e 29       		.byte	41
+ 428 018f 01       		.byte	1
+ 429 0190 2E       		.byte	46
+ 430 0191 02       		.byte	2
+ 431 0192 2F       		.byte	47
+ 432 0193 01       		.byte	1
+ 433 0194 31       		.byte	49
+ 434 0195 01       		.byte	1
+ 435 0196 33       		.byte	51
+ 436 0197 04       		.byte	4
+ 437 0198 35       		.byte	53
+ 438 0199 08       		.byte	8
+ 439 019a 36       		.byte	54
+ 440 019b 03       		.byte	3
+ 441 019c 37       		.byte	55
+ 442 019d 02       		.byte	2
+ 443 019e 39       		.byte	57
+ 444 019f 02       		.byte	2
+ 445 01a0 3E       		.byte	62
+ 446 01a1 40       		.byte	64
+ 447 01a2 3F       		.byte	63
+ 448 01a3 54       		.byte	84
+ 449 01a4 40       		.byte	64
+ 450 01a5 63       		.byte	99
+ 451 01a6 41       		.byte	65
+ 452 01a7 04       		.byte	4
+ 453 01a8 42       		.byte	66
+ 454 01a9 02       		.byte	2
+ 455 01aa 44       		.byte	68
+ 456 01ab 01       		.byte	1
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccuv5JGI.s 			page 9
+
+
+ 457 01ac 45       		.byte	69
+ 458 01ad EC       		.byte	-20
+ 459 01ae 48       		.byte	72
+ 460 01af 03       		.byte	3
+ 461 01b0 49       		.byte	73
+ 462 01b1 FF       		.byte	-1
+ 463 01b2 4A       		.byte	74
+ 464 01b3 FF       		.byte	-1
+ 465 01b4 4B       		.byte	75
+ 466 01b5 FF       		.byte	-1
+ 467 01b6 4C       		.byte	76
+ 468 01b7 62       		.byte	98
+ 469 01b8 4D       		.byte	77
+ 470 01b9 A0       		.byte	-96
+ 471 01ba 4E       		.byte	78
+ 472 01bb F0       		.byte	-16
+ 473 01bc 4F       		.byte	79
+ 474 01bd 41       		.byte	65
+ 475 01be 50       		.byte	80
+ 476 01bf 0C       		.byte	12
+ 477 01c0 54       		.byte	84
+ 478 01c1 18       		.byte	24
+ 479 01c2 58       		.byte	88
+ 480 01c3 04       		.byte	4
+ 481 01c4 59       		.byte	89
+ 482 01c5 04       		.byte	4
+ 483 01c6 5A       		.byte	90
+ 484 01c7 04       		.byte	4
+ 485 01c8 5B       		.byte	91
+ 486 01c9 04       		.byte	4
+ 487 01ca 5C       		.byte	92
+ 488 01cb 10       		.byte	16
+ 489 01cc 5D       		.byte	93
+ 490 01cd 11       		.byte	17
+ 491 01ce 5F       		.byte	95
+ 492 01cf 01       		.byte	1
+ 493 01d0 66       		.byte	102
+ 494 01d1 40       		.byte	64
+ 495 01d2 67       		.byte	103
+ 496 01d3 02       		.byte	2
+ 497 01d4 69       		.byte	105
+ 498 01d5 10       		.byte	16
+ 499 01d6 6A       		.byte	106
+ 500 01d7 30       		.byte	48
+ 501 01d8 6B       		.byte	107
+ 502 01d9 10       		.byte	16
+ 503 01da 6D       		.byte	109
+ 504 01db 10       		.byte	16
+ 505 01dc 6E       		.byte	110
+ 506 01dd 10       		.byte	16
+ 507 01de 6F       		.byte	111
+ 508 01df 12       		.byte	18
+ 509 01e0 83       		.byte	-125
+ 510 01e1 80       		.byte	-128
+ 511 01e2 84       		.byte	-124
+ 512 01e3 02       		.byte	2
+ 513 01e4 85       		.byte	-123
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccuv5JGI.s 			page 10
+
+
+ 514 01e5 10       		.byte	16
+ 515 01e6 86       		.byte	-122
+ 516 01e7 1C       		.byte	28
+ 517 01e8 89       		.byte	-119
+ 518 01e9 40       		.byte	64
+ 519 01ea 8A       		.byte	-118
+ 520 01eb 18       		.byte	24
+ 521 01ec 8B       		.byte	-117
+ 522 01ed 80       		.byte	-128
+ 523 01ee 8C       		.byte	-116
+ 524 01ef 02       		.byte	2
+ 525 01f0 8E       		.byte	-114
+ 526 01f1 0C       		.byte	12
+ 527 01f2 91       		.byte	-111
+ 528 01f3 B0       		.byte	-80
+ 529 01f4 93       		.byte	-109
+ 530 01f5 0C       		.byte	12
+ 531 01f6 94       		.byte	-108
+ 532 01f7 18       		.byte	24
+ 533 01f8 95       		.byte	-107
+ 534 01f9 AC       		.byte	-84
+ 535 01fa 96       		.byte	-106
+ 536 01fb 06       		.byte	6
+ 537 01fc 97       		.byte	-105
+ 538 01fd 11       		.byte	17
+ 539 01fe 99       		.byte	-103
+ 540 01ff 09       		.byte	9
+ 541 0200 9B       		.byte	-101
+ 542 0201 10       		.byte	16
+ 543 0202 9C       		.byte	-100
+ 544 0203 01       		.byte	1
+ 545 0204 9F       		.byte	-97
+ 546 0205 03       		.byte	3
+ 547 0206 A5       		.byte	-91
+ 548 0207 14       		.byte	20
+ 549 0208 A6       		.byte	-90
+ 550 0209 06       		.byte	6
+ 551 020a A9       		.byte	-87
+ 552 020b 1C       		.byte	28
+ 553 020c AA       		.byte	-86
+ 554 020d 10       		.byte	16
+ 555 020e AB       		.byte	-85
+ 556 020f A2       		.byte	-94
+ 557 0210 B2       		.byte	-78
+ 558 0211 1E       		.byte	30
+ 559 0212 B3       		.byte	-77
+ 560 0213 80       		.byte	-128
+ 561 0214 B4       		.byte	-76
+ 562 0215 01       		.byte	1
+ 563 0216 B5       		.byte	-75
+ 564 0217 60       		.byte	96
+ 565 0218 B7       		.byte	-73
+ 566 0219 1F       		.byte	31
+ 567 021a B9       		.byte	-71
+ 568 021b 20       		.byte	32
+ 569 021c BA       		.byte	-70
+ 570 021d 08       		.byte	8
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccuv5JGI.s 			page 11
+
+
+ 571 021e BE       		.byte	-66
+ 572 021f 10       		.byte	16
+ 573 0220 BF       		.byte	-65
+ 574 0221 04       		.byte	4
+ 575 0222 D8       		.byte	-40
+ 576 0223 04       		.byte	4
+ 577 0224 D9       		.byte	-39
+ 578 0225 04       		.byte	4
+ 579 0226 DC       		.byte	-36
+ 580 0227 11       		.byte	17
+ 581 0228 DF       		.byte	-33
+ 582 0229 01       		.byte	1
+ 583 022a 03       		.byte	3
+ 584 022b 80       		.byte	-128
+ 585 022c 05       		.byte	5
+ 586 022d 08       		.byte	8
+ 587 022e 07       		.byte	7
+ 588 022f 09       		.byte	9
+ 589 0230 0A       		.byte	10
+ 590 0231 04       		.byte	4
+ 591 0232 0C       		.byte	12
+ 592 0233 40       		.byte	64
+ 593 0234 0E       		.byte	14
+ 594 0235 20       		.byte	32
+ 595 0236 10       		.byte	16
+ 596 0237 02       		.byte	2
+ 597 0238 16       		.byte	22
+ 598 0239 28       		.byte	40
+ 599 023a 18       		.byte	24
+ 600 023b 01       		.byte	1
+ 601 023c 1E       		.byte	30
+ 602 023d 20       		.byte	32
+ 603 023e 1F       		.byte	31
+ 604 023f 14       		.byte	20
+ 605 0240 20       		.byte	32
+ 606 0241 04       		.byte	4
+ 607 0242 21       		.byte	33
+ 608 0243 82       		.byte	-126
+ 609 0244 22       		.byte	34
+ 610 0245 04       		.byte	4
+ 611 0246 26       		.byte	38
+ 612 0247 A8       		.byte	-88
+ 613 0248 27       		.byte	39
+ 614 0249 08       		.byte	8
+ 615 024a 29       		.byte	41
+ 616 024b A4       		.byte	-92
+ 617 024c 2F       		.byte	47
+ 618 024d 24       		.byte	36
+ 619 024e 30       		.byte	48
+ 620 024f 80       		.byte	-128
+ 621 0250 31       		.byte	49
+ 622 0251 22       		.byte	34
+ 623 0252 33       		.byte	51
+ 624 0253 08       		.byte	8
+ 625 0254 34       		.byte	52
+ 626 0255 40       		.byte	64
+ 627 0256 35       		.byte	53
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccuv5JGI.s 			page 12
+
+
+ 628 0257 08       		.byte	8
+ 629 0258 36       		.byte	54
+ 630 0259 A0       		.byte	-96
+ 631 025a 37       		.byte	55
+ 632 025b 01       		.byte	1
+ 633 025c 38       		.byte	56
+ 634 025d 40       		.byte	64
+ 635 025e 39       		.byte	57
+ 636 025f 08       		.byte	8
+ 637 0260 3B       		.byte	59
+ 638 0261 10       		.byte	16
+ 639 0262 3E       		.byte	62
+ 640 0263 28       		.byte	40
+ 641 0264 3F       		.byte	63
+ 642 0265 22       		.byte	34
+ 643 0266 40       		.byte	64
+ 644 0267 41       		.byte	65
+ 645 0268 41       		.byte	65
+ 646 0269 20       		.byte	32
+ 647 026a 42       		.byte	66
+ 648 026b 50       		.byte	80
+ 649 026c 48       		.byte	72
+ 650 026d 80       		.byte	-128
+ 651 026e 49       		.byte	73
+ 652 026f 24       		.byte	36
+ 653 0270 5A       		.byte	90
+ 654 0271 02       		.byte	2
+ 655 0272 60       		.byte	96
+ 656 0273 04       		.byte	4
+ 657 0274 61       		.byte	97
+ 658 0275 80       		.byte	-128
+ 659 0276 87       		.byte	-121
+ 660 0277 10       		.byte	16
+ 661 0278 91       		.byte	-111
+ 662 0279 08       		.byte	8
+ 663 027a 92       		.byte	-110
+ 664 027b 56       		.byte	86
+ 665 027c 93       		.byte	-109
+ 666 027d 10       		.byte	16
+ 667 027e 96       		.byte	-106
+ 668 027f 08       		.byte	8
+ 669 0280 97       		.byte	-105
+ 670 0281 08       		.byte	8
+ 671 0282 99       		.byte	-103
+ 672 0283 A8       		.byte	-88
+ 673 0284 9A       		.byte	-102
+ 674 0285 08       		.byte	8
+ 675 0286 9B       		.byte	-101
+ 676 0287 01       		.byte	1
+ 677 0288 A0       		.byte	-96
+ 678 0289 02       		.byte	2
+ 679 028a A1       		.byte	-95
+ 680 028b 20       		.byte	32
+ 681 028c A3       		.byte	-93
+ 682 028d B9       		.byte	-71
+ 683 028e A6       		.byte	-90
+ 684 028f 28       		.byte	40
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccuv5JGI.s 			page 13
+
+
+ 685 0290 AA       		.byte	-86
+ 686 0291 04       		.byte	4
+ 687 0292 AB       		.byte	-85
+ 688 0293 01       		.byte	1
+ 689 0294 C0       		.byte	-64
+ 690 0295 E8       		.byte	-24
+ 691 0296 C2       		.byte	-62
+ 692 0297 A2       		.byte	-94
+ 693 0298 C4       		.byte	-60
+ 694 0299 61       		.byte	97
+ 695 029a CA       		.byte	-54
+ 696 029b 6E       		.byte	110
+ 697 029c CC       		.byte	-52
+ 698 029d FF       		.byte	-1
+ 699 029e CE       		.byte	-50
+ 700 029f EE       		.byte	-18
+ 701 02a0 D0       		.byte	-48
+ 702 02a1 0F       		.byte	15
+ 703 02a2 D2       		.byte	-46
+ 704 02a3 04       		.byte	4
+ 705 02a4 D6       		.byte	-42
+ 706 02a5 01       		.byte	1
+ 707 02a6 D8       		.byte	-40
+ 708 02a7 0C       		.byte	12
+ 709 02a8 E4       		.byte	-28
+ 710 02a9 02       		.byte	2
+ 711 02aa 08       		.byte	8
+ 712 02ab 01       		.byte	1
+ 713 02ac 0C       		.byte	12
+ 714 02ad 01       		.byte	1
+ 715 02ae 10       		.byte	16
+ 716 02af 01       		.byte	1
+ 717 02b0 24       		.byte	36
+ 718 02b1 01       		.byte	1
+ 719 02b2 28       		.byte	40
+ 720 02b3 02       		.byte	2
+ 721 02b4 32       		.byte	50
+ 722 02b5 01       		.byte	1
+ 723 02b6 34       		.byte	52
+ 724 02b7 02       		.byte	2
+ 725 02b8 3E       		.byte	62
+ 726 02b9 14       		.byte	20
+ 727 02ba 40       		.byte	64
+ 728 02bb 46       		.byte	70
+ 729 02bc 41       		.byte	65
+ 730 02bd 03       		.byte	3
+ 731 02be 46       		.byte	70
+ 732 02bf B0       		.byte	-80
+ 733 02c0 47       		.byte	71
+ 734 02c1 CE       		.byte	-50
+ 735 02c2 48       		.byte	72
+ 736 02c3 38       		.byte	56
+ 737 02c4 49       		.byte	73
+ 738 02c5 FF       		.byte	-1
+ 739 02c6 4A       		.byte	74
+ 740 02c7 FF       		.byte	-1
+ 741 02c8 4B       		.byte	75
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccuv5JGI.s 			page 14
+
+
+ 742 02c9 FF       		.byte	-1
+ 743 02ca 4E       		.byte	78
+ 744 02cb F0       		.byte	-16
+ 745 02cc 4F       		.byte	79
+ 746 02cd 44       		.byte	68
+ 747 02ce 50       		.byte	80
+ 748 02cf 0C       		.byte	12
+ 749 02d0 58       		.byte	88
+ 750 02d1 04       		.byte	4
+ 751 02d2 5A       		.byte	90
+ 752 02d3 04       		.byte	4
+ 753 02d4 5D       		.byte	93
+ 754 02d5 01       		.byte	1
+ 755 02d6 5F       		.byte	95
+ 756 02d7 01       		.byte	1
+ 757 02d8 66       		.byte	102
+ 758 02d9 C0       		.byte	-64
+ 759 02da 6A       		.byte	106
+ 760 02db 40       		.byte	64
+ 761 02dc 6B       		.byte	107
+ 762 02dd 02       		.byte	2
+ 763 02de 80       		.byte	-128
+ 764 02df 02       		.byte	2
+ 765 02e0 81       		.byte	-127
+ 766 02e1 FF       		.byte	-1
+ 767 02e2 84       		.byte	-124
+ 768 02e3 13       		.byte	19
+ 769 02e4 85       		.byte	-123
+ 770 02e5 18       		.byte	24
+ 771 02e6 86       		.byte	-122
+ 772 02e7 0C       		.byte	12
+ 773 02e8 89       		.byte	-119
+ 774 02e9 08       		.byte	8
+ 775 02ea 8C       		.byte	-116
+ 776 02eb 0F       		.byte	15
+ 777 02ec 8E       		.byte	-114
+ 778 02ed 10       		.byte	16
+ 779 02ee 8F       		.byte	-113
+ 780 02ef 04       		.byte	4
+ 781 02f0 90       		.byte	-112
+ 782 02f1 1F       		.byte	31
+ 783 02f2 91       		.byte	-111
+ 784 02f3 44       		.byte	68
+ 785 02f4 95       		.byte	-107
+ 786 02f5 3C       		.byte	60
+ 787 02f6 96       		.byte	-106
+ 788 02f7 13       		.byte	19
+ 789 02f8 97       		.byte	-105
+ 790 02f9 C2       		.byte	-62
+ 791 02fa 98       		.byte	-104
+ 792 02fb 03       		.byte	3
+ 793 02fc 99       		.byte	-103
+ 794 02fd C0       		.byte	-64
+ 795 02fe 9C       		.byte	-100
+ 796 02ff 0C       		.byte	12
+ 797 0300 9D       		.byte	-99
+ 798 0301 10       		.byte	16
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccuv5JGI.s 			page 15
+
+
+ 799 0302 9E       		.byte	-98
+ 800 0303 13       		.byte	19
+ 801 0304 A0       		.byte	-96
+ 802 0305 08       		.byte	8
+ 803 0306 A1       		.byte	-95
+ 804 0307 80       		.byte	-128
+ 805 0308 A4       		.byte	-92
+ 806 0309 04       		.byte	4
+ 807 030a A7       		.byte	-89
+ 808 030b E3       		.byte	-29
+ 809 030c A8       		.byte	-88
+ 810 030d 0C       		.byte	12
+ 811 030e A9       		.byte	-87
+ 812 030f E7       		.byte	-25
+ 813 0310 AB       		.byte	-85
+ 814 0311 18       		.byte	24
+ 815 0312 AC       		.byte	-84
+ 816 0313 01       		.byte	1
+ 817 0314 AD       		.byte	-83
+ 818 0315 1C       		.byte	28
+ 819 0316 AF       		.byte	-81
+ 820 0317 E1       		.byte	-31
+ 821 0318 B1       		.byte	-79
+ 822 0319 C0       		.byte	-64
+ 823 031a B3       		.byte	-77
+ 824 031b 1F       		.byte	31
+ 825 031c B4       		.byte	-76
+ 826 031d 0F       		.byte	15
+ 827 031e B5       		.byte	-75
+ 828 031f 38       		.byte	56
+ 829 0320 B6       		.byte	-74
+ 830 0321 1C       		.byte	28
+ 831 0322 BA       		.byte	-70
+ 832 0323 A2       		.byte	-94
+ 833 0324 BB       		.byte	-69
+ 834 0325 08       		.byte	8
+ 835 0326 D6       		.byte	-42
+ 836 0327 02       		.byte	2
+ 837 0328 D7       		.byte	-41
+ 838 0329 12       		.byte	18
+ 839 032a D8       		.byte	-40
+ 840 032b 04       		.byte	4
+ 841 032c D9       		.byte	-39
+ 842 032d 04       		.byte	4
+ 843 032e DB       		.byte	-37
+ 844 032f 04       		.byte	4
+ 845 0330 DC       		.byte	-36
+ 846 0331 11       		.byte	17
+ 847 0332 DD       		.byte	-35
+ 848 0333 10       		.byte	16
+ 849 0334 DF       		.byte	-33
+ 850 0335 01       		.byte	1
+ 851 0336 00       		.byte	0
+ 852 0337 04       		.byte	4
+ 853 0338 01       		.byte	1
+ 854 0339 80       		.byte	-128
+ 855 033a 03       		.byte	3
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccuv5JGI.s 			page 16
+
+
+ 856 033b 80       		.byte	-128
+ 857 033c 05       		.byte	5
+ 858 033d A0       		.byte	-96
+ 859 033e 08       		.byte	8
+ 860 033f 10       		.byte	16
+ 861 0340 0A       		.byte	10
+ 862 0341 55       		.byte	85
+ 863 0342 0D       		.byte	13
+ 864 0343 01       		.byte	1
+ 865 0344 0E       		.byte	14
+ 866 0345 40       		.byte	64
+ 867 0346 10       		.byte	16
+ 868 0347 AA       		.byte	-86
+ 869 0348 15       		.byte	21
+ 870 0349 08       		.byte	8
+ 871 034a 16       		.byte	22
+ 872 034b 04       		.byte	4
+ 873 034c 18       		.byte	24
+ 874 034d 04       		.byte	4
+ 875 034e 19       		.byte	25
+ 876 034f A0       		.byte	-96
+ 877 0350 1A       		.byte	26
+ 878 0351 40       		.byte	64
+ 879 0352 1D       		.byte	29
+ 880 0353 04       		.byte	4
+ 881 0354 1E       		.byte	30
+ 882 0355 08       		.byte	8
+ 883 0356 21       		.byte	33
+ 884 0357 2C       		.byte	44
+ 885 0358 22       		.byte	34
+ 886 0359 01       		.byte	1
+ 887 035a 28       		.byte	40
+ 888 035b 20       		.byte	32
+ 889 035c 29       		.byte	41
+ 890 035d A0       		.byte	-96
+ 891 035e 2B       		.byte	43
+ 892 035f 80       		.byte	-128
+ 893 0360 30       		.byte	48
+ 894 0361 92       		.byte	-110
+ 895 0362 31       		.byte	49
+ 896 0363 08       		.byte	8
+ 897 0364 35       		.byte	53
+ 898 0365 08       		.byte	8
+ 899 0366 37       		.byte	55
+ 900 0367 04       		.byte	4
+ 901 0368 38       		.byte	56
+ 902 0369 68       		.byte	104
+ 903 036a 39       		.byte	57
+ 904 036b 02       		.byte	2
+ 905 036c 40       		.byte	64
+ 906 036d 20       		.byte	32
+ 907 036e 42       		.byte	66
+ 908 036f 10       		.byte	16
+ 909 0370 47       		.byte	71
+ 910 0371 05       		.byte	5
+ 911 0372 4F       		.byte	79
+ 912 0373 20       		.byte	32
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccuv5JGI.s 			page 17
+
+
+ 913 0374 56       		.byte	86
+ 914 0375 04       		.byte	4
+ 915 0376 57       		.byte	87
+ 916 0377 21       		.byte	33
+ 917 0378 59       		.byte	89
+ 918 0379 04       		.byte	4
+ 919 037a 69       		.byte	105
+ 920 037b 04       		.byte	4
+ 921 037c 6A       		.byte	106
+ 922 037d 20       		.byte	32
+ 923 037e 6B       		.byte	107
+ 924 037f 02       		.byte	2
+ 925 0380 70       		.byte	112
+ 926 0381 BC       		.byte	-68
+ 927 0382 89       		.byte	-119
+ 928 0383 04       		.byte	4
+ 929 0384 8A       		.byte	-118
+ 930 0385 01       		.byte	1
+ 931 0386 90       		.byte	-112
+ 932 0387 40       		.byte	64
+ 933 0388 92       		.byte	-110
+ 934 0389 14       		.byte	20
+ 935 038a 93       		.byte	-109
+ 936 038b 10       		.byte	16
+ 937 038c 95       		.byte	-107
+ 938 038d 04       		.byte	4
+ 939 038e 96       		.byte	-106
+ 940 038f 28       		.byte	40
+ 941 0390 97       		.byte	-105
+ 942 0391 09       		.byte	9
+ 943 0392 99       		.byte	-103
+ 944 0393 08       		.byte	8
+ 945 0394 9A       		.byte	-102
+ 946 0395 08       		.byte	8
+ 947 0396 9B       		.byte	-101
+ 948 0397 01       		.byte	1
+ 949 0398 9F       		.byte	-97
+ 950 0399 02       		.byte	2
+ 951 039a A0       		.byte	-96
+ 952 039b 02       		.byte	2
+ 953 039c A3       		.byte	-93
+ 954 039d 98       		.byte	-104
+ 955 039e A6       		.byte	-90
+ 956 039f 2C       		.byte	44
+ 957 03a0 A7       		.byte	-89
+ 958 03a1 01       		.byte	1
+ 959 03a2 A8       		.byte	-88
+ 960 03a3 04       		.byte	4
+ 961 03a4 AD       		.byte	-83
+ 962 03a5 10       		.byte	16
+ 963 03a6 AF       		.byte	-81
+ 964 03a7 01       		.byte	1
+ 965 03a8 B4       		.byte	-76
+ 966 03a9 02       		.byte	2
+ 967 03aa C0       		.byte	-64
+ 968 03ab CD       		.byte	-51
+ 969 03ac C2       		.byte	-62
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccuv5JGI.s 			page 18
+
+
+ 970 03ad 1F       		.byte	31
+ 971 03ae C4       		.byte	-60
+ 972 03af 6F       		.byte	111
+ 973 03b0 CA       		.byte	-54
+ 974 03b1 0F       		.byte	15
+ 975 03b2 CC       		.byte	-52
+ 976 03b3 0F       		.byte	15
+ 977 03b4 CE       		.byte	-50
+ 978 03b5 0F       		.byte	15
+ 979 03b6 D0       		.byte	-48
+ 980 03b7 C0       		.byte	-64
+ 981 03b8 D2       		.byte	-46
+ 982 03b9 20       		.byte	32
+ 983 03ba D6       		.byte	-42
+ 984 03bb 02       		.byte	2
+ 985 03bc E8       		.byte	-24
+ 986 03bd 04       		.byte	4
+ 987 03be 00       		.byte	0
+ 988 03bf 28       		.byte	40
+ 989 03c0 02       		.byte	2
+ 990 03c1 12       		.byte	18
+ 991 03c2 0B       		.byte	11
+ 992 03c3 02       		.byte	2
+ 993 03c4 0D       		.byte	13
+ 994 03c5 08       		.byte	8
+ 995 03c6 13       		.byte	19
+ 996 03c7 01       		.byte	1
+ 997 03c8 14       		.byte	20
+ 998 03c9 3F       		.byte	63
+ 999 03ca 18       		.byte	24
+ 1000 03cb 02       		.byte	2
+ 1001 03cc 1A       		.byte	26
+ 1002 03cd 0C       		.byte	12
+ 1003 03ce 1B       		.byte	27
+ 1004 03cf 0E       		.byte	14
+ 1005 03d0 20       		.byte	32
+ 1006 03d1 01       		.byte	1
+ 1007 03d2 24       		.byte	36
+ 1008 03d3 3F       		.byte	63
+ 1009 03d4 2C       		.byte	44
+ 1010 03d5 14       		.byte	20
+ 1011 03d6 2E       		.byte	46
+ 1012 03d7 62       		.byte	98
+ 1013 03d8 30       		.byte	48
+ 1014 03d9 40       		.byte	64
+ 1015 03da 31       		.byte	49
+ 1016 03db 08       		.byte	8
+ 1017 03dc 32       		.byte	50
+ 1018 03dd 01       		.byte	1
+ 1019 03de 33       		.byte	51
+ 1020 03df 01       		.byte	1
+ 1021 03e0 34       		.byte	52
+ 1022 03e1 0E       		.byte	14
+ 1023 03e2 35       		.byte	53
+ 1024 03e3 02       		.byte	2
+ 1025 03e4 36       		.byte	54
+ 1026 03e5 30       		.byte	48
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccuv5JGI.s 			page 19
+
+
+ 1027 03e6 37       		.byte	55
+ 1028 03e7 04       		.byte	4
+ 1029 03e8 40       		.byte	64
+ 1030 03e9 60       		.byte	96
+ 1031 03ea 41       		.byte	65
+ 1032 03eb 03       		.byte	3
+ 1033 03ec 45       		.byte	69
+ 1034 03ed D0       		.byte	-48
+ 1035 03ee 46       		.byte	70
+ 1036 03ef 10       		.byte	16
+ 1037 03f0 47       		.byte	71
+ 1038 03f1 02       		.byte	2
+ 1039 03f2 48       		.byte	72
+ 1040 03f3 1A       		.byte	26
+ 1041 03f4 49       		.byte	73
+ 1042 03f5 FF       		.byte	-1
+ 1043 03f6 4A       		.byte	74
+ 1044 03f7 FF       		.byte	-1
+ 1045 03f8 4B       		.byte	75
+ 1046 03f9 FF       		.byte	-1
+ 1047 03fa 4D       		.byte	77
+ 1048 03fb A0       		.byte	-96
+ 1049 03fc 4F       		.byte	79
+ 1050 03fd 04       		.byte	4
+ 1051 03fe 50       		.byte	80
+ 1052 03ff 18       		.byte	24
+ 1053 0400 52       		.byte	82
+ 1054 0401 80       		.byte	-128
+ 1055 0402 54       		.byte	84
+ 1056 0403 05       		.byte	5
+ 1057 0404 58       		.byte	88
+ 1058 0405 04       		.byte	4
+ 1059 0406 59       		.byte	89
+ 1060 0407 04       		.byte	4
+ 1061 0408 5A       		.byte	90
+ 1062 0409 04       		.byte	4
+ 1063 040a 5B       		.byte	91
+ 1064 040b 04       		.byte	4
+ 1065 040c 5C       		.byte	92
+ 1066 040d 31       		.byte	49
+ 1067 040e 5D       		.byte	93
+ 1068 040f 33       		.byte	51
+ 1069 0410 5F       		.byte	95
+ 1070 0411 01       		.byte	1
+ 1071 0412 60       		.byte	96
+ 1072 0413 40       		.byte	64
+ 1073 0414 62       		.byte	98
+ 1074 0415 C0       		.byte	-64
+ 1075 0416 64       		.byte	100
+ 1076 0417 40       		.byte	64
+ 1077 0418 65       		.byte	101
+ 1078 0419 40       		.byte	64
+ 1079 041a 66       		.byte	102
+ 1080 041b C0       		.byte	-64
+ 1081 041c 68       		.byte	104
+ 1082 041d C0       		.byte	-64
+ 1083 041e 6A       		.byte	106
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccuv5JGI.s 			page 20
+
+
+ 1084 041f C0       		.byte	-64
+ 1085 0420 6C       		.byte	108
+ 1086 0421 C0       		.byte	-64
+ 1087 0422 6E       		.byte	110
+ 1088 0423 C0       		.byte	-64
+ 1089 0424 81       		.byte	-127
+ 1090 0425 03       		.byte	3
+ 1091 0426 83       		.byte	-125
+ 1092 0427 04       		.byte	4
+ 1093 0428 86       		.byte	-122
+ 1094 0429 06       		.byte	6
+ 1095 042a 8A       		.byte	-118
+ 1096 042b 02       		.byte	2
+ 1097 042c 8B       		.byte	-117
+ 1098 042d 15       		.byte	21
+ 1099 042e 91       		.byte	-111
+ 1100 042f 33       		.byte	51
+ 1101 0430 93       		.byte	-109
+ 1102 0431 0C       		.byte	12
+ 1103 0432 96       		.byte	-106
+ 1104 0433 01       		.byte	1
+ 1105 0434 9A       		.byte	-102
+ 1106 0435 03       		.byte	3
+ 1107 0436 9B       		.byte	-101
+ 1108 0437 08       		.byte	8
+ 1109 0438 A2       		.byte	-94
+ 1110 0439 05       		.byte	5
+ 1111 043a A4       		.byte	-92
+ 1112 043b 06       		.byte	6
+ 1113 043c A5       		.byte	-91
+ 1114 043d 33       		.byte	51
+ 1115 043e A6       		.byte	-90
+ 1116 043f 01       		.byte	1
+ 1117 0440 A7       		.byte	-89
+ 1118 0441 04       		.byte	4
+ 1119 0442 A9       		.byte	-87
+ 1120 0443 2A       		.byte	42
+ 1121 0444 AB       		.byte	-85
+ 1122 0445 04       		.byte	4
+ 1123 0446 B3       		.byte	-77
+ 1124 0447 30       		.byte	48
+ 1125 0448 B4       		.byte	-76
+ 1126 0449 07       		.byte	7
+ 1127 044a B7       		.byte	-73
+ 1128 044b 0F       		.byte	15
+ 1129 044c B9       		.byte	-71
+ 1130 044d 08       		.byte	8
+ 1131 044e BA       		.byte	-70
+ 1132 044f 20       		.byte	32
+ 1133 0450 BB       		.byte	-69
+ 1134 0451 80       		.byte	-128
+ 1135 0452 BF       		.byte	-65
+ 1136 0453 04       		.byte	4
+ 1137 0454 C0       		.byte	-64
+ 1138 0455 02       		.byte	2
+ 1139 0456 C7       		.byte	-57
+ 1140 0457 04       		.byte	4
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccuv5JGI.s 			page 21
+
+
+ 1141 0458 C9       		.byte	-55
+ 1142 0459 FF       		.byte	-1
+ 1143 045a CA       		.byte	-54
+ 1144 045b 07       		.byte	7
+ 1145 045c CB       		.byte	-53
+ 1146 045d FF       		.byte	-1
+ 1147 045e CC       		.byte	-52
+ 1148 045f 40       		.byte	64
+ 1149 0460 CD       		.byte	-51
+ 1150 0461 20       		.byte	32
+ 1151 0462 CE       		.byte	-50
+ 1152 0463 F0       		.byte	-16
+ 1153 0464 CF       		.byte	-49
+ 1154 0465 05       		.byte	5
+ 1155 0466 D0       		.byte	-48
+ 1156 0467 08       		.byte	8
+ 1157 0468 D4       		.byte	-44
+ 1158 0469 01       		.byte	1
+ 1159 046a D8       		.byte	-40
+ 1160 046b 04       		.byte	4
+ 1161 046c D9       		.byte	-39
+ 1162 046d 04       		.byte	4
+ 1163 046e DA       		.byte	-38
+ 1164 046f 04       		.byte	4
+ 1165 0470 DB       		.byte	-37
+ 1166 0471 04       		.byte	4
+ 1167 0472 DC       		.byte	-36
+ 1168 0473 11       		.byte	17
+ 1169 0474 DD       		.byte	-35
+ 1170 0475 11       		.byte	17
+ 1171 0476 DF       		.byte	-33
+ 1172 0477 01       		.byte	1
+ 1173 0478 E0       		.byte	-32
+ 1174 0479 40       		.byte	64
+ 1175 047a E1       		.byte	-31
+ 1176 047b A8       		.byte	-88
+ 1177 047c E2       		.byte	-30
+ 1178 047d 40       		.byte	64
+ 1179 047e E3       		.byte	-29
+ 1180 047f 20       		.byte	32
+ 1181 0480 03       		.byte	3
+ 1182 0481 80       		.byte	-128
+ 1183 0482 06       		.byte	6
+ 1184 0483 08       		.byte	8
+ 1185 0484 07       		.byte	7
+ 1186 0485 10       		.byte	16
+ 1187 0486 0A       		.byte	10
+ 1188 0487 24       		.byte	36
+ 1189 0488 0D       		.byte	13
+ 1190 0489 20       		.byte	32
+ 1191 048a 0F       		.byte	15
+ 1192 048b 20       		.byte	32
+ 1193 048c 10       		.byte	16
+ 1194 048d 02       		.byte	2
+ 1195 048e 11       		.byte	17
+ 1196 048f 04       		.byte	4
+ 1197 0490 13       		.byte	19
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccuv5JGI.s 			page 22
+
+
+ 1198 0491 02       		.byte	2
+ 1199 0492 16       		.byte	22
+ 1200 0493 20       		.byte	32
+ 1201 0494 17       		.byte	23
+ 1202 0495 01       		.byte	1
+ 1203 0496 18       		.byte	24
+ 1204 0497 40       		.byte	64
+ 1205 0498 1A       		.byte	26
+ 1206 0499 14       		.byte	20
+ 1207 049a 1B       		.byte	27
+ 1208 049b 80       		.byte	-128
+ 1209 049c 1D       		.byte	29
+ 1210 049d 20       		.byte	32
+ 1211 049e 1F       		.byte	31
+ 1212 049f 10       		.byte	16
+ 1213 04a0 20       		.byte	32
+ 1214 04a1 04       		.byte	4
+ 1215 04a2 21       		.byte	33
+ 1216 04a3 40       		.byte	64
+ 1217 04a4 23       		.byte	35
+ 1218 04a5 90       		.byte	-112
+ 1219 04a6 27       		.byte	39
+ 1220 04a7 21       		.byte	33
+ 1221 04a8 2D       		.byte	45
+ 1222 04a9 08       		.byte	8
+ 1223 04aa 2E       		.byte	46
+ 1224 04ab 20       		.byte	32
+ 1225 04ac 2F       		.byte	47
+ 1226 04ad 14       		.byte	20
+ 1227 04ae 30       		.byte	48
+ 1228 04af 20       		.byte	32
+ 1229 04b0 31       		.byte	49
+ 1230 04b1 02       		.byte	2
+ 1231 04b2 36       		.byte	54
+ 1232 04b3 20       		.byte	32
+ 1233 04b4 37       		.byte	55
+ 1234 04b5 11       		.byte	17
+ 1235 04b6 39       		.byte	57
+ 1236 04b7 80       		.byte	-128
+ 1237 04b8 3B       		.byte	59
+ 1238 04b9 10       		.byte	16
+ 1239 04ba 3F       		.byte	63
+ 1240 04bb 22       		.byte	34
+ 1241 04bc 43       		.byte	67
+ 1242 04bd 08       		.byte	8
+ 1243 04be 47       		.byte	71
+ 1244 04bf 20       		.byte	32
+ 1245 04c0 49       		.byte	73
+ 1246 04c1 01       		.byte	1
+ 1247 04c2 4B       		.byte	75
+ 1248 04c3 10       		.byte	16
+ 1249 04c4 50       		.byte	80
+ 1250 04c5 20       		.byte	32
+ 1251 04c6 53       		.byte	83
+ 1252 04c7 08       		.byte	8
+ 1253 04c8 56       		.byte	86
+ 1254 04c9 08       		.byte	8
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccuv5JGI.s 			page 23
+
+
+ 1255 04ca 57       		.byte	87
+ 1256 04cb 10       		.byte	16
+ 1257 04cc 59       		.byte	89
+ 1258 04cd 01       		.byte	1
+ 1259 04ce 5A       		.byte	90
+ 1260 04cf 08       		.byte	8
+ 1261 04d0 5B       		.byte	91
+ 1262 04d1 80       		.byte	-128
+ 1263 04d2 5D       		.byte	93
+ 1264 04d3 10       		.byte	16
+ 1265 04d4 5E       		.byte	94
+ 1266 04d5 48       		.byte	72
+ 1267 04d6 5F       		.byte	95
+ 1268 04d7 01       		.byte	1
+ 1269 04d8 71       		.byte	113
+ 1270 04d9 02       		.byte	2
+ 1271 04da 8E       		.byte	-114
+ 1272 04db 48       		.byte	72
+ 1273 04dc C0       		.byte	-64
+ 1274 04dd 68       		.byte	104
+ 1275 04de C2       		.byte	-62
+ 1276 04df 66       		.byte	102
+ 1277 04e0 C4       		.byte	-60
+ 1278 04e1 3D       		.byte	61
+ 1279 04e2 CA       		.byte	-54
+ 1280 04e3 60       		.byte	96
+ 1281 04e4 CC       		.byte	-52
+ 1282 04e5 A5       		.byte	-91
+ 1283 04e6 CE       		.byte	-50
+ 1284 04e7 AC       		.byte	-84
+ 1285 04e8 D0       		.byte	-48
+ 1286 04e9 22       		.byte	34
+ 1287 04ea D2       		.byte	-46
+ 1288 04eb 04       		.byte	4
+ 1289 04ec D6       		.byte	-42
+ 1290 04ed FB       		.byte	-5
+ 1291 04ee 08       		.byte	8
+ 1292 04ef 80       		.byte	-128
+ 1293 04f0 32       		.byte	50
+ 1294 04f1 10       		.byte	16
+ 1295 04f2 37       		.byte	55
+ 1296 04f3 20       		.byte	32
+ 1297 04f4 62       		.byte	98
+ 1298 04f5 08       		.byte	8
+ 1299 04f6 C2       		.byte	-62
+ 1300 04f7 40       		.byte	64
+ 1301 04f8 CC       		.byte	-52
+ 1302 04f9 30       		.byte	48
+ 1303 04fa D8       		.byte	-40
+ 1304 04fb 40       		.byte	64
+ 1305 04fc 8E       		.byte	-114
+ 1306 04fd 10       		.byte	16
+ 1307 04fe 8F       		.byte	-113
+ 1308 04ff 20       		.byte	32
+ 1309 0500 96       		.byte	-106
+ 1310 0501 20       		.byte	32
+ 1311 0502 9F       		.byte	-97
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccuv5JGI.s 			page 24
+
+
+ 1312 0503 20       		.byte	32
+ 1313 0504 AA       		.byte	-86
+ 1314 0505 08       		.byte	8
+ 1315 0506 B0       		.byte	-80
+ 1316 0507 80       		.byte	-128
+ 1317 0508 EA       		.byte	-22
+ 1318 0509 20       		.byte	32
+ 1319 050a 00       		.byte	0
+ 1320 050b 04       		.byte	4
+ 1321 050c 56       		.byte	86
+ 1322 050d 20       		.byte	32
+ 1323 050e 63       		.byte	99
+ 1324 050f 40       		.byte	64
+ 1325 0510 C0       		.byte	-64
+ 1326 0511 08       		.byte	8
+ 1327 0512 D4       		.byte	-44
+ 1328 0513 02       		.byte	2
+ 1329 0514 D8       		.byte	-40
+ 1330 0515 02       		.byte	2
+ 1331 0516 97       		.byte	-105
+ 1332 0517 40       		.byte	64
+ 1333 0518 AA       		.byte	-86
+ 1334 0519 20       		.byte	32
+ 1335 051a B4       		.byte	-76
+ 1336 051b 04       		.byte	4
+ 1337 051c EE       		.byte	-18
+ 1338 051d 02       		.byte	2
+ 1339 051e 87       		.byte	-121
+ 1340 051f 40       		.byte	64
+ 1341 0520 97       		.byte	-105
+ 1342 0521 40       		.byte	64
+ 1343 0522 00       		.byte	0
+ 1344 0523 0F       		.byte	15
+ 1345 0524 08       		.byte	8
+ 1346 0525 05       		.byte	5
+ 1347 0526 0C       		.byte	12
+ 1348 0527 02       		.byte	2
+ 1349 0528 0E       		.byte	14
+ 1350 0529 0A       		.byte	10
+ 1351 052a 00       		.byte	0
+ 1352 052b 0F       		.byte	15
+ 1353 052c 00       		.byte	0
+ 1354 052d 0B       		.byte	11
+ 1355 052e 0B       		.byte	11
+ 1356 052f 00       		.byte	0
+ 1357 0530 00       		.byte	0
+ 1358 0531 00       		.byte	0
+ 1359 0532 00       		.byte	0
+ 1360 0533 00       		.byte	0
+ 1361 0534 00       		.byte	0
+ 1362 0535 7F       		.byte	127
+ 1363 0536 7F       		.byte	127
+ 1364 0537 00       		.byte	0
+ 1365 0538 00       		.byte	0
+ 1366 0539 00       		.byte	0
+ 1367 053a 00       		.byte	0
+ 1368 053b 00       		.byte	0
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccuv5JGI.s 			page 25
+
+
+ 1369 053c 40       		.byte	64
+ 1370 053d 10       		.byte	16
+ 1371 053e 10       		.byte	16
+ 1372 053f 00       		.byte	0
+ 1373 0540 10       		.byte	16
+ 1374 0541 00       		.byte	0
+ 1375 0542 00       		.byte	0
+ 1376 0543 00       		.byte	0
+ 1377 0544 40       		.byte	64
+ 1378 0545 00       		.byte	0
+ 1379 0546 01       		.byte	1
+ 1380 0547 48       		.byte	72
+ 1381 0548 48       		.byte	72
+ 1382 0549 00       		.byte	0
+ 1383 054a 48       		.byte	72
+ 1384 054b 00       		.byte	0
+ 1385 054c 00       		.byte	0
+ 1386 054d 00       		.byte	0
+ 1387 054e 00       		.byte	0
+ 1388 054f 00       		.byte	0
+ 1389              		.section	.cywolatch,"a",%progbits
+ 1390              		.align	2
+ 1391              		.type	cy_meta_wonvl, %object
+ 1392              		.size	cy_meta_wonvl, 4
+ 1393              	cy_meta_wonvl:
+ 1394 0000 BC       		.byte	-68
+ 1395 0001 90       		.byte	-112
+ 1396 0002 AC       		.byte	-84
+ 1397 0003 AF       		.byte	-81
+ 1398              		.section	.cycustnvl,"a",%progbits
+ 1399              		.align	2
+ 1400              		.type	cy_meta_custnvl, %object
+ 1401              		.size	cy_meta_custnvl, 4
+ 1402              	cy_meta_custnvl:
+ 1403 0000 00       		.byte	0
+ 1404 0001 00       		.byte	0
+ 1405 0002 40       		.byte	64
+ 1406 0003 05       		.byte	5
+ 1407              		.section	.cymeta,"a",%progbits
+ 1408              		.align	2
+ 1409              		.type	cy_metadata, %object
+ 1410              		.size	cy_metadata, 12
+ 1411              	cy_metadata:
+ 1412 0000 00       		.byte	0
+ 1413 0001 01       		.byte	1
+ 1414 0002 2E       		.byte	46
+ 1415 0003 12       		.byte	18
+ 1416 0004 30       		.byte	48
+ 1417 0005 69       		.byte	105
+ 1418 0006 00       		.byte	0
+ 1419 0007 01       		.byte	1
+ 1420 0008 00       		.byte	0
+ 1421 0009 00       		.byte	0
+ 1422 000a 00       		.byte	0
+ 1423 000b 00       		.byte	0
+ 1424              		.section	.cyflashprotect,"a",%progbits
+ 1425              		.align	2
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccuv5JGI.s 			page 26
+
+
+ 1426              		.type	cy_meta_flashprotect, %object
+ 1427              		.size	cy_meta_flashprotect, 256
+ 1428              	cy_meta_flashprotect:
+ 1429 0000 00000000 		.space	256
+ 1429      00000000 
+ 1429      00000000 
+ 1429      00000000 
+ 1429      00000000 
+ 1430              		.text
+ 1431              	.Letext0:
+ 1432              		.file 1 "c:\\program files (x86)\\cypress\\psoc creator\\4.2\\psoc creator\\import\\gnu\\arm\\5.4.
+ 1433              		.file 2 "c:\\program files (x86)\\cypress\\psoc creator\\4.2\\psoc creator\\import\\gnu\\arm\\5.4.
+ 1434              		.file 3 "Generated_Source\\PSoC5\\cymetadata.c"
+ 1435              		.section	.debug_info,"",%progbits
+ 1436              	.Ldebug_info0:
+ 1437 0000 32010000 		.4byte	0x132
+ 1438 0004 0400     		.2byte	0x4
+ 1439 0006 00000000 		.4byte	.Ldebug_abbrev0
+ 1440 000a 04       		.byte	0x4
+ 1441 000b 01       		.uleb128 0x1
+ 1442 000c 24000000 		.4byte	.LASF17
+ 1443 0010 0C       		.byte	0xc
+ 1444 0011 EF010000 		.4byte	.LASF18
+ 1445 0015 5F010000 		.4byte	.LASF19
+ 1446 0019 00000000 		.4byte	.Ldebug_line0
+ 1447 001d 02       		.uleb128 0x2
+ 1448 001e 01       		.byte	0x1
+ 1449 001f 06       		.byte	0x6
+ 1450 0020 E3010000 		.4byte	.LASF0
+ 1451 0024 03       		.uleb128 0x3
+ 1452 0025 00000000 		.4byte	.LASF9
+ 1453 0029 01       		.byte	0x1
+ 1454 002a 1D       		.byte	0x1d
+ 1455 002b 2F000000 		.4byte	0x2f
+ 1456 002f 02       		.uleb128 0x2
+ 1457 0030 01       		.byte	0x1
+ 1458 0031 08       		.byte	0x8
+ 1459 0032 16000000 		.4byte	.LASF1
+ 1460 0036 02       		.uleb128 0x2
+ 1461 0037 02       		.byte	0x2
+ 1462 0038 05       		.byte	0x5
+ 1463 0039 D0010000 		.4byte	.LASF2
+ 1464 003d 02       		.uleb128 0x2
+ 1465 003e 02       		.byte	0x2
+ 1466 003f 07       		.byte	0x7
+ 1467 0040 C4000000 		.4byte	.LASF3
+ 1468 0044 02       		.uleb128 0x2
+ 1469 0045 04       		.byte	0x4
+ 1470 0046 05       		.byte	0x5
+ 1471 0047 DA010000 		.4byte	.LASF4
+ 1472 004b 02       		.uleb128 0x2
+ 1473 004c 04       		.byte	0x4
+ 1474 004d 07       		.byte	0x7
+ 1475 004e B2000000 		.4byte	.LASF5
+ 1476 0052 02       		.uleb128 0x2
+ 1477 0053 08       		.byte	0x8
+ 1478 0054 05       		.byte	0x5
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccuv5JGI.s 			page 27
+
+
+ 1479 0055 51010000 		.4byte	.LASF6
+ 1480 0059 02       		.uleb128 0x2
+ 1481 005a 08       		.byte	0x8
+ 1482 005b 07       		.byte	0x7
+ 1483 005c 06010000 		.4byte	.LASF7
+ 1484 0060 04       		.uleb128 0x4
+ 1485 0061 04       		.byte	0x4
+ 1486 0062 05       		.byte	0x5
+ 1487 0063 696E7400 		.ascii	"int\000"
+ 1488 0067 02       		.uleb128 0x2
+ 1489 0068 04       		.byte	0x4
+ 1490 0069 07       		.byte	0x7
+ 1491 006a F9000000 		.4byte	.LASF8
+ 1492 006e 03       		.uleb128 0x3
+ 1493 006f 1D010000 		.4byte	.LASF10
+ 1494 0073 02       		.byte	0x2
+ 1495 0074 18       		.byte	0x18
+ 1496 0075 24000000 		.4byte	0x24
+ 1497 0079 05       		.uleb128 0x5
+ 1498 007a 91000000 		.4byte	0x91
+ 1499 007e 8A000000 		.4byte	0x8a
+ 1500 0082 06       		.uleb128 0x6
+ 1501 0083 8A000000 		.4byte	0x8a
+ 1502 0087 4F05     		.2byte	0x54f
+ 1503 0089 00       		.byte	0
+ 1504 008a 02       		.uleb128 0x2
+ 1505 008b 04       		.byte	0x4
+ 1506 008c 07       		.byte	0x7
+ 1507 008d 48010000 		.4byte	.LASF11
+ 1508 0091 07       		.uleb128 0x7
+ 1509 0092 6E000000 		.4byte	0x6e
+ 1510 0096 08       		.uleb128 0x8
+ 1511 0097 E7000000 		.4byte	.LASF12
+ 1512 009b 03       		.byte	0x3
+ 1513 009c 1F       		.byte	0x1f
+ 1514 009d A7000000 		.4byte	0xa7
+ 1515 00a1 05       		.uleb128 0x5
+ 1516 00a2 03       		.byte	0x3
+ 1517 00a3 00000000 		.4byte	cy_meta_configecc
+ 1518 00a7 07       		.uleb128 0x7
+ 1519 00a8 79000000 		.4byte	0x79
+ 1520 00ac 05       		.uleb128 0x5
+ 1521 00ad 91000000 		.4byte	0x91
+ 1522 00b1 BC000000 		.4byte	0xbc
+ 1523 00b5 09       		.uleb128 0x9
+ 1524 00b6 8A000000 		.4byte	0x8a
+ 1525 00ba 03       		.byte	0x3
+ 1526 00bb 00       		.byte	0
+ 1527 00bc 08       		.uleb128 0x8
+ 1528 00bd D7000000 		.4byte	.LASF13
+ 1529 00c1 03       		.byte	0x3
+ 1530 00c2 D6       		.byte	0xd6
+ 1531 00c3 CD000000 		.4byte	0xcd
+ 1532 00c7 05       		.uleb128 0x5
+ 1533 00c8 03       		.byte	0x3
+ 1534 00c9 00000000 		.4byte	cy_meta_custnvl
+ 1535 00cd 07       		.uleb128 0x7
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccuv5JGI.s 			page 28
+
+
+ 1536 00ce AC000000 		.4byte	0xac
+ 1537 00d2 08       		.uleb128 0x8
+ 1538 00d3 3A010000 		.4byte	.LASF14
+ 1539 00d7 03       		.byte	0x3
+ 1540 00d8 E4       		.byte	0xe4
+ 1541 00d9 E3000000 		.4byte	0xe3
+ 1542 00dd 05       		.uleb128 0x5
+ 1543 00de 03       		.byte	0x3
+ 1544 00df 00000000 		.4byte	cy_meta_wonvl
+ 1545 00e3 07       		.uleb128 0x7
+ 1546 00e4 AC000000 		.4byte	0xac
+ 1547 00e8 05       		.uleb128 0x5
+ 1548 00e9 91000000 		.4byte	0x91
+ 1549 00ed F8000000 		.4byte	0xf8
+ 1550 00f1 09       		.uleb128 0x9
+ 1551 00f2 8A000000 		.4byte	0x8a
+ 1552 00f6 FF       		.byte	0xff
+ 1553 00f7 00       		.byte	0
+ 1554 00f8 08       		.uleb128 0x8
+ 1555 00f9 25010000 		.4byte	.LASF15
+ 1556 00fd 03       		.byte	0x3
+ 1557 00fe F2       		.byte	0xf2
+ 1558 00ff 09010000 		.4byte	0x109
+ 1559 0103 05       		.uleb128 0x5
+ 1560 0104 03       		.byte	0x3
+ 1561 0105 00000000 		.4byte	cy_meta_flashprotect
+ 1562 0109 07       		.uleb128 0x7
+ 1563 010a E8000000 		.4byte	0xe8
+ 1564 010e 05       		.uleb128 0x5
+ 1565 010f 91000000 		.4byte	0x91
+ 1566 0113 1E010000 		.4byte	0x11e
+ 1567 0117 09       		.uleb128 0x9
+ 1568 0118 8A000000 		.4byte	0x8a
+ 1569 011c 0B       		.byte	0xb
+ 1570 011d 00       		.byte	0
+ 1571 011e 0A       		.uleb128 0xa
+ 1572 011f 0A000000 		.4byte	.LASF16
+ 1573 0123 03       		.byte	0x3
+ 1574 0124 1F01     		.2byte	0x11f
+ 1575 0126 30010000 		.4byte	0x130
+ 1576 012a 05       		.uleb128 0x5
+ 1577 012b 03       		.byte	0x3
+ 1578 012c 00000000 		.4byte	cy_metadata
+ 1579 0130 07       		.uleb128 0x7
+ 1580 0131 0E010000 		.4byte	0x10e
+ 1581 0135 00       		.byte	0
+ 1582              		.section	.debug_abbrev,"",%progbits
+ 1583              	.Ldebug_abbrev0:
+ 1584 0000 01       		.uleb128 0x1
+ 1585 0001 11       		.uleb128 0x11
+ 1586 0002 01       		.byte	0x1
+ 1587 0003 25       		.uleb128 0x25
+ 1588 0004 0E       		.uleb128 0xe
+ 1589 0005 13       		.uleb128 0x13
+ 1590 0006 0B       		.uleb128 0xb
+ 1591 0007 03       		.uleb128 0x3
+ 1592 0008 0E       		.uleb128 0xe
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccuv5JGI.s 			page 29
+
+
+ 1593 0009 1B       		.uleb128 0x1b
+ 1594 000a 0E       		.uleb128 0xe
+ 1595 000b 10       		.uleb128 0x10
+ 1596 000c 17       		.uleb128 0x17
+ 1597 000d 00       		.byte	0
+ 1598 000e 00       		.byte	0
+ 1599 000f 02       		.uleb128 0x2
+ 1600 0010 24       		.uleb128 0x24
+ 1601 0011 00       		.byte	0
+ 1602 0012 0B       		.uleb128 0xb
+ 1603 0013 0B       		.uleb128 0xb
+ 1604 0014 3E       		.uleb128 0x3e
+ 1605 0015 0B       		.uleb128 0xb
+ 1606 0016 03       		.uleb128 0x3
+ 1607 0017 0E       		.uleb128 0xe
+ 1608 0018 00       		.byte	0
+ 1609 0019 00       		.byte	0
+ 1610 001a 03       		.uleb128 0x3
+ 1611 001b 16       		.uleb128 0x16
+ 1612 001c 00       		.byte	0
+ 1613 001d 03       		.uleb128 0x3
+ 1614 001e 0E       		.uleb128 0xe
+ 1615 001f 3A       		.uleb128 0x3a
+ 1616 0020 0B       		.uleb128 0xb
+ 1617 0021 3B       		.uleb128 0x3b
+ 1618 0022 0B       		.uleb128 0xb
+ 1619 0023 49       		.uleb128 0x49
+ 1620 0024 13       		.uleb128 0x13
+ 1621 0025 00       		.byte	0
+ 1622 0026 00       		.byte	0
+ 1623 0027 04       		.uleb128 0x4
+ 1624 0028 24       		.uleb128 0x24
+ 1625 0029 00       		.byte	0
+ 1626 002a 0B       		.uleb128 0xb
+ 1627 002b 0B       		.uleb128 0xb
+ 1628 002c 3E       		.uleb128 0x3e
+ 1629 002d 0B       		.uleb128 0xb
+ 1630 002e 03       		.uleb128 0x3
+ 1631 002f 08       		.uleb128 0x8
+ 1632 0030 00       		.byte	0
+ 1633 0031 00       		.byte	0
+ 1634 0032 05       		.uleb128 0x5
+ 1635 0033 01       		.uleb128 0x1
+ 1636 0034 01       		.byte	0x1
+ 1637 0035 49       		.uleb128 0x49
+ 1638 0036 13       		.uleb128 0x13
+ 1639 0037 01       		.uleb128 0x1
+ 1640 0038 13       		.uleb128 0x13
+ 1641 0039 00       		.byte	0
+ 1642 003a 00       		.byte	0
+ 1643 003b 06       		.uleb128 0x6
+ 1644 003c 21       		.uleb128 0x21
+ 1645 003d 00       		.byte	0
+ 1646 003e 49       		.uleb128 0x49
+ 1647 003f 13       		.uleb128 0x13
+ 1648 0040 2F       		.uleb128 0x2f
+ 1649 0041 05       		.uleb128 0x5
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccuv5JGI.s 			page 30
+
+
+ 1650 0042 00       		.byte	0
+ 1651 0043 00       		.byte	0
+ 1652 0044 07       		.uleb128 0x7
+ 1653 0045 26       		.uleb128 0x26
+ 1654 0046 00       		.byte	0
+ 1655 0047 49       		.uleb128 0x49
+ 1656 0048 13       		.uleb128 0x13
+ 1657 0049 00       		.byte	0
+ 1658 004a 00       		.byte	0
+ 1659 004b 08       		.uleb128 0x8
+ 1660 004c 34       		.uleb128 0x34
+ 1661 004d 00       		.byte	0
+ 1662 004e 03       		.uleb128 0x3
+ 1663 004f 0E       		.uleb128 0xe
+ 1664 0050 3A       		.uleb128 0x3a
+ 1665 0051 0B       		.uleb128 0xb
+ 1666 0052 3B       		.uleb128 0x3b
+ 1667 0053 0B       		.uleb128 0xb
+ 1668 0054 49       		.uleb128 0x49
+ 1669 0055 13       		.uleb128 0x13
+ 1670 0056 3F       		.uleb128 0x3f
+ 1671 0057 19       		.uleb128 0x19
+ 1672 0058 02       		.uleb128 0x2
+ 1673 0059 18       		.uleb128 0x18
+ 1674 005a 00       		.byte	0
+ 1675 005b 00       		.byte	0
+ 1676 005c 09       		.uleb128 0x9
+ 1677 005d 21       		.uleb128 0x21
+ 1678 005e 00       		.byte	0
+ 1679 005f 49       		.uleb128 0x49
+ 1680 0060 13       		.uleb128 0x13
+ 1681 0061 2F       		.uleb128 0x2f
+ 1682 0062 0B       		.uleb128 0xb
+ 1683 0063 00       		.byte	0
+ 1684 0064 00       		.byte	0
+ 1685 0065 0A       		.uleb128 0xa
+ 1686 0066 34       		.uleb128 0x34
+ 1687 0067 00       		.byte	0
+ 1688 0068 03       		.uleb128 0x3
+ 1689 0069 0E       		.uleb128 0xe
+ 1690 006a 3A       		.uleb128 0x3a
+ 1691 006b 0B       		.uleb128 0xb
+ 1692 006c 3B       		.uleb128 0x3b
+ 1693 006d 05       		.uleb128 0x5
+ 1694 006e 49       		.uleb128 0x49
+ 1695 006f 13       		.uleb128 0x13
+ 1696 0070 3F       		.uleb128 0x3f
+ 1697 0071 19       		.uleb128 0x19
+ 1698 0072 02       		.uleb128 0x2
+ 1699 0073 18       		.uleb128 0x18
+ 1700 0074 00       		.byte	0
+ 1701 0075 00       		.byte	0
+ 1702 0076 00       		.byte	0
+ 1703              		.section	.debug_aranges,"",%progbits
+ 1704 0000 14000000 		.4byte	0x14
+ 1705 0004 0200     		.2byte	0x2
+ 1706 0006 00000000 		.4byte	.Ldebug_info0
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccuv5JGI.s 			page 31
+
+
+ 1707 000a 04       		.byte	0x4
+ 1708 000b 00       		.byte	0
+ 1709 000c 0000     		.2byte	0
+ 1710 000e 0000     		.2byte	0
+ 1711 0010 00000000 		.4byte	0
+ 1712 0014 00000000 		.4byte	0
+ 1713              		.section	.debug_line,"",%progbits
+ 1714              	.Ldebug_line0:
+ 1715 0000 3D010000 		.section	.debug_str,"MS",%progbits,1
+ 1715      02003701 
+ 1715      00000201 
+ 1715      FB0E0D00 
+ 1715      01010101 
+ 1716              	.LASF9:
+ 1717 0000 5F5F7569 		.ascii	"__uint8_t\000"
+ 1717      6E74385F 
+ 1717      7400
+ 1718              	.LASF16:
+ 1719 000a 63795F6D 		.ascii	"cy_metadata\000"
+ 1719      65746164 
+ 1719      61746100 
+ 1720              	.LASF1:
+ 1721 0016 756E7369 		.ascii	"unsigned char\000"
+ 1721      676E6564 
+ 1721      20636861 
+ 1721      7200
+ 1722              	.LASF17:
+ 1723 0024 474E5520 		.ascii	"GNU C11 5.4.1 20160609 (release) [ARM/embedded-5-br"
+ 1723      43313120 
+ 1723      352E342E 
+ 1723      31203230 
+ 1723      31363036 
+ 1724 0057 616E6368 		.ascii	"anch revision 237715] -mcpu=cortex-m3 -mthumb -g -O"
+ 1724      20726576 
+ 1724      6973696F 
+ 1724      6E203233 
+ 1724      37373135 
+ 1725 008a 67202D66 		.ascii	"g -ffunction-sections -ffat-lto-objects\000"
+ 1725      66756E63 
+ 1725      74696F6E 
+ 1725      2D736563 
+ 1725      74696F6E 
+ 1726              	.LASF5:
+ 1727 00b2 6C6F6E67 		.ascii	"long unsigned int\000"
+ 1727      20756E73 
+ 1727      69676E65 
+ 1727      6420696E 
+ 1727      7400
+ 1728              	.LASF3:
+ 1729 00c4 73686F72 		.ascii	"short unsigned int\000"
+ 1729      7420756E 
+ 1729      7369676E 
+ 1729      65642069 
+ 1729      6E7400
+ 1730              	.LASF13:
+ 1731 00d7 63795F6D 		.ascii	"cy_meta_custnvl\000"
+ 1731      6574615F 
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccuv5JGI.s 			page 32
+
+
+ 1731      63757374 
+ 1731      6E766C00 
+ 1732              	.LASF12:
+ 1733 00e7 63795F6D 		.ascii	"cy_meta_configecc\000"
+ 1733      6574615F 
+ 1733      636F6E66 
+ 1733      69676563 
+ 1733      6300
+ 1734              	.LASF8:
+ 1735 00f9 756E7369 		.ascii	"unsigned int\000"
+ 1735      676E6564 
+ 1735      20696E74 
+ 1735      00
+ 1736              	.LASF7:
+ 1737 0106 6C6F6E67 		.ascii	"long long unsigned int\000"
+ 1737      206C6F6E 
+ 1737      6720756E 
+ 1737      7369676E 
+ 1737      65642069 
+ 1738              	.LASF10:
+ 1739 011d 75696E74 		.ascii	"uint8_t\000"
+ 1739      385F7400 
+ 1740              	.LASF15:
+ 1741 0125 63795F6D 		.ascii	"cy_meta_flashprotect\000"
+ 1741      6574615F 
+ 1741      666C6173 
+ 1741      6870726F 
+ 1741      74656374 
+ 1742              	.LASF14:
+ 1743 013a 63795F6D 		.ascii	"cy_meta_wonvl\000"
+ 1743      6574615F 
+ 1743      776F6E76 
+ 1743      6C00
+ 1744              	.LASF11:
+ 1745 0148 73697A65 		.ascii	"sizetype\000"
+ 1745      74797065 
+ 1745      00
+ 1746              	.LASF6:
+ 1747 0151 6C6F6E67 		.ascii	"long long int\000"
+ 1747      206C6F6E 
+ 1747      6720696E 
+ 1747      7400
+ 1748              	.LASF19:
+ 1749 015f 433A5C55 		.ascii	"C:\\Users\\ryant\\Documents\\Princeton\\!S20-21\\EL"
+ 1749      73657273 
+ 1749      5C727961 
+ 1749      6E745C44 
+ 1749      6F63756D 
+ 1750 018c 45333032 		.ascii	"E302\\current_speed_control\\carlab\\speed_control\\"
+ 1750      5C637572 
+ 1750      72656E74 
+ 1750      5F737065 
+ 1750      65645F63 
+ 1751 01bc 73706565 		.ascii	"speed_control.cydsn\000"
+ 1751      645F636F 
+ 1751      6E74726F 
+ 1751      6C2E6379 
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccuv5JGI.s 			page 33
+
+
+ 1751      64736E00 
+ 1752              	.LASF2:
+ 1753 01d0 73686F72 		.ascii	"short int\000"
+ 1753      7420696E 
+ 1753      7400
+ 1754              	.LASF4:
+ 1755 01da 6C6F6E67 		.ascii	"long int\000"
+ 1755      20696E74 
+ 1755      00
+ 1756              	.LASF0:
+ 1757 01e3 7369676E 		.ascii	"signed char\000"
+ 1757      65642063 
+ 1757      68617200 
+ 1758              	.LASF18:
+ 1759 01ef 47656E65 		.ascii	"Generated_Source\\PSoC5\\cymetadata.c\000"
+ 1759      72617465 
+ 1759      645F536F 
+ 1759      75726365 
+ 1759      5C50536F 
+ 1760              		.ident	"GCC: (GNU Tools for ARM Embedded Processors) 5.4.1 20160609 (release) [ARM/embedded-5-bran

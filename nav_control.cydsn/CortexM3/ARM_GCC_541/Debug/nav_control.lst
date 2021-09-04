@@ -1,0 +1,2588 @@
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 1
+
+
+   1              		.syntax unified
+   2              		.cpu cortex-m3
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 1
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.thumb
+  14              		.syntax unified
+  15              		.file	"nav_control.c"
+  16              		.text
+  17              	.Ltext0:
+  18              		.cfi_sections	.debug_frame
+  19              		.section	.text.Servo_PWM_AngleCalc,"ax",%progbits
+  20              		.align	2
+  21              		.global	Servo_PWM_AngleCalc
+  22              		.thumb
+  23              		.thumb_func
+  24              		.type	Servo_PWM_AngleCalc, %function
+  25              	Servo_PWM_AngleCalc:
+  26              	.LFB64:
+  27              		.file 1 "nav_control.c"
+   1:nav_control.c **** 
+   2:nav_control.c **** #include "project.h"
+   3:nav_control.c **** #include <stdio.h>
+   4:nav_control.c **** #include <stdlib.h>
+   5:nav_control.c **** #include <math.h>
+   6:nav_control.c **** #include <string.h>
+   7:nav_control.c **** #include "cyapicallbacks.h"
+   8:nav_control.c **** #include "math.h"
+   9:nav_control.c **** #include "balloon.h"
+  10:nav_control.c **** 
+  11:nav_control.c **** 
+  12:nav_control.c **** #define BUF_SIZE 64 // For writing 
+  13:nav_control.c **** #define MIN_ANGLE 0 // minimum angle
+  14:nav_control.c **** #define MAX_ANGLE 180 // maximum angle
+  15:nav_control.c **** #define MIN_SERVO_PWM 1310 // minimum servo pwm
+  16:nav_control.c **** #define MAX_SERVO_PWM 2620 // maximum servo pwm
+  17:nav_control.c **** #define LEFT_POSITION 0 // smallest angle servos can tolerate 
+  18:nav_control.c **** #define RIGHT_POSITION 150 // largest angle servos can tolerate 
+  19:nav_control.c **** 
+  20:nav_control.c **** #define FRAME_HEIGHT 240 // max number of rows in frame
+  21:nav_control.c **** #define FRAME_WIDTH 320 // max number of columns in frame
+  22:nav_control.c **** #define MAX_H_PULSES 9 // number of h pulses to wait for until in frame
+  23:nav_control.c **** #define V_SYNC_WAIT 0 // state name for v sync waiting
+  24:nav_control.c **** #define FRAME_WAIT 1 // state name for frame waiting
+  25:nav_control.c **** #define IN_FRAME 2 // state name for being in frame
+  26:nav_control.c **** #define BLACK_THRESHOLD 600 // pixel intensity for black
+  27:nav_control.c **** #define MAX_SAMPLES 10 // number of previous bits to consider for average 
+  28:nav_control.c **** #define LEFT 0 // left of line state when exploring line
+  29:nav_control.c **** #define ON_LINE 1 // on black line state when exploring line
+  30:nav_control.c **** #define RIGHT 2 // right of line state when exploring line 
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 2
+
+
+  31:nav_control.c **** #define LINE_OF_INTEREST 120 // line that we want to calculate line value for
+  32:nav_control.c **** #define TARGET_LINECOUNT 65060 // ideal line count for line in center
+  33:nav_control.c **** #define NANO_S_PER_COUNT 42 // how many ns elapse per count
+  34:nav_control.c **** 
+  35:nav_control.c **** // Global flags
+  36:nav_control.c **** int STEER_STATE = 0;
+  37:nav_control.c **** int VIDEO_STATE = 0;
+  38:nav_control.c **** int CAPTURE_FRAME = 0;
+  39:nav_control.c **** int LINE_STATE = LEFT;
+  40:nav_control.c **** int NAVIGATION_LINE = 0;
+  41:nav_control.c **** int CENTER_ANGLE = 74; // true straight angle of servos
+  42:nav_control.c **** int LINE_SEEN = 0;
+  43:nav_control.c **** int FRAME_PARITY = 1;
+  44:nav_control.c **** 
+  45:nav_control.c **** // Global variables 
+  46:nav_control.c **** int num_h_pulse = 0;
+  47:nav_control.c **** int line_count = 0;
+  48:nav_control.c **** int left_count = 0;
+  49:nav_control.c **** int right_count = 0;
+  50:nav_control.c **** int oldest_value = 0;
+  51:nav_control.c **** int num_interupts = 0;
+  52:nav_control.c **** int average_buf[MAX_SAMPLES];
+  53:nav_control.c **** float average_position;
+  54:nav_control.c **** char outputBuf[BUF_SIZE];
+  55:nav_control.c **** int frameVal[15000];
+  56:nav_control.c **** int frameIndex = 0;
+  57:nav_control.c **** uint16 line_time; 
+  58:nav_control.c **** int numFrame = 0;
+  59:nav_control.c **** int RUN_STATE = 0;
+  60:nav_control.c **** 
+  61:nav_control.c **** float kp_servo = 0.15; // Proportional constant 
+  62:nav_control.c **** float ki_servo = 0; // Integral constant 
+  63:nav_control.c **** float kd_servo = 0; // Derivative constant
+  64:nav_control.c **** float prev_error_servo = 0; // Error calculated during previous interrupt
+  65:nav_control.c **** float prev_i_term_servo = 0; // Integral term calculated during previous interrupt 
+  66:nav_control.c **** float prev_angle = 74;
+  67:nav_control.c **** 
+  68:nav_control.c **** 
+  69:nav_control.c **** // ---------------NAVIGATION CONTROL CODE---------------
+  70:nav_control.c **** 
+  71:nav_control.c **** //Take in an integer angle btwn 0 and 180 and output corresponding pwm width
+  72:nav_control.c **** // Adapted from arduino map function
+  73:nav_control.c **** uint16 Servo_PWM_AngleCalc(int angle) {
+  28              		.loc 1 73 0
+  29              		.cfi_startproc
+  30              		@ args = 0, pretend = 0, frame = 0
+  31              		@ frame_needed = 0, uses_anonymous_args = 0
+  32              		@ link register save eliminated.
+  33              	.LVL0:
+  74:nav_control.c ****     if (angle < LEFT_POSITION) return MIN_SERVO_PWM;
+  34              		.loc 1 74 0
+  35 0000 0028     		cmp	r0, #0
+  36 0002 10DB     		blt	.L3
+  75:nav_control.c ****     else if (angle > RIGHT_POSITION) return MAX_SERVO_PWM;
+  37              		.loc 1 75 0
+  38 0004 9628     		cmp	r0, #150
+  39 0006 11DC     		bgt	.L4
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 3
+
+
+  76:nav_control.c ****     return ((angle - MIN_ANGLE) * (MAX_SERVO_PWM - MIN_SERVO_PWM) / (MAX_ANGLE - MIN_ANGLE) + MIN_S
+  40              		.loc 1 76 0
+  41 0008 40F21E53 		movw	r3, #1310
+  42 000c 03FB00F0 		mul	r0, r3, r0
+  43              	.LVL1:
+  44 0010 084B     		ldr	r3, .L5
+  45 0012 83FB0023 		smull	r2, r3, r3, r0
+  46 0016 0344     		add	r3, r3, r0
+  47 0018 C017     		asrs	r0, r0, #31
+  48 001a C0EBE310 		rsb	r0, r0, r3, asr #7
+  49 001e 00F21E50 		addw	r0, r0, #1310
+  50 0022 80B2     		uxth	r0, r0
+  51 0024 7047     		bx	lr
+  52              	.LVL2:
+  53              	.L3:
+  74:nav_control.c ****     if (angle < LEFT_POSITION) return MIN_SERVO_PWM;
+  54              		.loc 1 74 0
+  55 0026 40F21E50 		movw	r0, #1310
+  56              	.LVL3:
+  57 002a 7047     		bx	lr
+  58              	.LVL4:
+  59              	.L4:
+  75:nav_control.c ****     else if (angle > RIGHT_POSITION) return MAX_SERVO_PWM;
+  60              		.loc 1 75 0
+  61 002c 40F63C20 		movw	r0, #2620
+  62              	.LVL5:
+  77:nav_control.c **** }
+  63              		.loc 1 77 0
+  64 0030 7047     		bx	lr
+  65              	.L6:
+  66 0032 00BF     		.align	2
+  67              	.L5:
+  68 0034 B7600BB6 		.word	-1240768329
+  69              		.cfi_endproc
+  70              	.LFE64:
+  71              		.size	Servo_PWM_AngleCalc, .-Servo_PWM_AngleCalc
+  72              		.section	.text.print_xbee,"ax",%progbits
+  73              		.align	2
+  74              		.global	print_xbee
+  75              		.thumb
+  76              		.thumb_func
+  77              		.type	print_xbee, %function
+  78              	print_xbee:
+  79              	.LFB65:
+  78:nav_control.c **** 
+  79:nav_control.c **** // Print a string to the XBEE with some formating 
+  80:nav_control.c **** void print_xbee(char* string, int num) {
+  80              		.loc 1 80 0
+  81              		.cfi_startproc
+  82              		@ args = 0, pretend = 0, frame = 64
+  83              		@ frame_needed = 0, uses_anonymous_args = 0
+  84              	.LVL6:
+  85 0000 00B5     		push	{lr}
+  86              		.cfi_def_cfa_offset 4
+  87              		.cfi_offset 14, -4
+  88 0002 91B0     		sub	sp, sp, #68
+  89              		.cfi_def_cfa_offset 72
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 4
+
+
+  81:nav_control.c ****     char buf[64];
+  82:nav_control.c ****     sprintf(buf, string, num);
+  90              		.loc 1 82 0
+  91 0004 0A46     		mov	r2, r1
+  92 0006 0146     		mov	r1, r0
+  93              	.LVL7:
+  94 0008 6846     		mov	r0, sp
+  95              	.LVL8:
+  96 000a FFF7FEFF 		bl	sprintf
+  97              	.LVL9:
+  83:nav_control.c ****     XBEE_PutString(buf);
+  98              		.loc 1 83 0
+  99 000e 6846     		mov	r0, sp
+ 100 0010 FFF7FEFF 		bl	XBEE_PutString
+ 101              	.LVL10:
+  84:nav_control.c **** }
+ 102              		.loc 1 84 0
+ 103 0014 11B0     		add	sp, sp, #68
+ 104              		.cfi_def_cfa_offset 4
+ 105              		@ sp needed
+ 106 0016 5DF804FB 		ldr	pc, [sp], #4
+ 107              		.cfi_endproc
+ 108              	.LFE65:
+ 109              		.size	print_xbee, .-print_xbee
+ 110              		.global	__aeabi_fsub
+ 111              		.global	__aeabi_fmul
+ 112              		.global	__aeabi_fadd
+ 113 001a 00BF     		.section	.text.Servo_PID_Control,"ax",%progbits
+ 114              		.align	2
+ 115              		.global	Servo_PID_Control
+ 116              		.thumb
+ 117              		.thumb_func
+ 118              		.type	Servo_PID_Control, %function
+ 119              	Servo_PID_Control:
+ 120              	.LFB66:
+  85:nav_control.c **** 
+  86:nav_control.c **** // Control function for steering 
+  87:nav_control.c **** float Servo_PID_Control(float linecount) {
+ 121              		.loc 1 87 0
+ 122              		.cfi_startproc
+ 123              		@ args = 0, pretend = 0, frame = 0
+ 124              		@ frame_needed = 0, uses_anonymous_args = 0
+ 125              	.LVL11:
+ 126 0000 70B5     		push	{r4, r5, r6, lr}
+ 127              		.cfi_def_cfa_offset 16
+ 128              		.cfi_offset 4, -16
+ 129              		.cfi_offset 5, -12
+ 130              		.cfi_offset 6, -8
+ 131              		.cfi_offset 14, -4
+ 132              	.LVL12:
+  88:nav_control.c ****         float p_term = 0;
+  89:nav_control.c ****         float i_term = 0;
+  90:nav_control.c ****         float d_term = 0;
+  91:nav_control.c ****         float output;
+  92:nav_control.c ****        
+  93:nav_control.c ****     
+  94:nav_control.c ****         float error = TARGET_LINECOUNT - linecount;
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 5
+
+
+ 133              		.loc 1 94 0
+ 134 0002 0146     		mov	r1, r0
+ 135 0004 0B48     		ldr	r0, .L11
+ 136              	.LVL13:
+ 137 0006 FFF7FEFF 		bl	__aeabi_fsub
+ 138              	.LVL14:
+ 139 000a 0546     		mov	r5, r0
+ 140              	.LVL15:
+  95:nav_control.c ****         
+  96:nav_control.c ****         float dt = 1/30;
+  97:nav_control.c **** 
+  98:nav_control.c ****         //Proportional Term
+  99:nav_control.c ****         p_term = kp_servo * error;
+ 141              		.loc 1 99 0
+ 142 000c 0A4B     		ldr	r3, .L11+4
+ 143 000e 1968     		ldr	r1, [r3]	@ float
+ 144 0010 FFF7FEFF 		bl	__aeabi_fmul
+ 145              	.LVL16:
+ 146 0014 0646     		mov	r6, r0
+ 147              	.LVL17:
+ 100:nav_control.c ****         //Integral Term
+ 101:nav_control.c ****         i_term =  ((ki_servo) * (prev_i_term_servo + (error)*(dt)));
+ 148              		.loc 1 101 0
+ 149 0016 0021     		movs	r1, #0
+ 150 0018 2846     		mov	r0, r5
+ 151              	.LVL18:
+ 152 001a FFF7FEFF 		bl	__aeabi_fmul
+ 153              	.LVL19:
+ 154 001e 074C     		ldr	r4, .L11+8
+ 155 0020 2168     		ldr	r1, [r4]	@ float
+ 156 0022 FFF7FEFF 		bl	__aeabi_fadd
+ 157              	.LVL20:
+ 158 0026 6168     		ldr	r1, [r4, #4]	@ float
+ 159 0028 FFF7FEFF 		bl	__aeabi_fmul
+ 160              	.LVL21:
+ 102:nav_control.c ****         //Derivative Term
+ 103:nav_control.c ****         d_term = kd_servo * ((error - prev_error_servo)/dt);
+ 104:nav_control.c ****       
+ 105:nav_control.c ****         output = p_term; 
+ 106:nav_control.c ****        
+ 107:nav_control.c ****         
+ 108:nav_control.c ****         prev_error_servo = error;
+ 161              		.loc 1 108 0
+ 162 002c A560     		str	r5, [r4, #8]	@ float
+ 109:nav_control.c ****         prev_i_term_servo = i_term;
+ 163              		.loc 1 109 0
+ 164 002e 2060     		str	r0, [r4]	@ float
+ 110:nav_control.c ****         
+ 111:nav_control.c ****         return output;
+ 112:nav_control.c **** }
+ 165              		.loc 1 112 0
+ 166 0030 3046     		mov	r0, r6
+ 167              	.LVL22:
+ 168 0032 70BD     		pop	{r4, r5, r6, pc}
+ 169              	.LVL23:
+ 170              	.L12:
+ 171              		.align	2
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 6
+
+
+ 172              	.L11:
+ 173 0034 00247E47 		.word	1199449088
+ 174 0038 00000000 		.word	.LANCHOR0
+ 175 003c 00000000 		.word	.LANCHOR1
+ 176              		.cfi_endproc
+ 177              	.LFE66:
+ 178              		.size	Servo_PID_Control, .-Servo_PID_Control
+ 179              		.section	.text.Porch_Int_ISR,"ax",%progbits
+ 180              		.align	2
+ 181              		.global	Porch_Int_ISR
+ 182              		.thumb
+ 183              		.thumb_func
+ 184              		.type	Porch_Int_ISR, %function
+ 185              	Porch_Int_ISR:
+ 186              	.LFB67:
+ 113:nav_control.c **** 
+ 114:nav_control.c **** // Reset the timer after seeing the back porch
+ 115:nav_control.c **** CY_ISR(Porch_Int_ISR) {
+ 187              		.loc 1 115 0
+ 188              		.cfi_startproc
+ 189              		@ args = 0, pretend = 0, frame = 0
+ 190              		@ frame_needed = 0, uses_anonymous_args = 0
+ 191 0000 08B5     		push	{r3, lr}
+ 192              		.cfi_def_cfa_offset 8
+ 193              		.cfi_offset 3, -8
+ 194              		.cfi_offset 14, -4
+ 116:nav_control.c ****     if (line_count == LINE_OF_INTEREST) {
+ 195              		.loc 1 116 0
+ 196 0002 054B     		ldr	r3, .L16
+ 197 0004 DB68     		ldr	r3, [r3, #12]
+ 198 0006 782B     		cmp	r3, #120
+ 199 0008 05D1     		bne	.L13
+ 117:nav_control.c ****         Line_Time_Reset_Write(1);
+ 200              		.loc 1 117 0
+ 201 000a 0120     		movs	r0, #1
+ 202 000c FFF7FEFF 		bl	Line_Time_Reset_Write
+ 203              	.LVL24:
+ 118:nav_control.c ****         Line_Time_Reset_Write(0);
+ 204              		.loc 1 118 0
+ 205 0010 0020     		movs	r0, #0
+ 206 0012 FFF7FEFF 		bl	Line_Time_Reset_Write
+ 207              	.LVL25:
+ 208              	.L13:
+ 209 0016 08BD     		pop	{r3, pc}
+ 210              	.L17:
+ 211              		.align	2
+ 212              	.L16:
+ 213 0018 00000000 		.word	.LANCHOR1
+ 214              		.cfi_endproc
+ 215              	.LFE67:
+ 216              		.size	Porch_Int_ISR, .-Porch_Int_ISR
+ 217              		.global	__aeabi_ui2f
+ 218              		.global	__aeabi_i2f
+ 219              		.global	__aeabi_f2iz
+ 220              		.section	.text.Line_Int_ISR,"ax",%progbits
+ 221              		.align	2
+ 222              		.global	Line_Int_ISR
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 7
+
+
+ 223              		.thumb
+ 224              		.thumb_func
+ 225              		.type	Line_Int_ISR, %function
+ 226              	Line_Int_ISR:
+ 227              	.LFB68:
+ 119:nav_control.c ****     }
+ 120:nav_control.c **** }
+ 121:nav_control.c **** 
+ 122:nav_control.c **** // If on line of interest, calculate error and send PWM value to servo
+ 123:nav_control.c **** CY_ISR(Line_Int_ISR){
+ 228              		.loc 1 123 0
+ 229              		.cfi_startproc
+ 230              		@ args = 0, pretend = 0, frame = 0
+ 231              		@ frame_needed = 0, uses_anonymous_args = 0
+ 124:nav_control.c ****     float angle;
+ 125:nav_control.c ****     float output;
+ 126:nav_control.c ****     if (RUN_STATE || STEER_STATE) {
+ 232              		.loc 1 126 0
+ 233 0000 214B     		ldr	r3, .L24
+ 234 0002 1B69     		ldr	r3, [r3, #16]
+ 235 0004 1BB9     		cbnz	r3, .L19
+ 236              		.loc 1 126 0 is_stmt 0 discriminator 1
+ 237 0006 204B     		ldr	r3, .L24
+ 238 0008 5B69     		ldr	r3, [r3, #20]
+ 239 000a 002B     		cmp	r3, #0
+ 240 000c 3AD0     		beq	.L23
+ 241              	.L19:
+ 127:nav_control.c ****         if (line_count == LINE_OF_INTEREST) {
+ 242              		.loc 1 127 0 is_stmt 1
+ 243 000e 1E4B     		ldr	r3, .L24
+ 244 0010 DB68     		ldr	r3, [r3, #12]
+ 245 0012 782B     		cmp	r3, #120
+ 246 0014 36D1     		bne	.L23
+ 123:nav_control.c ****     float angle;
+ 247              		.loc 1 123 0
+ 248 0016 70B5     		push	{r4, r5, r6, lr}
+ 249              		.cfi_def_cfa_offset 16
+ 250              		.cfi_offset 4, -16
+ 251              		.cfi_offset 5, -12
+ 252              		.cfi_offset 6, -8
+ 253              		.cfi_offset 14, -4
+ 128:nav_control.c ****             LINE_SEEN = 1;
+ 254              		.loc 1 128 0
+ 255 0018 0122     		movs	r2, #1
+ 256 001a 1B4B     		ldr	r3, .L24
+ 257 001c 9A61     		str	r2, [r3, #24]
+ 129:nav_control.c ****             line_time = Line_Timer_ReadCapture();
+ 258              		.loc 1 129 0
+ 259 001e FFF7FEFF 		bl	Line_Timer_ReadCapture
+ 260              	.LVL26:
+ 261 0022 1A4B     		ldr	r3, .L24+4
+ 262 0024 1880     		strh	r0, [r3]	@ movhi
+ 130:nav_control.c **** 
+ 131:nav_control.c ****             // Determine PWM value to send to Servo
+ 132:nav_control.c ****             output = Servo_PID_Control(line_time);
+ 263              		.loc 1 132 0
+ 264 0026 FFF7FEFF 		bl	__aeabi_ui2f
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 8
+
+
+ 265              	.LVL27:
+ 266 002a FFF7FEFF 		bl	Servo_PID_Control
+ 267              	.LVL28:
+ 268 002e 0446     		mov	r4, r0
+ 269              	.LVL29:
+ 133:nav_control.c ****             angle = CENTER_ANGLE  + output;
+ 270              		.loc 1 133 0
+ 271 0030 174D     		ldr	r5, .L24+8
+ 272 0032 6868     		ldr	r0, [r5, #4]
+ 273              	.LVL30:
+ 274 0034 FFF7FEFF 		bl	__aeabi_i2f
+ 275              	.LVL31:
+ 276 0038 0146     		mov	r1, r0
+ 277 003a 2046     		mov	r0, r4
+ 278 003c FFF7FEFF 		bl	__aeabi_fadd
+ 279              	.LVL32:
+ 280 0040 0446     		mov	r4, r0
+ 281              	.LVL33:
+ 134:nav_control.c ****             
+ 135:nav_control.c ****             // Throw out line if too extreme
+ 136:nav_control.c ****             if (abs((int)angle - (int)prev_angle) > 150) {
+ 282              		.loc 1 136 0
+ 283 0042 FFF7FEFF 		bl	__aeabi_f2iz
+ 284              	.LVL34:
+ 285 0046 0646     		mov	r6, r0
+ 286 0048 A868     		ldr	r0, [r5, #8]	@ float
+ 287 004a FFF7FEFF 		bl	__aeabi_f2iz
+ 288              	.LVL35:
+ 289 004e 301A     		subs	r0, r6, r0
+ 290 0050 0028     		cmp	r0, #0
+ 291 0052 B8BF     		it	lt
+ 292 0054 4042     		rsblt	r0, r0, #0
+ 293 0056 9628     		cmp	r0, #150
+ 294 0058 04DD     		ble	.L21
+ 137:nav_control.c ****                 print_xbee("!!!CALCULATED ANGLE was : %i\n\r", (int)angle);
+ 295              		.loc 1 137 0
+ 296 005a 3146     		mov	r1, r6
+ 297 005c 0D48     		ldr	r0, .L24+12
+ 298 005e FFF7FEFF 		bl	print_xbee
+ 299              	.LVL36:
+ 138:nav_control.c ****                 angle = prev_angle;
+ 300              		.loc 1 138 0
+ 301 0062 AC68     		ldr	r4, [r5, #8]	@ float
+ 302              	.LVL37:
+ 303              	.L21:
+ 139:nav_control.c ****             }
+ 140:nav_control.c ****             print_xbee("ANGLE: %i\n\r", (int)angle);
+ 304              		.loc 1 140 0
+ 305 0064 2046     		mov	r0, r4
+ 306 0066 FFF7FEFF 		bl	__aeabi_f2iz
+ 307              	.LVL38:
+ 308 006a 0546     		mov	r5, r0
+ 309 006c 0146     		mov	r1, r0
+ 310 006e 0A48     		ldr	r0, .L24+16
+ 311 0070 FFF7FEFF 		bl	print_xbee
+ 312              	.LVL39:
+ 141:nav_control.c ****             
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 9
+
+
+ 142:nav_control.c ****             // Write to Servo
+ 143:nav_control.c ****             Servo_PWM_WriteCompare(Servo_PWM_AngleCalc((int)angle));
+ 313              		.loc 1 143 0
+ 314 0074 2846     		mov	r0, r5
+ 315 0076 FFF7FEFF 		bl	Servo_PWM_AngleCalc
+ 316              	.LVL40:
+ 317 007a FFF7FEFF 		bl	Servo_PWM_WriteCompare
+ 318              	.LVL41:
+ 144:nav_control.c ****             prev_angle = angle;
+ 319              		.loc 1 144 0
+ 320 007e 044B     		ldr	r3, .L24+8
+ 321 0080 9C60     		str	r4, [r3, #8]	@ float
+ 322 0082 70BD     		pop	{r4, r5, r6, pc}
+ 323              	.LVL42:
+ 324              	.L23:
+ 325              		.cfi_def_cfa_offset 0
+ 326              		.cfi_restore 4
+ 327              		.cfi_restore 5
+ 328              		.cfi_restore 6
+ 329              		.cfi_restore 14
+ 330 0084 7047     		bx	lr
+ 331              	.L25:
+ 332 0086 00BF     		.align	2
+ 333              	.L24:
+ 334 0088 00000000 		.word	.LANCHOR1
+ 335 008c 00000000 		.word	line_time
+ 336 0090 00000000 		.word	.LANCHOR0
+ 337 0094 00000000 		.word	.LC0
+ 338 0098 20000000 		.word	.LC1
+ 339              		.cfi_endproc
+ 340              	.LFE68:
+ 341              		.size	Line_Int_ISR, .-Line_Int_ISR
+ 342              		.section	.text.V_Sync_ISR,"ax",%progbits
+ 343              		.align	2
+ 344              		.global	V_Sync_ISR
+ 345              		.thumb
+ 346              		.thumb_func
+ 347              		.type	V_Sync_ISR, %function
+ 348              	V_Sync_ISR:
+ 349              	.LFB69:
+ 145:nav_control.c ****         }
+ 146:nav_control.c ****     }
+ 147:nav_control.c **** }
+ 148:nav_control.c **** 
+ 149:nav_control.c **** 
+ 150:nav_control.c **** // V Sync Interrupt Handler
+ 151:nav_control.c **** CY_ISR(V_Sync_ISR) {
+ 350              		.loc 1 151 0
+ 351              		.cfi_startproc
+ 352              		@ args = 0, pretend = 0, frame = 0
+ 353              		@ frame_needed = 0, uses_anonymous_args = 0
+ 354              		@ link register save eliminated.
+ 152:nav_control.c ****     VIDEO_STATE = FRAME_WAIT;
+ 355              		.loc 1 152 0
+ 356 0000 0122     		movs	r2, #1
+ 357 0002 014B     		ldr	r3, .L27
+ 358 0004 DA61     		str	r2, [r3, #28]
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 10
+
+
+ 359 0006 7047     		bx	lr
+ 360              	.L28:
+ 361              		.align	2
+ 362              	.L27:
+ 363 0008 00000000 		.word	.LANCHOR1
+ 364              		.cfi_endproc
+ 365              	.LFE69:
+ 366              		.size	V_Sync_ISR, .-V_Sync_ISR
+ 367              		.section	.text.H_Sync_ISR,"ax",%progbits
+ 368              		.align	2
+ 369              		.global	H_Sync_ISR
+ 370              		.thumb
+ 371              		.thumb_func
+ 372              		.type	H_Sync_ISR, %function
+ 373              	H_Sync_ISR:
+ 374              	.LFB70:
+ 153:nav_control.c **** }
+ 154:nav_control.c **** 
+ 155:nav_control.c **** // H Sync Interrupt Handler
+ 156:nav_control.c **** CY_ISR(H_Sync_ISR) {
+ 375              		.loc 1 156 0
+ 376              		.cfi_startproc
+ 377              		@ args = 0, pretend = 0, frame = 0
+ 378              		@ frame_needed = 0, uses_anonymous_args = 0
+ 379              		@ link register save eliminated.
+ 157:nav_control.c ****     num_h_pulse++;
+ 380              		.loc 1 157 0
+ 381 0000 174A     		ldr	r2, .L35
+ 382 0002 136A     		ldr	r3, [r2, #32]
+ 383 0004 0133     		adds	r3, r3, #1
+ 384 0006 1362     		str	r3, [r2, #32]
+ 158:nav_control.c ****     
+ 159:nav_control.c ****     switch(VIDEO_STATE) {
+ 385              		.loc 1 159 0
+ 386 0008 D269     		ldr	r2, [r2, #28]
+ 387 000a 012A     		cmp	r2, #1
+ 388 000c 02D0     		beq	.L31
+ 389 000e 022A     		cmp	r2, #2
+ 390 0010 0BD0     		beq	.L32
+ 391 0012 7047     		bx	lr
+ 392              	.L31:
+ 160:nav_control.c ****     
+ 161:nav_control.c ****         // Waiting for V Sync
+ 162:nav_control.c ****         case V_SYNC_WAIT:
+ 163:nav_control.c ****             break;
+ 164:nav_control.c ****         
+ 165:nav_control.c ****         // Waiting for next frame to start
+ 166:nav_control.c ****         case FRAME_WAIT:
+ 167:nav_control.c ****             num_h_pulse++;
+ 393              		.loc 1 167 0
+ 394 0014 0133     		adds	r3, r3, #1
+ 395 0016 124A     		ldr	r2, .L35
+ 396 0018 1362     		str	r3, [r2, #32]
+ 168:nav_control.c ****             if (num_h_pulse >= MAX_H_PULSES) {
+ 397              		.loc 1 168 0
+ 398 001a 082B     		cmp	r3, #8
+ 399 001c 1EDD     		ble	.L29
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 11
+
+
+ 169:nav_control.c ****                 num_h_pulse = 0;
+ 400              		.loc 1 169 0
+ 401 001e 1346     		mov	r3, r2
+ 402 0020 0022     		movs	r2, #0
+ 403 0022 1A62     		str	r2, [r3, #32]
+ 170:nav_control.c ****                 VIDEO_STATE = IN_FRAME;
+ 404              		.loc 1 170 0
+ 405 0024 0222     		movs	r2, #2
+ 406 0026 DA61     		str	r2, [r3, #28]
+ 407 0028 7047     		bx	lr
+ 408              	.L32:
+ 171:nav_control.c ****             }
+ 172:nav_control.c ****             break;
+ 173:nav_control.c ****             
+ 174:nav_control.c ****         // In frame
+ 175:nav_control.c ****         case IN_FRAME:  
+ 176:nav_control.c ****             
+ 177:nav_control.c ****             line_count++;
+ 409              		.loc 1 177 0
+ 410 002a 0D4A     		ldr	r2, .L35
+ 411 002c D368     		ldr	r3, [r2, #12]
+ 412 002e 0133     		adds	r3, r3, #1
+ 413 0030 D360     		str	r3, [r2, #12]
+ 178:nav_control.c ****             // Check if on line of interest
+ 179:nav_control.c ****             if (line_count == LINE_OF_INTEREST) {
+ 414              		.loc 1 179 0
+ 415 0032 782B     		cmp	r3, #120
+ 416 0034 02D1     		bne	.L33
+ 180:nav_control.c ****                 NAVIGATION_LINE = 1;
+ 417              		.loc 1 180 0
+ 418 0036 0121     		movs	r1, #1
+ 419 0038 5162     		str	r1, [r2, #36]
+ 420 003a 02E0     		b	.L34
+ 421              	.L33:
+ 181:nav_control.c ****             }
+ 182:nav_control.c ****             else {
+ 183:nav_control.c ****                 NAVIGATION_LINE = 0;  
+ 422              		.loc 1 183 0
+ 423 003c 0021     		movs	r1, #0
+ 424 003e 084A     		ldr	r2, .L35
+ 425 0040 5162     		str	r1, [r2, #36]
+ 426              	.L34:
+ 184:nav_control.c ****             }
+ 185:nav_control.c ****             
+ 186:nav_control.c ****             // Check if end of frame
+ 187:nav_control.c ****             if (line_count >= FRAME_HEIGHT) {
+ 427              		.loc 1 187 0
+ 428 0042 EF2B     		cmp	r3, #239
+ 429 0044 0ADD     		ble	.L29
+ 188:nav_control.c ****                 line_count = 0;
+ 430              		.loc 1 188 0
+ 431 0046 064B     		ldr	r3, .L35
+ 432 0048 0022     		movs	r2, #0
+ 433 004a DA60     		str	r2, [r3, #12]
+ 189:nav_control.c ****                 LINE_SEEN = 0;
+ 434              		.loc 1 189 0
+ 435 004c 9A61     		str	r2, [r3, #24]
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 12
+
+
+ 190:nav_control.c ****                 VIDEO_STATE = V_SYNC_WAIT;
+ 436              		.loc 1 190 0
+ 437 004e DA61     		str	r2, [r3, #28]
+ 191:nav_control.c ****                 FRAME_PARITY = !FRAME_PARITY;
+ 438              		.loc 1 191 0
+ 439 0050 044A     		ldr	r2, .L35+4
+ 440 0052 D368     		ldr	r3, [r2, #12]
+ 441 0054 B3FA83F3 		clz	r3, r3
+ 442 0058 5B09     		lsrs	r3, r3, #5
+ 443 005a D360     		str	r3, [r2, #12]
+ 444              	.L29:
+ 445 005c 7047     		bx	lr
+ 446              	.L36:
+ 447 005e 00BF     		.align	2
+ 448              	.L35:
+ 449 0060 00000000 		.word	.LANCHOR1
+ 450 0064 00000000 		.word	.LANCHOR0
+ 451              		.cfi_endproc
+ 452              	.LFE70:
+ 453              		.size	H_Sync_ISR, .-H_Sync_ISR
+ 454              		.global	prev_angle
+ 455              		.global	prev_i_term_servo
+ 456              		.global	prev_error_servo
+ 457              		.global	kd_servo
+ 458              		.global	ki_servo
+ 459              		.global	kp_servo
+ 460              		.global	numFrame
+ 461              		.comm	line_time,2,2
+ 462              		.global	frameIndex
+ 463              		.comm	frameVal,60000,4
+ 464              		.comm	outputBuf,64,4
+ 465              		.comm	average_position,4,4
+ 466              		.comm	average_buf,40,4
+ 467              		.global	num_interupts
+ 468              		.global	oldest_value
+ 469              		.global	right_count
+ 470              		.global	left_count
+ 471              		.global	line_count
+ 472              		.global	num_h_pulse
+ 473              		.global	FRAME_PARITY
+ 474              		.global	LINE_SEEN
+ 475              		.global	CENTER_ANGLE
+ 476              		.global	NAVIGATION_LINE
+ 477              		.global	LINE_STATE
+ 478              		.global	CAPTURE_FRAME
+ 479              		.global	VIDEO_STATE
+ 480              		.global	STEER_STATE
+ 481              		.global	RUN_STATE
+ 482              		.comm	BALLOON_STATE,4,4
+ 483              		.data
+ 484              		.align	2
+ 485              		.set	.LANCHOR0,. + 0
+ 486              		.type	kp_servo, %object
+ 487              		.size	kp_servo, 4
+ 488              	kp_servo:
+ 489 0000 9A99193E 		.word	1041865114
+ 490              		.type	CENTER_ANGLE, %object
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 13
+
+
+ 491              		.size	CENTER_ANGLE, 4
+ 492              	CENTER_ANGLE:
+ 493 0004 4A000000 		.word	74
+ 494              		.type	prev_angle, %object
+ 495              		.size	prev_angle, 4
+ 496              	prev_angle:
+ 497 0008 00009442 		.word	1116995584
+ 498              		.type	FRAME_PARITY, %object
+ 499              		.size	FRAME_PARITY, 4
+ 500              	FRAME_PARITY:
+ 501 000c 01000000 		.word	1
+ 502              		.section	.rodata.str1.4,"aMS",%progbits,1
+ 503              		.align	2
+ 504              	.LC0:
+ 505 0000 21212143 		.ascii	"!!!CALCULATED ANGLE was : %i\012\015\000"
+ 505      414C4355 
+ 505      4C415445 
+ 505      4420414E 
+ 505      474C4520 
+ 506 001f 00       		.space	1
+ 507              	.LC1:
+ 508 0020 414E474C 		.ascii	"ANGLE: %i\012\015\000"
+ 508      453A2025 
+ 508      690A0D00 
+ 509              		.bss
+ 510              		.align	2
+ 511              		.set	.LANCHOR1,. + 0
+ 512              		.type	prev_i_term_servo, %object
+ 513              		.size	prev_i_term_servo, 4
+ 514              	prev_i_term_servo:
+ 515 0000 00000000 		.space	4
+ 516              		.type	ki_servo, %object
+ 517              		.size	ki_servo, 4
+ 518              	ki_servo:
+ 519 0004 00000000 		.space	4
+ 520              		.type	prev_error_servo, %object
+ 521              		.size	prev_error_servo, 4
+ 522              	prev_error_servo:
+ 523 0008 00000000 		.space	4
+ 524              		.type	line_count, %object
+ 525              		.size	line_count, 4
+ 526              	line_count:
+ 527 000c 00000000 		.space	4
+ 528              		.type	RUN_STATE, %object
+ 529              		.size	RUN_STATE, 4
+ 530              	RUN_STATE:
+ 531 0010 00000000 		.space	4
+ 532              		.type	STEER_STATE, %object
+ 533              		.size	STEER_STATE, 4
+ 534              	STEER_STATE:
+ 535 0014 00000000 		.space	4
+ 536              		.type	LINE_SEEN, %object
+ 537              		.size	LINE_SEEN, 4
+ 538              	LINE_SEEN:
+ 539 0018 00000000 		.space	4
+ 540              		.type	VIDEO_STATE, %object
+ 541              		.size	VIDEO_STATE, 4
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 14
+
+
+ 542              	VIDEO_STATE:
+ 543 001c 00000000 		.space	4
+ 544              		.type	num_h_pulse, %object
+ 545              		.size	num_h_pulse, 4
+ 546              	num_h_pulse:
+ 547 0020 00000000 		.space	4
+ 548              		.type	NAVIGATION_LINE, %object
+ 549              		.size	NAVIGATION_LINE, 4
+ 550              	NAVIGATION_LINE:
+ 551 0024 00000000 		.space	4
+ 552              		.type	kd_servo, %object
+ 553              		.size	kd_servo, 4
+ 554              	kd_servo:
+ 555 0028 00000000 		.space	4
+ 556              		.type	numFrame, %object
+ 557              		.size	numFrame, 4
+ 558              	numFrame:
+ 559 002c 00000000 		.space	4
+ 560              		.type	frameIndex, %object
+ 561              		.size	frameIndex, 4
+ 562              	frameIndex:
+ 563 0030 00000000 		.space	4
+ 564              		.type	num_interupts, %object
+ 565              		.size	num_interupts, 4
+ 566              	num_interupts:
+ 567 0034 00000000 		.space	4
+ 568              		.type	oldest_value, %object
+ 569              		.size	oldest_value, 4
+ 570              	oldest_value:
+ 571 0038 00000000 		.space	4
+ 572              		.type	right_count, %object
+ 573              		.size	right_count, 4
+ 574              	right_count:
+ 575 003c 00000000 		.space	4
+ 576              		.type	left_count, %object
+ 577              		.size	left_count, 4
+ 578              	left_count:
+ 579 0040 00000000 		.space	4
+ 580              		.type	LINE_STATE, %object
+ 581              		.size	LINE_STATE, 4
+ 582              	LINE_STATE:
+ 583 0044 00000000 		.space	4
+ 584              		.type	CAPTURE_FRAME, %object
+ 585              		.size	CAPTURE_FRAME, 4
+ 586              	CAPTURE_FRAME:
+ 587 0048 00000000 		.space	4
+ 588              		.text
+ 589              	.Letext0:
+ 590              		.file 2 "c:\\program files (x86)\\cypress\\psoc creator\\4.2\\psoc creator\\import\\gnu\\arm\\5.4.
+ 591              		.file 3 "c:\\program files (x86)\\cypress\\psoc creator\\4.2\\psoc creator\\import\\gnu\\arm\\5.4.
+ 592              		.file 4 "Generated_Source\\PSoC5/cytypes.h"
+ 593              		.file 5 "Generated_Source\\PSoC5/core_cm3.h"
+ 594              		.file 6 "balloon.h"
+ 595              		.file 7 "c:\\program files (x86)\\cypress\\psoc creator\\4.2\\psoc creator\\import\\gnu\\arm\\5.4.
+ 596              		.file 8 "Generated_Source\\PSoC5/XBEE.h"
+ 597              		.file 9 "Generated_Source\\PSoC5/Line_Time_Reset.h"
+ 598              		.file 10 "Generated_Source\\PSoC5/Line_Timer.h"
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 15
+
+
+ 599              		.file 11 "Generated_Source\\PSoC5/Servo_PWM.h"
+ 600              		.section	.debug_info,"",%progbits
+ 601              	.Ldebug_info0:
+ 602 0000 31050000 		.4byte	0x531
+ 603 0004 0400     		.2byte	0x4
+ 604 0006 00000000 		.4byte	.Ldebug_abbrev0
+ 605 000a 04       		.byte	0x4
+ 606 000b 01       		.uleb128 0x1
+ 607 000c 70030000 		.4byte	.LASF67
+ 608 0010 0C       		.byte	0xc
+ 609 0011 9C020000 		.4byte	.LASF68
+ 610 0015 09000000 		.4byte	.LASF69
+ 611 0019 00000000 		.4byte	.Ldebug_ranges0+0
+ 612 001d 00000000 		.4byte	0
+ 613 0021 00000000 		.4byte	.Ldebug_line0
+ 614 0025 02       		.uleb128 0x2
+ 615 0026 04       		.byte	0x4
+ 616 0027 04       		.byte	0x4
+ 617 0028 3B010000 		.4byte	.LASF0
+ 618 002c 02       		.uleb128 0x2
+ 619 002d 01       		.byte	0x1
+ 620 002e 06       		.byte	0x6
+ 621 002f 12020000 		.4byte	.LASF1
+ 622 0033 02       		.uleb128 0x2
+ 623 0034 01       		.byte	0x1
+ 624 0035 08       		.byte	0x8
+ 625 0036 BC010000 		.4byte	.LASF2
+ 626 003a 02       		.uleb128 0x2
+ 627 003b 02       		.byte	0x2
+ 628 003c 05       		.byte	0x5
+ 629 003d AB000000 		.4byte	.LASF3
+ 630 0041 02       		.uleb128 0x2
+ 631 0042 02       		.byte	0x2
+ 632 0043 07       		.byte	0x7
+ 633 0044 84020000 		.4byte	.LASF4
+ 634 0048 03       		.uleb128 0x3
+ 635 0049 1D030000 		.4byte	.LASF10
+ 636 004d 02       		.byte	0x2
+ 637 004e 3F       		.byte	0x3f
+ 638 004f 53000000 		.4byte	0x53
+ 639 0053 02       		.uleb128 0x2
+ 640 0054 04       		.byte	0x4
+ 641 0055 05       		.byte	0x5
+ 642 0056 6C010000 		.4byte	.LASF5
+ 643 005a 02       		.uleb128 0x2
+ 644 005b 04       		.byte	0x4
+ 645 005c 07       		.byte	0x7
+ 646 005d F2020000 		.4byte	.LASF6
+ 647 0061 02       		.uleb128 0x2
+ 648 0062 08       		.byte	0x8
+ 649 0063 05       		.byte	0x5
+ 650 0064 41010000 		.4byte	.LASF7
+ 651 0068 02       		.uleb128 0x2
+ 652 0069 08       		.byte	0x8
+ 653 006a 07       		.byte	0x7
+ 654 006b 29020000 		.4byte	.LASF8
+ 655 006f 04       		.uleb128 0x4
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 16
+
+
+ 656 0070 04       		.byte	0x4
+ 657 0071 05       		.byte	0x5
+ 658 0072 696E7400 		.ascii	"int\000"
+ 659 0076 02       		.uleb128 0x2
+ 660 0077 04       		.byte	0x4
+ 661 0078 07       		.byte	0x7
+ 662 0079 4B020000 		.4byte	.LASF9
+ 663 007d 03       		.uleb128 0x3
+ 664 007e B1020000 		.4byte	.LASF11
+ 665 0082 03       		.byte	0x3
+ 666 0083 2C       		.byte	0x2c
+ 667 0084 48000000 		.4byte	0x48
+ 668 0088 05       		.uleb128 0x5
+ 669 0089 FC000000 		.4byte	.LASF12
+ 670 008d 04       		.byte	0x4
+ 671 008e E501     		.2byte	0x1e5
+ 672 0090 41000000 		.4byte	0x41
+ 673 0094 02       		.uleb128 0x2
+ 674 0095 08       		.byte	0x8
+ 675 0096 04       		.byte	0x4
+ 676 0097 04030000 		.4byte	.LASF13
+ 677 009b 02       		.uleb128 0x2
+ 678 009c 01       		.byte	0x1
+ 679 009d 08       		.byte	0x8
+ 680 009e 97020000 		.4byte	.LASF14
+ 681 00a2 02       		.uleb128 0x2
+ 682 00a3 08       		.byte	0x8
+ 683 00a4 04       		.byte	0x4
+ 684 00a5 A4010000 		.4byte	.LASF15
+ 685 00a9 02       		.uleb128 0x2
+ 686 00aa 04       		.byte	0x4
+ 687 00ab 07       		.byte	0x7
+ 688 00ac C0000000 		.4byte	.LASF16
+ 689 00b0 06       		.uleb128 0x6
+ 690 00b1 04       		.byte	0x4
+ 691 00b2 9B000000 		.4byte	0x9b
+ 692 00b6 07       		.uleb128 0x7
+ 693 00b7 CA010000 		.4byte	.LASF19
+ 694 00bb 01       		.byte	0x1
+ 695 00bc 49       		.byte	0x49
+ 696 00bd 88000000 		.4byte	0x88
+ 697 00c1 00000000 		.4byte	.LFB64
+ 698 00c5 38000000 		.4byte	.LFE64-.LFB64
+ 699 00c9 01       		.uleb128 0x1
+ 700 00ca 9C       		.byte	0x9c
+ 701 00cb DF000000 		.4byte	0xdf
+ 702 00cf 08       		.uleb128 0x8
+ 703 00d0 31030000 		.4byte	.LASF17
+ 704 00d4 01       		.byte	0x1
+ 705 00d5 49       		.byte	0x49
+ 706 00d6 6F000000 		.4byte	0x6f
+ 707 00da 00000000 		.4byte	.LLST0
+ 708 00de 00       		.byte	0
+ 709 00df 09       		.uleb128 0x9
+ 710 00e0 58020000 		.4byte	.LASF27
+ 711 00e4 01       		.byte	0x1
+ 712 00e5 50       		.byte	0x50
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 17
+
+
+ 713 00e6 00000000 		.4byte	.LFB65
+ 714 00ea 1A000000 		.4byte	.LFE65-.LFB65
+ 715 00ee 01       		.uleb128 0x1
+ 716 00ef 9C       		.byte	0x9c
+ 717 00f0 54010000 		.4byte	0x154
+ 718 00f4 08       		.uleb128 0x8
+ 719 00f5 75010000 		.4byte	.LASF18
+ 720 00f9 01       		.byte	0x1
+ 721 00fa 50       		.byte	0x50
+ 722 00fb B0000000 		.4byte	0xb0
+ 723 00ff 53000000 		.4byte	.LLST1
+ 724 0103 0A       		.uleb128 0xa
+ 725 0104 6E756D00 		.ascii	"num\000"
+ 726 0108 01       		.byte	0x1
+ 727 0109 50       		.byte	0x50
+ 728 010a 6F000000 		.4byte	0x6f
+ 729 010e 7F000000 		.4byte	.LLST2
+ 730 0112 0B       		.uleb128 0xb
+ 731 0113 62756600 		.ascii	"buf\000"
+ 732 0117 01       		.byte	0x1
+ 733 0118 51       		.byte	0x51
+ 734 0119 54010000 		.4byte	0x154
+ 735 011d 03       		.uleb128 0x3
+ 736 011e 91       		.byte	0x91
+ 737 011f B87F     		.sleb128 -72
+ 738 0121 0C       		.uleb128 0xc
+ 739 0122 0E000000 		.4byte	.LVL9
+ 740 0126 FD040000 		.4byte	0x4fd
+ 741 012a 43010000 		.4byte	0x143
+ 742 012e 0D       		.uleb128 0xd
+ 743 012f 01       		.uleb128 0x1
+ 744 0130 50       		.byte	0x50
+ 745 0131 02       		.uleb128 0x2
+ 746 0132 7D       		.byte	0x7d
+ 747 0133 00       		.sleb128 0
+ 748 0134 0D       		.uleb128 0xd
+ 749 0135 01       		.uleb128 0x1
+ 750 0136 51       		.byte	0x51
+ 751 0137 03       		.uleb128 0x3
+ 752 0138 F3       		.byte	0xf3
+ 753 0139 01       		.uleb128 0x1
+ 754 013a 50       		.byte	0x50
+ 755 013b 0D       		.uleb128 0xd
+ 756 013c 01       		.uleb128 0x1
+ 757 013d 52       		.byte	0x52
+ 758 013e 03       		.uleb128 0x3
+ 759 013f F3       		.byte	0xf3
+ 760 0140 01       		.uleb128 0x1
+ 761 0141 51       		.byte	0x51
+ 762 0142 00       		.byte	0
+ 763 0143 0E       		.uleb128 0xe
+ 764 0144 14000000 		.4byte	.LVL10
+ 765 0148 08050000 		.4byte	0x508
+ 766 014c 0D       		.uleb128 0xd
+ 767 014d 01       		.uleb128 0x1
+ 768 014e 50       		.byte	0x50
+ 769 014f 02       		.uleb128 0x2
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 18
+
+
+ 770 0150 7D       		.byte	0x7d
+ 771 0151 00       		.sleb128 0
+ 772 0152 00       		.byte	0
+ 773 0153 00       		.byte	0
+ 774 0154 0F       		.uleb128 0xf
+ 775 0155 9B000000 		.4byte	0x9b
+ 776 0159 64010000 		.4byte	0x164
+ 777 015d 10       		.uleb128 0x10
+ 778 015e A9000000 		.4byte	0xa9
+ 779 0162 3F       		.byte	0x3f
+ 780 0163 00       		.byte	0
+ 781 0164 11       		.uleb128 0x11
+ 782 0165 51030000 		.4byte	.LASF20
+ 783 0169 01       		.byte	0x1
+ 784 016a 57       		.byte	0x57
+ 785 016b 25000000 		.4byte	0x25
+ 786 016f 00000000 		.4byte	.LFB66
+ 787 0173 40000000 		.4byte	.LFE66-.LFB66
+ 788 0177 01       		.uleb128 0x1
+ 789 0178 9C       		.byte	0x9c
+ 790 0179 E7010000 		.4byte	0x1e7
+ 791 017d 08       		.uleb128 0x8
+ 792 017e 1B010000 		.4byte	.LASF21
+ 793 0182 01       		.byte	0x1
+ 794 0183 57       		.byte	0x57
+ 795 0184 25000000 		.4byte	0x25
+ 796 0188 AB000000 		.4byte	.LLST3
+ 797 018c 12       		.uleb128 0x12
+ 798 018d 6F020000 		.4byte	.LASF22
+ 799 0191 01       		.byte	0x1
+ 800 0192 58       		.byte	0x58
+ 801 0193 25000000 		.4byte	0x25
+ 802 0197 D9000000 		.4byte	.LLST4
+ 803 019b 12       		.uleb128 0x12
+ 804 019c AA020000 		.4byte	.LASF23
+ 805 01a0 01       		.byte	0x1
+ 806 01a1 59       		.byte	0x59
+ 807 01a2 25000000 		.4byte	0x25
+ 808 01a6 12010000 		.4byte	.LLST5
+ 809 01aa 12       		.uleb128 0x12
+ 810 01ab D6000000 		.4byte	.LASF24
+ 811 01af 01       		.byte	0x1
+ 812 01b0 5A       		.byte	0x5a
+ 813 01b1 25000000 		.4byte	0x25
+ 814 01b5 44010000 		.4byte	.LLST6
+ 815 01b9 12       		.uleb128 0x12
+ 816 01ba 37030000 		.4byte	.LASF25
+ 817 01be 01       		.byte	0x1
+ 818 01bf 5B       		.byte	0x5b
+ 819 01c0 25000000 		.4byte	0x25
+ 820 01c4 B1010000 		.4byte	.LLST7
+ 821 01c8 12       		.uleb128 0x12
+ 822 01c9 4B030000 		.4byte	.LASF26
+ 823 01cd 01       		.byte	0x1
+ 824 01ce 5E       		.byte	0x5e
+ 825 01cf 25000000 		.4byte	0x25
+ 826 01d3 CF010000 		.4byte	.LLST8
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 19
+
+
+ 827 01d7 13       		.uleb128 0x13
+ 828 01d8 647400   		.ascii	"dt\000"
+ 829 01db 01       		.byte	0x1
+ 830 01dc 60       		.byte	0x60
+ 831 01dd 25000000 		.4byte	0x25
+ 832 01e1 04       		.byte	0x4
+ 833 01e2 00000000 		.4byte	0
+ 834 01e6 00       		.byte	0
+ 835 01e7 09       		.uleb128 0x9
+ 836 01e8 76020000 		.4byte	.LASF28
+ 837 01ec 01       		.byte	0x1
+ 838 01ed 73       		.byte	0x73
+ 839 01ee 00000000 		.4byte	.LFB67
+ 840 01f2 1C000000 		.4byte	.LFE67-.LFB67
+ 841 01f6 01       		.uleb128 0x1
+ 842 01f7 9C       		.byte	0x9c
+ 843 01f8 1F020000 		.4byte	0x21f
+ 844 01fc 0C       		.uleb128 0xc
+ 845 01fd 10000000 		.4byte	.LVL24
+ 846 0201 13050000 		.4byte	0x513
+ 847 0205 0F020000 		.4byte	0x20f
+ 848 0209 0D       		.uleb128 0xd
+ 849 020a 01       		.uleb128 0x1
+ 850 020b 50       		.byte	0x50
+ 851 020c 01       		.uleb128 0x1
+ 852 020d 31       		.byte	0x31
+ 853 020e 00       		.byte	0
+ 854 020f 0E       		.uleb128 0xe
+ 855 0210 16000000 		.4byte	.LVL25
+ 856 0214 13050000 		.4byte	0x513
+ 857 0218 0D       		.uleb128 0xd
+ 858 0219 01       		.uleb128 0x1
+ 859 021a 50       		.byte	0x50
+ 860 021b 01       		.uleb128 0x1
+ 861 021c 30       		.byte	0x30
+ 862 021d 00       		.byte	0
+ 863 021e 00       		.byte	0
+ 864 021f 14       		.uleb128 0x14
+ 865 0220 3E030000 		.4byte	.LASF29
+ 866 0224 01       		.byte	0x1
+ 867 0225 7B       		.byte	0x7b
+ 868 0226 00000000 		.4byte	.LFB68
+ 869 022a 9C000000 		.4byte	.LFE68-.LFB68
+ 870 022e 01       		.uleb128 0x1
+ 871 022f 9C       		.byte	0x9c
+ 872 0230 BC020000 		.4byte	0x2bc
+ 873 0234 12       		.uleb128 0x12
+ 874 0235 31030000 		.4byte	.LASF17
+ 875 0239 01       		.byte	0x1
+ 876 023a 7C       		.byte	0x7c
+ 877 023b 25000000 		.4byte	0x25
+ 878 023f FC010000 		.4byte	.LLST9
+ 879 0243 12       		.uleb128 0x12
+ 880 0244 37030000 		.4byte	.LASF25
+ 881 0248 01       		.byte	0x1
+ 882 0249 7D       		.byte	0x7d
+ 883 024a 25000000 		.4byte	0x25
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 20
+
+
+ 884 024e 1A020000 		.4byte	.LLST10
+ 885 0252 15       		.uleb128 0x15
+ 886 0253 22000000 		.4byte	.LVL26
+ 887 0257 1E050000 		.4byte	0x51e
+ 888 025b 15       		.uleb128 0x15
+ 889 025c 2E000000 		.4byte	.LVL28
+ 890 0260 64010000 		.4byte	0x164
+ 891 0264 0C       		.uleb128 0xc
+ 892 0265 62000000 		.4byte	.LVL36
+ 893 0269 DF000000 		.4byte	0xdf
+ 894 026d 81020000 		.4byte	0x281
+ 895 0271 0D       		.uleb128 0xd
+ 896 0272 01       		.uleb128 0x1
+ 897 0273 50       		.byte	0x50
+ 898 0274 05       		.uleb128 0x5
+ 899 0275 03       		.byte	0x3
+ 900 0276 00000000 		.4byte	.LC0
+ 901 027a 0D       		.uleb128 0xd
+ 902 027b 01       		.uleb128 0x1
+ 903 027c 51       		.byte	0x51
+ 904 027d 02       		.uleb128 0x2
+ 905 027e 76       		.byte	0x76
+ 906 027f 00       		.sleb128 0
+ 907 0280 00       		.byte	0
+ 908 0281 0C       		.uleb128 0xc
+ 909 0282 74000000 		.4byte	.LVL39
+ 910 0286 DF000000 		.4byte	0xdf
+ 911 028a 9E020000 		.4byte	0x29e
+ 912 028e 0D       		.uleb128 0xd
+ 913 028f 01       		.uleb128 0x1
+ 914 0290 50       		.byte	0x50
+ 915 0291 05       		.uleb128 0x5
+ 916 0292 03       		.byte	0x3
+ 917 0293 20000000 		.4byte	.LC1
+ 918 0297 0D       		.uleb128 0xd
+ 919 0298 01       		.uleb128 0x1
+ 920 0299 51       		.byte	0x51
+ 921 029a 02       		.uleb128 0x2
+ 922 029b 75       		.byte	0x75
+ 923 029c 00       		.sleb128 0
+ 924 029d 00       		.byte	0
+ 925 029e 0C       		.uleb128 0xc
+ 926 029f 7A000000 		.4byte	.LVL40
+ 927 02a3 B6000000 		.4byte	0xb6
+ 928 02a7 B2020000 		.4byte	0x2b2
+ 929 02ab 0D       		.uleb128 0xd
+ 930 02ac 01       		.uleb128 0x1
+ 931 02ad 50       		.byte	0x50
+ 932 02ae 02       		.uleb128 0x2
+ 933 02af 75       		.byte	0x75
+ 934 02b0 00       		.sleb128 0
+ 935 02b1 00       		.byte	0
+ 936 02b2 15       		.uleb128 0x15
+ 937 02b3 7E000000 		.4byte	.LVL41
+ 938 02b7 29050000 		.4byte	0x529
+ 939 02bb 00       		.byte	0
+ 940 02bc 16       		.uleb128 0x16
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 21
+
+
+ 941 02bd FE030000 		.4byte	.LASF30
+ 942 02c1 01       		.byte	0x1
+ 943 02c2 97       		.byte	0x97
+ 944 02c3 00000000 		.4byte	.LFB69
+ 945 02c7 0C000000 		.4byte	.LFE69-.LFB69
+ 946 02cb 01       		.uleb128 0x1
+ 947 02cc 9C       		.byte	0x9c
+ 948 02cd 16       		.uleb128 0x16
+ 949 02ce 07020000 		.4byte	.LASF31
+ 950 02d2 01       		.byte	0x1
+ 951 02d3 9C       		.byte	0x9c
+ 952 02d4 00000000 		.4byte	.LFB70
+ 953 02d8 68000000 		.4byte	.LFE70-.LFB70
+ 954 02dc 01       		.uleb128 0x1
+ 955 02dd 9C       		.byte	0x9c
+ 956 02de 17       		.uleb128 0x17
+ 957 02df 63030000 		.4byte	.LASF32
+ 958 02e3 05       		.byte	0x5
+ 959 02e4 1207     		.2byte	0x712
+ 960 02e6 EA020000 		.4byte	0x2ea
+ 961 02ea 18       		.uleb128 0x18
+ 962 02eb 7D000000 		.4byte	0x7d
+ 963 02ef 19       		.uleb128 0x19
+ 964 02f0 7C010000 		.4byte	.LASF33
+ 965 02f4 06       		.byte	0x6
+ 966 02f5 14       		.byte	0x14
+ 967 02f6 6F000000 		.4byte	0x6f
+ 968 02fa 05       		.uleb128 0x5
+ 969 02fb 03       		.byte	0x3
+ 970 02fc 00000000 		.4byte	BALLOON_STATE
+ 971 0300 19       		.uleb128 0x19
+ 972 0301 1F040000 		.4byte	.LASF34
+ 973 0305 01       		.byte	0x1
+ 974 0306 3B       		.byte	0x3b
+ 975 0307 6F000000 		.4byte	0x6f
+ 976 030b 05       		.uleb128 0x5
+ 977 030c 03       		.byte	0x3
+ 978 030d 00000000 		.4byte	RUN_STATE
+ 979 0311 19       		.uleb128 0x19
+ 980 0312 98010000 		.4byte	.LASF35
+ 981 0316 01       		.byte	0x1
+ 982 0317 24       		.byte	0x24
+ 983 0318 6F000000 		.4byte	0x6f
+ 984 031c 05       		.uleb128 0x5
+ 985 031d 03       		.byte	0x3
+ 986 031e 00000000 		.4byte	STEER_STATE
+ 987 0322 19       		.uleb128 0x19
+ 988 0323 63020000 		.4byte	.LASF36
+ 989 0327 01       		.byte	0x1
+ 990 0328 25       		.byte	0x25
+ 991 0329 6F000000 		.4byte	0x6f
+ 992 032d 05       		.uleb128 0x5
+ 993 032e 03       		.byte	0x3
+ 994 032f 00000000 		.4byte	VIDEO_STATE
+ 995 0333 19       		.uleb128 0x19
+ 996 0334 8A010000 		.4byte	.LASF37
+ 997 0338 01       		.byte	0x1
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 22
+
+
+ 998 0339 26       		.byte	0x26
+ 999 033a 6F000000 		.4byte	0x6f
+ 1000 033e 05       		.uleb128 0x5
+ 1001 033f 03       		.byte	0x3
+ 1002 0340 00000000 		.4byte	CAPTURE_FRAME
+ 1003 0344 19       		.uleb128 0x19
+ 1004 0345 1E020000 		.4byte	.LASF38
+ 1005 0349 01       		.byte	0x1
+ 1006 034a 27       		.byte	0x27
+ 1007 034b 6F000000 		.4byte	0x6f
+ 1008 034f 05       		.uleb128 0x5
+ 1009 0350 03       		.byte	0x3
+ 1010 0351 00000000 		.4byte	LINE_STATE
+ 1011 0355 19       		.uleb128 0x19
+ 1012 0356 DE010000 		.4byte	.LASF39
+ 1013 035a 01       		.byte	0x1
+ 1014 035b 28       		.byte	0x28
+ 1015 035c 6F000000 		.4byte	0x6f
+ 1016 0360 05       		.uleb128 0x5
+ 1017 0361 03       		.byte	0x3
+ 1018 0362 00000000 		.4byte	NAVIGATION_LINE
+ 1019 0366 19       		.uleb128 0x19
+ 1020 0367 C9000000 		.4byte	.LASF40
+ 1021 036b 01       		.byte	0x1
+ 1022 036c 29       		.byte	0x29
+ 1023 036d 6F000000 		.4byte	0x6f
+ 1024 0371 05       		.uleb128 0x5
+ 1025 0372 03       		.byte	0x3
+ 1026 0373 00000000 		.4byte	CENTER_ANGLE
+ 1027 0377 19       		.uleb128 0x19
+ 1028 0378 27030000 		.4byte	.LASF41
+ 1029 037c 01       		.byte	0x1
+ 1030 037d 2A       		.byte	0x2a
+ 1031 037e 6F000000 		.4byte	0x6f
+ 1032 0382 05       		.uleb128 0x5
+ 1033 0383 03       		.byte	0x3
+ 1034 0384 00000000 		.4byte	LINE_SEEN
+ 1035 0388 19       		.uleb128 0x19
+ 1036 0389 D9020000 		.4byte	.LASF42
+ 1037 038d 01       		.byte	0x1
+ 1038 038e 2B       		.byte	0x2b
+ 1039 038f 6F000000 		.4byte	0x6f
+ 1040 0393 05       		.uleb128 0x5
+ 1041 0394 03       		.byte	0x3
+ 1042 0395 00000000 		.4byte	FRAME_PARITY
+ 1043 0399 19       		.uleb128 0x19
+ 1044 039a B0010000 		.4byte	.LASF43
+ 1045 039e 01       		.byte	0x1
+ 1046 039f 2E       		.byte	0x2e
+ 1047 03a0 6F000000 		.4byte	0x6f
+ 1048 03a4 05       		.uleb128 0x5
+ 1049 03a5 03       		.byte	0x3
+ 1050 03a6 00000000 		.4byte	num_h_pulse
+ 1051 03aa 19       		.uleb128 0x19
+ 1052 03ab B5000000 		.4byte	.LASF44
+ 1053 03af 01       		.byte	0x1
+ 1054 03b0 2F       		.byte	0x2f
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 23
+
+
+ 1055 03b1 6F000000 		.4byte	0x6f
+ 1056 03b5 05       		.uleb128 0x5
+ 1057 03b6 03       		.byte	0x3
+ 1058 03b7 00000000 		.4byte	line_count
+ 1059 03bb 19       		.uleb128 0x19
+ 1060 03bc 4F010000 		.4byte	.LASF45
+ 1061 03c0 01       		.byte	0x1
+ 1062 03c1 30       		.byte	0x30
+ 1063 03c2 6F000000 		.4byte	0x6f
+ 1064 03c6 05       		.uleb128 0x5
+ 1065 03c7 03       		.byte	0x3
+ 1066 03c8 00000000 		.4byte	left_count
+ 1067 03cc 19       		.uleb128 0x19
+ 1068 03cd 2F010000 		.4byte	.LASF46
+ 1069 03d1 01       		.byte	0x1
+ 1070 03d2 31       		.byte	0x31
+ 1071 03d3 6F000000 		.4byte	0x6f
+ 1072 03d7 05       		.uleb128 0x5
+ 1073 03d8 03       		.byte	0x3
+ 1074 03d9 00000000 		.4byte	right_count
+ 1075 03dd 19       		.uleb128 0x19
+ 1076 03de 0E010000 		.4byte	.LASF47
+ 1077 03e2 01       		.byte	0x1
+ 1078 03e3 32       		.byte	0x32
+ 1079 03e4 6F000000 		.4byte	0x6f
+ 1080 03e8 05       		.uleb128 0x5
+ 1081 03e9 03       		.byte	0x3
+ 1082 03ea 00000000 		.4byte	oldest_value
+ 1083 03ee 19       		.uleb128 0x19
+ 1084 03ef DD000000 		.4byte	.LASF48
+ 1085 03f3 01       		.byte	0x1
+ 1086 03f4 33       		.byte	0x33
+ 1087 03f5 6F000000 		.4byte	0x6f
+ 1088 03f9 05       		.uleb128 0x5
+ 1089 03fa 03       		.byte	0x3
+ 1090 03fb 00000000 		.4byte	num_interupts
+ 1091 03ff 0F       		.uleb128 0xf
+ 1092 0400 6F000000 		.4byte	0x6f
+ 1093 0404 0F040000 		.4byte	0x40f
+ 1094 0408 10       		.uleb128 0x10
+ 1095 0409 A9000000 		.4byte	0xa9
+ 1096 040d 09       		.byte	0x9
+ 1097 040e 00       		.byte	0
+ 1098 040f 19       		.uleb128 0x19
+ 1099 0410 E6020000 		.4byte	.LASF49
+ 1100 0414 01       		.byte	0x1
+ 1101 0415 34       		.byte	0x34
+ 1102 0416 FF030000 		.4byte	0x3ff
+ 1103 041a 05       		.uleb128 0x5
+ 1104 041b 03       		.byte	0x3
+ 1105 041c 00000000 		.4byte	average_buf
+ 1106 0420 19       		.uleb128 0x19
+ 1107 0421 EB000000 		.4byte	.LASF50
+ 1108 0425 01       		.byte	0x1
+ 1109 0426 35       		.byte	0x35
+ 1110 0427 25000000 		.4byte	0x25
+ 1111 042b 05       		.uleb128 0x5
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 24
+
+
+ 1112 042c 03       		.byte	0x3
+ 1113 042d 00000000 		.4byte	average_position
+ 1114 0431 19       		.uleb128 0x19
+ 1115 0432 81000000 		.4byte	.LASF51
+ 1116 0436 01       		.byte	0x1
+ 1117 0437 36       		.byte	0x36
+ 1118 0438 54010000 		.4byte	0x154
+ 1119 043c 05       		.uleb128 0x5
+ 1120 043d 03       		.byte	0x3
+ 1121 043e 00000000 		.4byte	outputBuf
+ 1122 0442 0F       		.uleb128 0xf
+ 1123 0443 6F000000 		.4byte	0x6f
+ 1124 0447 53040000 		.4byte	0x453
+ 1125 044b 1A       		.uleb128 0x1a
+ 1126 044c A9000000 		.4byte	0xa9
+ 1127 0450 973A     		.2byte	0x3a97
+ 1128 0452 00       		.byte	0
+ 1129 0453 19       		.uleb128 0x19
+ 1130 0454 B9020000 		.4byte	.LASF52
+ 1131 0458 01       		.byte	0x1
+ 1132 0459 37       		.byte	0x37
+ 1133 045a 42040000 		.4byte	0x442
+ 1134 045e 05       		.uleb128 0x5
+ 1135 045f 03       		.byte	0x3
+ 1136 0460 00000000 		.4byte	frameVal
+ 1137 0464 19       		.uleb128 0x19
+ 1138 0465 40020000 		.4byte	.LASF53
+ 1139 0469 01       		.byte	0x1
+ 1140 046a 38       		.byte	0x38
+ 1141 046b 6F000000 		.4byte	0x6f
+ 1142 046f 05       		.uleb128 0x5
+ 1143 0470 03       		.byte	0x3
+ 1144 0471 00000000 		.4byte	frameIndex
+ 1145 0475 19       		.uleb128 0x19
+ 1146 0476 25010000 		.4byte	.LASF54
+ 1147 047a 01       		.byte	0x1
+ 1148 047b 39       		.byte	0x39
+ 1149 047c 88000000 		.4byte	0x88
+ 1150 0480 05       		.uleb128 0x5
+ 1151 0481 03       		.byte	0x3
+ 1152 0482 00000000 		.4byte	line_time
+ 1153 0486 19       		.uleb128 0x19
+ 1154 0487 8B000000 		.4byte	.LASF55
+ 1155 048b 01       		.byte	0x1
+ 1156 048c 3A       		.byte	0x3a
+ 1157 048d 6F000000 		.4byte	0x6f
+ 1158 0491 05       		.uleb128 0x5
+ 1159 0492 03       		.byte	0x3
+ 1160 0493 00000000 		.4byte	numFrame
+ 1161 0497 19       		.uleb128 0x19
+ 1162 0498 14030000 		.4byte	.LASF56
+ 1163 049c 01       		.byte	0x1
+ 1164 049d 3D       		.byte	0x3d
+ 1165 049e 25000000 		.4byte	0x25
+ 1166 04a2 05       		.uleb128 0x5
+ 1167 04a3 03       		.byte	0x3
+ 1168 04a4 00000000 		.4byte	kp_servo
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 25
+
+
+ 1169 04a8 19       		.uleb128 0x19
+ 1170 04a9 00000000 		.4byte	.LASF57
+ 1171 04ad 01       		.byte	0x1
+ 1172 04ae 3E       		.byte	0x3e
+ 1173 04af 25000000 		.4byte	0x25
+ 1174 04b3 05       		.uleb128 0x5
+ 1175 04b4 03       		.byte	0x3
+ 1176 04b5 00000000 		.4byte	ki_servo
+ 1177 04b9 19       		.uleb128 0x19
+ 1178 04ba 0B030000 		.4byte	.LASF58
+ 1179 04be 01       		.byte	0x1
+ 1180 04bf 3F       		.byte	0x3f
+ 1181 04c0 25000000 		.4byte	0x25
+ 1182 04c4 05       		.uleb128 0x5
+ 1183 04c5 03       		.byte	0x3
+ 1184 04c6 00000000 		.4byte	kd_servo
+ 1185 04ca 19       		.uleb128 0x19
+ 1186 04cb F6010000 		.4byte	.LASF59
+ 1187 04cf 01       		.byte	0x1
+ 1188 04d0 40       		.byte	0x40
+ 1189 04d1 25000000 		.4byte	0x25
+ 1190 04d5 05       		.uleb128 0x5
+ 1191 04d6 03       		.byte	0x3
+ 1192 04d7 00000000 		.4byte	prev_error_servo
+ 1193 04db 19       		.uleb128 0x19
+ 1194 04dc 5A010000 		.4byte	.LASF60
+ 1195 04e0 01       		.byte	0x1
+ 1196 04e1 41       		.byte	0x41
+ 1197 04e2 25000000 		.4byte	0x25
+ 1198 04e6 05       		.uleb128 0x5
+ 1199 04e7 03       		.byte	0x3
+ 1200 04e8 00000000 		.4byte	prev_i_term_servo
+ 1201 04ec 19       		.uleb128 0x19
+ 1202 04ed 03010000 		.4byte	.LASF61
+ 1203 04f1 01       		.byte	0x1
+ 1204 04f2 42       		.byte	0x42
+ 1205 04f3 25000000 		.4byte	0x25
+ 1206 04f7 05       		.uleb128 0x5
+ 1207 04f8 03       		.byte	0x3
+ 1208 04f9 00000000 		.4byte	prev_angle
+ 1209 04fd 1B       		.uleb128 0x1b
+ 1210 04fe EE010000 		.4byte	.LASF62
+ 1211 0502 EE010000 		.4byte	.LASF62
+ 1212 0506 07       		.byte	0x7
+ 1213 0507 E7       		.byte	0xe7
+ 1214 0508 1B       		.uleb128 0x1b
+ 1215 0509 72000000 		.4byte	.LASF63
+ 1216 050d 72000000 		.4byte	.LASF63
+ 1217 0511 08       		.byte	0x8
+ 1218 0512 8B       		.byte	0x8b
+ 1219 0513 1B       		.uleb128 0x1b
+ 1220 0514 09040000 		.4byte	.LASF64
+ 1221 0518 09040000 		.4byte	.LASF64
+ 1222 051c 09       		.byte	0x9
+ 1223 051d 2F       		.byte	0x2f
+ 1224 051e 1B       		.uleb128 0x1b
+ 1225 051f 94000000 		.4byte	.LASF65
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 26
+
+
+ 1226 0523 94000000 		.4byte	.LASF65
+ 1227 0527 0A       		.byte	0xa
+ 1228 0528 6B       		.byte	0x6b
+ 1229 0529 1B       		.uleb128 0x1b
+ 1230 052a C2020000 		.4byte	.LASF66
+ 1231 052e C2020000 		.4byte	.LASF66
+ 1232 0532 0B       		.byte	0xb
+ 1233 0533 C3       		.byte	0xc3
+ 1234 0534 00       		.byte	0
+ 1235              		.section	.debug_abbrev,"",%progbits
+ 1236              	.Ldebug_abbrev0:
+ 1237 0000 01       		.uleb128 0x1
+ 1238 0001 11       		.uleb128 0x11
+ 1239 0002 01       		.byte	0x1
+ 1240 0003 25       		.uleb128 0x25
+ 1241 0004 0E       		.uleb128 0xe
+ 1242 0005 13       		.uleb128 0x13
+ 1243 0006 0B       		.uleb128 0xb
+ 1244 0007 03       		.uleb128 0x3
+ 1245 0008 0E       		.uleb128 0xe
+ 1246 0009 1B       		.uleb128 0x1b
+ 1247 000a 0E       		.uleb128 0xe
+ 1248 000b 55       		.uleb128 0x55
+ 1249 000c 17       		.uleb128 0x17
+ 1250 000d 11       		.uleb128 0x11
+ 1251 000e 01       		.uleb128 0x1
+ 1252 000f 10       		.uleb128 0x10
+ 1253 0010 17       		.uleb128 0x17
+ 1254 0011 00       		.byte	0
+ 1255 0012 00       		.byte	0
+ 1256 0013 02       		.uleb128 0x2
+ 1257 0014 24       		.uleb128 0x24
+ 1258 0015 00       		.byte	0
+ 1259 0016 0B       		.uleb128 0xb
+ 1260 0017 0B       		.uleb128 0xb
+ 1261 0018 3E       		.uleb128 0x3e
+ 1262 0019 0B       		.uleb128 0xb
+ 1263 001a 03       		.uleb128 0x3
+ 1264 001b 0E       		.uleb128 0xe
+ 1265 001c 00       		.byte	0
+ 1266 001d 00       		.byte	0
+ 1267 001e 03       		.uleb128 0x3
+ 1268 001f 16       		.uleb128 0x16
+ 1269 0020 00       		.byte	0
+ 1270 0021 03       		.uleb128 0x3
+ 1271 0022 0E       		.uleb128 0xe
+ 1272 0023 3A       		.uleb128 0x3a
+ 1273 0024 0B       		.uleb128 0xb
+ 1274 0025 3B       		.uleb128 0x3b
+ 1275 0026 0B       		.uleb128 0xb
+ 1276 0027 49       		.uleb128 0x49
+ 1277 0028 13       		.uleb128 0x13
+ 1278 0029 00       		.byte	0
+ 1279 002a 00       		.byte	0
+ 1280 002b 04       		.uleb128 0x4
+ 1281 002c 24       		.uleb128 0x24
+ 1282 002d 00       		.byte	0
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 27
+
+
+ 1283 002e 0B       		.uleb128 0xb
+ 1284 002f 0B       		.uleb128 0xb
+ 1285 0030 3E       		.uleb128 0x3e
+ 1286 0031 0B       		.uleb128 0xb
+ 1287 0032 03       		.uleb128 0x3
+ 1288 0033 08       		.uleb128 0x8
+ 1289 0034 00       		.byte	0
+ 1290 0035 00       		.byte	0
+ 1291 0036 05       		.uleb128 0x5
+ 1292 0037 16       		.uleb128 0x16
+ 1293 0038 00       		.byte	0
+ 1294 0039 03       		.uleb128 0x3
+ 1295 003a 0E       		.uleb128 0xe
+ 1296 003b 3A       		.uleb128 0x3a
+ 1297 003c 0B       		.uleb128 0xb
+ 1298 003d 3B       		.uleb128 0x3b
+ 1299 003e 05       		.uleb128 0x5
+ 1300 003f 49       		.uleb128 0x49
+ 1301 0040 13       		.uleb128 0x13
+ 1302 0041 00       		.byte	0
+ 1303 0042 00       		.byte	0
+ 1304 0043 06       		.uleb128 0x6
+ 1305 0044 0F       		.uleb128 0xf
+ 1306 0045 00       		.byte	0
+ 1307 0046 0B       		.uleb128 0xb
+ 1308 0047 0B       		.uleb128 0xb
+ 1309 0048 49       		.uleb128 0x49
+ 1310 0049 13       		.uleb128 0x13
+ 1311 004a 00       		.byte	0
+ 1312 004b 00       		.byte	0
+ 1313 004c 07       		.uleb128 0x7
+ 1314 004d 2E       		.uleb128 0x2e
+ 1315 004e 01       		.byte	0x1
+ 1316 004f 3F       		.uleb128 0x3f
+ 1317 0050 19       		.uleb128 0x19
+ 1318 0051 03       		.uleb128 0x3
+ 1319 0052 0E       		.uleb128 0xe
+ 1320 0053 3A       		.uleb128 0x3a
+ 1321 0054 0B       		.uleb128 0xb
+ 1322 0055 3B       		.uleb128 0x3b
+ 1323 0056 0B       		.uleb128 0xb
+ 1324 0057 27       		.uleb128 0x27
+ 1325 0058 19       		.uleb128 0x19
+ 1326 0059 49       		.uleb128 0x49
+ 1327 005a 13       		.uleb128 0x13
+ 1328 005b 11       		.uleb128 0x11
+ 1329 005c 01       		.uleb128 0x1
+ 1330 005d 12       		.uleb128 0x12
+ 1331 005e 06       		.uleb128 0x6
+ 1332 005f 40       		.uleb128 0x40
+ 1333 0060 18       		.uleb128 0x18
+ 1334 0061 9742     		.uleb128 0x2117
+ 1335 0063 19       		.uleb128 0x19
+ 1336 0064 01       		.uleb128 0x1
+ 1337 0065 13       		.uleb128 0x13
+ 1338 0066 00       		.byte	0
+ 1339 0067 00       		.byte	0
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 28
+
+
+ 1340 0068 08       		.uleb128 0x8
+ 1341 0069 05       		.uleb128 0x5
+ 1342 006a 00       		.byte	0
+ 1343 006b 03       		.uleb128 0x3
+ 1344 006c 0E       		.uleb128 0xe
+ 1345 006d 3A       		.uleb128 0x3a
+ 1346 006e 0B       		.uleb128 0xb
+ 1347 006f 3B       		.uleb128 0x3b
+ 1348 0070 0B       		.uleb128 0xb
+ 1349 0071 49       		.uleb128 0x49
+ 1350 0072 13       		.uleb128 0x13
+ 1351 0073 02       		.uleb128 0x2
+ 1352 0074 17       		.uleb128 0x17
+ 1353 0075 00       		.byte	0
+ 1354 0076 00       		.byte	0
+ 1355 0077 09       		.uleb128 0x9
+ 1356 0078 2E       		.uleb128 0x2e
+ 1357 0079 01       		.byte	0x1
+ 1358 007a 3F       		.uleb128 0x3f
+ 1359 007b 19       		.uleb128 0x19
+ 1360 007c 03       		.uleb128 0x3
+ 1361 007d 0E       		.uleb128 0xe
+ 1362 007e 3A       		.uleb128 0x3a
+ 1363 007f 0B       		.uleb128 0xb
+ 1364 0080 3B       		.uleb128 0x3b
+ 1365 0081 0B       		.uleb128 0xb
+ 1366 0082 27       		.uleb128 0x27
+ 1367 0083 19       		.uleb128 0x19
+ 1368 0084 11       		.uleb128 0x11
+ 1369 0085 01       		.uleb128 0x1
+ 1370 0086 12       		.uleb128 0x12
+ 1371 0087 06       		.uleb128 0x6
+ 1372 0088 40       		.uleb128 0x40
+ 1373 0089 18       		.uleb128 0x18
+ 1374 008a 9742     		.uleb128 0x2117
+ 1375 008c 19       		.uleb128 0x19
+ 1376 008d 01       		.uleb128 0x1
+ 1377 008e 13       		.uleb128 0x13
+ 1378 008f 00       		.byte	0
+ 1379 0090 00       		.byte	0
+ 1380 0091 0A       		.uleb128 0xa
+ 1381 0092 05       		.uleb128 0x5
+ 1382 0093 00       		.byte	0
+ 1383 0094 03       		.uleb128 0x3
+ 1384 0095 08       		.uleb128 0x8
+ 1385 0096 3A       		.uleb128 0x3a
+ 1386 0097 0B       		.uleb128 0xb
+ 1387 0098 3B       		.uleb128 0x3b
+ 1388 0099 0B       		.uleb128 0xb
+ 1389 009a 49       		.uleb128 0x49
+ 1390 009b 13       		.uleb128 0x13
+ 1391 009c 02       		.uleb128 0x2
+ 1392 009d 17       		.uleb128 0x17
+ 1393 009e 00       		.byte	0
+ 1394 009f 00       		.byte	0
+ 1395 00a0 0B       		.uleb128 0xb
+ 1396 00a1 34       		.uleb128 0x34
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 29
+
+
+ 1397 00a2 00       		.byte	0
+ 1398 00a3 03       		.uleb128 0x3
+ 1399 00a4 08       		.uleb128 0x8
+ 1400 00a5 3A       		.uleb128 0x3a
+ 1401 00a6 0B       		.uleb128 0xb
+ 1402 00a7 3B       		.uleb128 0x3b
+ 1403 00a8 0B       		.uleb128 0xb
+ 1404 00a9 49       		.uleb128 0x49
+ 1405 00aa 13       		.uleb128 0x13
+ 1406 00ab 02       		.uleb128 0x2
+ 1407 00ac 18       		.uleb128 0x18
+ 1408 00ad 00       		.byte	0
+ 1409 00ae 00       		.byte	0
+ 1410 00af 0C       		.uleb128 0xc
+ 1411 00b0 898201   		.uleb128 0x4109
+ 1412 00b3 01       		.byte	0x1
+ 1413 00b4 11       		.uleb128 0x11
+ 1414 00b5 01       		.uleb128 0x1
+ 1415 00b6 31       		.uleb128 0x31
+ 1416 00b7 13       		.uleb128 0x13
+ 1417 00b8 01       		.uleb128 0x1
+ 1418 00b9 13       		.uleb128 0x13
+ 1419 00ba 00       		.byte	0
+ 1420 00bb 00       		.byte	0
+ 1421 00bc 0D       		.uleb128 0xd
+ 1422 00bd 8A8201   		.uleb128 0x410a
+ 1423 00c0 00       		.byte	0
+ 1424 00c1 02       		.uleb128 0x2
+ 1425 00c2 18       		.uleb128 0x18
+ 1426 00c3 9142     		.uleb128 0x2111
+ 1427 00c5 18       		.uleb128 0x18
+ 1428 00c6 00       		.byte	0
+ 1429 00c7 00       		.byte	0
+ 1430 00c8 0E       		.uleb128 0xe
+ 1431 00c9 898201   		.uleb128 0x4109
+ 1432 00cc 01       		.byte	0x1
+ 1433 00cd 11       		.uleb128 0x11
+ 1434 00ce 01       		.uleb128 0x1
+ 1435 00cf 31       		.uleb128 0x31
+ 1436 00d0 13       		.uleb128 0x13
+ 1437 00d1 00       		.byte	0
+ 1438 00d2 00       		.byte	0
+ 1439 00d3 0F       		.uleb128 0xf
+ 1440 00d4 01       		.uleb128 0x1
+ 1441 00d5 01       		.byte	0x1
+ 1442 00d6 49       		.uleb128 0x49
+ 1443 00d7 13       		.uleb128 0x13
+ 1444 00d8 01       		.uleb128 0x1
+ 1445 00d9 13       		.uleb128 0x13
+ 1446 00da 00       		.byte	0
+ 1447 00db 00       		.byte	0
+ 1448 00dc 10       		.uleb128 0x10
+ 1449 00dd 21       		.uleb128 0x21
+ 1450 00de 00       		.byte	0
+ 1451 00df 49       		.uleb128 0x49
+ 1452 00e0 13       		.uleb128 0x13
+ 1453 00e1 2F       		.uleb128 0x2f
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 30
+
+
+ 1454 00e2 0B       		.uleb128 0xb
+ 1455 00e3 00       		.byte	0
+ 1456 00e4 00       		.byte	0
+ 1457 00e5 11       		.uleb128 0x11
+ 1458 00e6 2E       		.uleb128 0x2e
+ 1459 00e7 01       		.byte	0x1
+ 1460 00e8 3F       		.uleb128 0x3f
+ 1461 00e9 19       		.uleb128 0x19
+ 1462 00ea 03       		.uleb128 0x3
+ 1463 00eb 0E       		.uleb128 0xe
+ 1464 00ec 3A       		.uleb128 0x3a
+ 1465 00ed 0B       		.uleb128 0xb
+ 1466 00ee 3B       		.uleb128 0x3b
+ 1467 00ef 0B       		.uleb128 0xb
+ 1468 00f0 27       		.uleb128 0x27
+ 1469 00f1 19       		.uleb128 0x19
+ 1470 00f2 49       		.uleb128 0x49
+ 1471 00f3 13       		.uleb128 0x13
+ 1472 00f4 11       		.uleb128 0x11
+ 1473 00f5 01       		.uleb128 0x1
+ 1474 00f6 12       		.uleb128 0x12
+ 1475 00f7 06       		.uleb128 0x6
+ 1476 00f8 40       		.uleb128 0x40
+ 1477 00f9 18       		.uleb128 0x18
+ 1478 00fa 9642     		.uleb128 0x2116
+ 1479 00fc 19       		.uleb128 0x19
+ 1480 00fd 01       		.uleb128 0x1
+ 1481 00fe 13       		.uleb128 0x13
+ 1482 00ff 00       		.byte	0
+ 1483 0100 00       		.byte	0
+ 1484 0101 12       		.uleb128 0x12
+ 1485 0102 34       		.uleb128 0x34
+ 1486 0103 00       		.byte	0
+ 1487 0104 03       		.uleb128 0x3
+ 1488 0105 0E       		.uleb128 0xe
+ 1489 0106 3A       		.uleb128 0x3a
+ 1490 0107 0B       		.uleb128 0xb
+ 1491 0108 3B       		.uleb128 0x3b
+ 1492 0109 0B       		.uleb128 0xb
+ 1493 010a 49       		.uleb128 0x49
+ 1494 010b 13       		.uleb128 0x13
+ 1495 010c 02       		.uleb128 0x2
+ 1496 010d 17       		.uleb128 0x17
+ 1497 010e 00       		.byte	0
+ 1498 010f 00       		.byte	0
+ 1499 0110 13       		.uleb128 0x13
+ 1500 0111 34       		.uleb128 0x34
+ 1501 0112 00       		.byte	0
+ 1502 0113 03       		.uleb128 0x3
+ 1503 0114 08       		.uleb128 0x8
+ 1504 0115 3A       		.uleb128 0x3a
+ 1505 0116 0B       		.uleb128 0xb
+ 1506 0117 3B       		.uleb128 0x3b
+ 1507 0118 0B       		.uleb128 0xb
+ 1508 0119 49       		.uleb128 0x49
+ 1509 011a 13       		.uleb128 0x13
+ 1510 011b 1C       		.uleb128 0x1c
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 31
+
+
+ 1511 011c 0A       		.uleb128 0xa
+ 1512 011d 00       		.byte	0
+ 1513 011e 00       		.byte	0
+ 1514 011f 14       		.uleb128 0x14
+ 1515 0120 2E       		.uleb128 0x2e
+ 1516 0121 01       		.byte	0x1
+ 1517 0122 3F       		.uleb128 0x3f
+ 1518 0123 19       		.uleb128 0x19
+ 1519 0124 03       		.uleb128 0x3
+ 1520 0125 0E       		.uleb128 0xe
+ 1521 0126 3A       		.uleb128 0x3a
+ 1522 0127 0B       		.uleb128 0xb
+ 1523 0128 3B       		.uleb128 0x3b
+ 1524 0129 0B       		.uleb128 0xb
+ 1525 012a 27       		.uleb128 0x27
+ 1526 012b 19       		.uleb128 0x19
+ 1527 012c 11       		.uleb128 0x11
+ 1528 012d 01       		.uleb128 0x1
+ 1529 012e 12       		.uleb128 0x12
+ 1530 012f 06       		.uleb128 0x6
+ 1531 0130 40       		.uleb128 0x40
+ 1532 0131 18       		.uleb128 0x18
+ 1533 0132 9642     		.uleb128 0x2116
+ 1534 0134 19       		.uleb128 0x19
+ 1535 0135 01       		.uleb128 0x1
+ 1536 0136 13       		.uleb128 0x13
+ 1537 0137 00       		.byte	0
+ 1538 0138 00       		.byte	0
+ 1539 0139 15       		.uleb128 0x15
+ 1540 013a 898201   		.uleb128 0x4109
+ 1541 013d 00       		.byte	0
+ 1542 013e 11       		.uleb128 0x11
+ 1543 013f 01       		.uleb128 0x1
+ 1544 0140 31       		.uleb128 0x31
+ 1545 0141 13       		.uleb128 0x13
+ 1546 0142 00       		.byte	0
+ 1547 0143 00       		.byte	0
+ 1548 0144 16       		.uleb128 0x16
+ 1549 0145 2E       		.uleb128 0x2e
+ 1550 0146 00       		.byte	0
+ 1551 0147 3F       		.uleb128 0x3f
+ 1552 0148 19       		.uleb128 0x19
+ 1553 0149 03       		.uleb128 0x3
+ 1554 014a 0E       		.uleb128 0xe
+ 1555 014b 3A       		.uleb128 0x3a
+ 1556 014c 0B       		.uleb128 0xb
+ 1557 014d 3B       		.uleb128 0x3b
+ 1558 014e 0B       		.uleb128 0xb
+ 1559 014f 27       		.uleb128 0x27
+ 1560 0150 19       		.uleb128 0x19
+ 1561 0151 11       		.uleb128 0x11
+ 1562 0152 01       		.uleb128 0x1
+ 1563 0153 12       		.uleb128 0x12
+ 1564 0154 06       		.uleb128 0x6
+ 1565 0155 40       		.uleb128 0x40
+ 1566 0156 18       		.uleb128 0x18
+ 1567 0157 9742     		.uleb128 0x2117
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 32
+
+
+ 1568 0159 19       		.uleb128 0x19
+ 1569 015a 00       		.byte	0
+ 1570 015b 00       		.byte	0
+ 1571 015c 17       		.uleb128 0x17
+ 1572 015d 34       		.uleb128 0x34
+ 1573 015e 00       		.byte	0
+ 1574 015f 03       		.uleb128 0x3
+ 1575 0160 0E       		.uleb128 0xe
+ 1576 0161 3A       		.uleb128 0x3a
+ 1577 0162 0B       		.uleb128 0xb
+ 1578 0163 3B       		.uleb128 0x3b
+ 1579 0164 05       		.uleb128 0x5
+ 1580 0165 49       		.uleb128 0x49
+ 1581 0166 13       		.uleb128 0x13
+ 1582 0167 3F       		.uleb128 0x3f
+ 1583 0168 19       		.uleb128 0x19
+ 1584 0169 3C       		.uleb128 0x3c
+ 1585 016a 19       		.uleb128 0x19
+ 1586 016b 00       		.byte	0
+ 1587 016c 00       		.byte	0
+ 1588 016d 18       		.uleb128 0x18
+ 1589 016e 35       		.uleb128 0x35
+ 1590 016f 00       		.byte	0
+ 1591 0170 49       		.uleb128 0x49
+ 1592 0171 13       		.uleb128 0x13
+ 1593 0172 00       		.byte	0
+ 1594 0173 00       		.byte	0
+ 1595 0174 19       		.uleb128 0x19
+ 1596 0175 34       		.uleb128 0x34
+ 1597 0176 00       		.byte	0
+ 1598 0177 03       		.uleb128 0x3
+ 1599 0178 0E       		.uleb128 0xe
+ 1600 0179 3A       		.uleb128 0x3a
+ 1601 017a 0B       		.uleb128 0xb
+ 1602 017b 3B       		.uleb128 0x3b
+ 1603 017c 0B       		.uleb128 0xb
+ 1604 017d 49       		.uleb128 0x49
+ 1605 017e 13       		.uleb128 0x13
+ 1606 017f 3F       		.uleb128 0x3f
+ 1607 0180 19       		.uleb128 0x19
+ 1608 0181 02       		.uleb128 0x2
+ 1609 0182 18       		.uleb128 0x18
+ 1610 0183 00       		.byte	0
+ 1611 0184 00       		.byte	0
+ 1612 0185 1A       		.uleb128 0x1a
+ 1613 0186 21       		.uleb128 0x21
+ 1614 0187 00       		.byte	0
+ 1615 0188 49       		.uleb128 0x49
+ 1616 0189 13       		.uleb128 0x13
+ 1617 018a 2F       		.uleb128 0x2f
+ 1618 018b 05       		.uleb128 0x5
+ 1619 018c 00       		.byte	0
+ 1620 018d 00       		.byte	0
+ 1621 018e 1B       		.uleb128 0x1b
+ 1622 018f 2E       		.uleb128 0x2e
+ 1623 0190 00       		.byte	0
+ 1624 0191 3F       		.uleb128 0x3f
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 33
+
+
+ 1625 0192 19       		.uleb128 0x19
+ 1626 0193 3C       		.uleb128 0x3c
+ 1627 0194 19       		.uleb128 0x19
+ 1628 0195 6E       		.uleb128 0x6e
+ 1629 0196 0E       		.uleb128 0xe
+ 1630 0197 03       		.uleb128 0x3
+ 1631 0198 0E       		.uleb128 0xe
+ 1632 0199 3A       		.uleb128 0x3a
+ 1633 019a 0B       		.uleb128 0xb
+ 1634 019b 3B       		.uleb128 0x3b
+ 1635 019c 0B       		.uleb128 0xb
+ 1636 019d 00       		.byte	0
+ 1637 019e 00       		.byte	0
+ 1638 019f 00       		.byte	0
+ 1639              		.section	.debug_loc,"",%progbits
+ 1640              	.Ldebug_loc0:
+ 1641              	.LLST0:
+ 1642 0000 00000000 		.4byte	.LVL0
+ 1643 0004 10000000 		.4byte	.LVL1
+ 1644 0008 0100     		.2byte	0x1
+ 1645 000a 50       		.byte	0x50
+ 1646 000b 10000000 		.4byte	.LVL1
+ 1647 000f 26000000 		.4byte	.LVL2
+ 1648 0013 0400     		.2byte	0x4
+ 1649 0015 F3       		.byte	0xf3
+ 1650 0016 01       		.uleb128 0x1
+ 1651 0017 50       		.byte	0x50
+ 1652 0018 9F       		.byte	0x9f
+ 1653 0019 26000000 		.4byte	.LVL2
+ 1654 001d 2A000000 		.4byte	.LVL3
+ 1655 0021 0100     		.2byte	0x1
+ 1656 0023 50       		.byte	0x50
+ 1657 0024 2A000000 		.4byte	.LVL3
+ 1658 0028 2C000000 		.4byte	.LVL4
+ 1659 002c 0400     		.2byte	0x4
+ 1660 002e F3       		.byte	0xf3
+ 1661 002f 01       		.uleb128 0x1
+ 1662 0030 50       		.byte	0x50
+ 1663 0031 9F       		.byte	0x9f
+ 1664 0032 2C000000 		.4byte	.LVL4
+ 1665 0036 30000000 		.4byte	.LVL5
+ 1666 003a 0100     		.2byte	0x1
+ 1667 003c 50       		.byte	0x50
+ 1668 003d 30000000 		.4byte	.LVL5
+ 1669 0041 38000000 		.4byte	.LFE64
+ 1670 0045 0400     		.2byte	0x4
+ 1671 0047 F3       		.byte	0xf3
+ 1672 0048 01       		.uleb128 0x1
+ 1673 0049 50       		.byte	0x50
+ 1674 004a 9F       		.byte	0x9f
+ 1675 004b 00000000 		.4byte	0
+ 1676 004f 00000000 		.4byte	0
+ 1677              	.LLST1:
+ 1678 0053 00000000 		.4byte	.LVL6
+ 1679 0057 0A000000 		.4byte	.LVL8
+ 1680 005b 0100     		.2byte	0x1
+ 1681 005d 50       		.byte	0x50
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 34
+
+
+ 1682 005e 0A000000 		.4byte	.LVL8
+ 1683 0062 0D000000 		.4byte	.LVL9-1
+ 1684 0066 0100     		.2byte	0x1
+ 1685 0068 51       		.byte	0x51
+ 1686 0069 0D000000 		.4byte	.LVL9-1
+ 1687 006d 1A000000 		.4byte	.LFE65
+ 1688 0071 0400     		.2byte	0x4
+ 1689 0073 F3       		.byte	0xf3
+ 1690 0074 01       		.uleb128 0x1
+ 1691 0075 50       		.byte	0x50
+ 1692 0076 9F       		.byte	0x9f
+ 1693 0077 00000000 		.4byte	0
+ 1694 007b 00000000 		.4byte	0
+ 1695              	.LLST2:
+ 1696 007f 00000000 		.4byte	.LVL6
+ 1697 0083 08000000 		.4byte	.LVL7
+ 1698 0087 0100     		.2byte	0x1
+ 1699 0089 51       		.byte	0x51
+ 1700 008a 08000000 		.4byte	.LVL7
+ 1701 008e 0D000000 		.4byte	.LVL9-1
+ 1702 0092 0100     		.2byte	0x1
+ 1703 0094 52       		.byte	0x52
+ 1704 0095 0D000000 		.4byte	.LVL9-1
+ 1705 0099 1A000000 		.4byte	.LFE65
+ 1706 009d 0400     		.2byte	0x4
+ 1707 009f F3       		.byte	0xf3
+ 1708 00a0 01       		.uleb128 0x1
+ 1709 00a1 51       		.byte	0x51
+ 1710 00a2 9F       		.byte	0x9f
+ 1711 00a3 00000000 		.4byte	0
+ 1712 00a7 00000000 		.4byte	0
+ 1713              	.LLST3:
+ 1714 00ab 00000000 		.4byte	.LVL11
+ 1715 00af 06000000 		.4byte	.LVL13
+ 1716 00b3 0100     		.2byte	0x1
+ 1717 00b5 50       		.byte	0x50
+ 1718 00b6 06000000 		.4byte	.LVL13
+ 1719 00ba 09000000 		.4byte	.LVL14-1
+ 1720 00be 0100     		.2byte	0x1
+ 1721 00c0 51       		.byte	0x51
+ 1722 00c1 09000000 		.4byte	.LVL14-1
+ 1723 00c5 40000000 		.4byte	.LFE66
+ 1724 00c9 0600     		.2byte	0x6
+ 1725 00cb F3       		.byte	0xf3
+ 1726 00cc 03       		.uleb128 0x3
+ 1727 00cd F5       		.byte	0xf5
+ 1728 00ce 00       		.uleb128 0
+ 1729 00cf 25       		.uleb128 0x25
+ 1730 00d0 9F       		.byte	0x9f
+ 1731 00d1 00000000 		.4byte	0
+ 1732 00d5 00000000 		.4byte	0
+ 1733              	.LLST4:
+ 1734 00d9 02000000 		.4byte	.LVL12
+ 1735 00dd 16000000 		.4byte	.LVL17
+ 1736 00e1 0600     		.2byte	0x6
+ 1737 00e3 9E       		.byte	0x9e
+ 1738 00e4 04       		.uleb128 0x4
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 35
+
+
+ 1739 00e5 00000000 		.4byte	0
+ 1740 00e9 16000000 		.4byte	.LVL17
+ 1741 00ed 1A000000 		.4byte	.LVL18
+ 1742 00f1 0100     		.2byte	0x1
+ 1743 00f3 50       		.byte	0x50
+ 1744 00f4 1A000000 		.4byte	.LVL18
+ 1745 00f8 34000000 		.4byte	.LVL23
+ 1746 00fc 0100     		.2byte	0x1
+ 1747 00fe 56       		.byte	0x56
+ 1748 00ff 34000000 		.4byte	.LVL23
+ 1749 0103 40000000 		.4byte	.LFE66
+ 1750 0107 0100     		.2byte	0x1
+ 1751 0109 50       		.byte	0x50
+ 1752 010a 00000000 		.4byte	0
+ 1753 010e 00000000 		.4byte	0
+ 1754              	.LLST5:
+ 1755 0112 02000000 		.4byte	.LVL12
+ 1756 0116 2C000000 		.4byte	.LVL21
+ 1757 011a 0600     		.2byte	0x6
+ 1758 011c 9E       		.byte	0x9e
+ 1759 011d 04       		.uleb128 0x4
+ 1760 011e 00000000 		.4byte	0
+ 1761 0122 2C000000 		.4byte	.LVL21
+ 1762 0126 32000000 		.4byte	.LVL22
+ 1763 012a 0100     		.2byte	0x1
+ 1764 012c 50       		.byte	0x50
+ 1765 012d 32000000 		.4byte	.LVL22
+ 1766 0131 40000000 		.4byte	.LFE66
+ 1767 0135 0500     		.2byte	0x5
+ 1768 0137 03       		.byte	0x3
+ 1769 0138 00000000 		.4byte	prev_i_term_servo
+ 1770 013c 00000000 		.4byte	0
+ 1771 0140 00000000 		.4byte	0
+ 1772              	.LLST6:
+ 1773 0144 02000000 		.4byte	.LVL12
+ 1774 0148 2C000000 		.4byte	.LVL21
+ 1775 014c 0600     		.2byte	0x6
+ 1776 014e 9E       		.byte	0x9e
+ 1777 014f 04       		.uleb128 0x4
+ 1778 0150 00000000 		.4byte	0
+ 1779 0154 2C000000 		.4byte	.LVL21
+ 1780 0158 34000000 		.4byte	.LVL23
+ 1781 015c 1E00     		.2byte	0x1e
+ 1782 015e F5       		.byte	0xf5
+ 1783 015f 05       		.uleb128 0x5
+ 1784 0160 25       		.uleb128 0x25
+ 1785 0161 03       		.byte	0x3
+ 1786 0162 00000000 		.4byte	prev_error_servo
+ 1787 0166 F6       		.byte	0xf6
+ 1788 0167 04       		.byte	0x4
+ 1789 0168 25       		.uleb128 0x25
+ 1790 0169 1C       		.byte	0x1c
+ 1791 016a F4       		.byte	0xf4
+ 1792 016b 25       		.uleb128 0x25
+ 1793 016c 04       		.byte	0x4
+ 1794 016d 00000000 		.4byte	0
+ 1795 0171 1B       		.byte	0x1b
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 36
+
+
+ 1796 0172 03       		.byte	0x3
+ 1797 0173 00000000 		.4byte	kd_servo
+ 1798 0177 F6       		.byte	0xf6
+ 1799 0178 04       		.byte	0x4
+ 1800 0179 25       		.uleb128 0x25
+ 1801 017a 1E       		.byte	0x1e
+ 1802 017b 9F       		.byte	0x9f
+ 1803 017c 34000000 		.4byte	.LVL23
+ 1804 0180 40000000 		.4byte	.LFE66
+ 1805 0184 2300     		.2byte	0x23
+ 1806 0186 03       		.byte	0x3
+ 1807 0187 00000000 		.4byte	prev_error_servo
+ 1808 018b F6       		.byte	0xf6
+ 1809 018c 04       		.byte	0x4
+ 1810 018d 25       		.uleb128 0x25
+ 1811 018e 03       		.byte	0x3
+ 1812 018f 00000000 		.4byte	prev_error_servo
+ 1813 0193 F6       		.byte	0xf6
+ 1814 0194 04       		.byte	0x4
+ 1815 0195 25       		.uleb128 0x25
+ 1816 0196 1C       		.byte	0x1c
+ 1817 0197 F4       		.byte	0xf4
+ 1818 0198 25       		.uleb128 0x25
+ 1819 0199 04       		.byte	0x4
+ 1820 019a 00000000 		.4byte	0
+ 1821 019e 1B       		.byte	0x1b
+ 1822 019f 03       		.byte	0x3
+ 1823 01a0 00000000 		.4byte	kd_servo
+ 1824 01a4 F6       		.byte	0xf6
+ 1825 01a5 04       		.byte	0x4
+ 1826 01a6 25       		.uleb128 0x25
+ 1827 01a7 1E       		.byte	0x1e
+ 1828 01a8 9F       		.byte	0x9f
+ 1829 01a9 00000000 		.4byte	0
+ 1830 01ad 00000000 		.4byte	0
+ 1831              	.LLST7:
+ 1832 01b1 2C000000 		.4byte	.LVL21
+ 1833 01b5 34000000 		.4byte	.LVL23
+ 1834 01b9 0100     		.2byte	0x1
+ 1835 01bb 56       		.byte	0x56
+ 1836 01bc 34000000 		.4byte	.LVL23
+ 1837 01c0 40000000 		.4byte	.LFE66
+ 1838 01c4 0100     		.2byte	0x1
+ 1839 01c6 50       		.byte	0x50
+ 1840 01c7 00000000 		.4byte	0
+ 1841 01cb 00000000 		.4byte	0
+ 1842              	.LLST8:
+ 1843 01cf 0C000000 		.4byte	.LVL15
+ 1844 01d3 13000000 		.4byte	.LVL16-1
+ 1845 01d7 0100     		.2byte	0x1
+ 1846 01d9 50       		.byte	0x50
+ 1847 01da 13000000 		.4byte	.LVL16-1
+ 1848 01de 34000000 		.4byte	.LVL23
+ 1849 01e2 0100     		.2byte	0x1
+ 1850 01e4 55       		.byte	0x55
+ 1851 01e5 34000000 		.4byte	.LVL23
+ 1852 01e9 40000000 		.4byte	.LFE66
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 37
+
+
+ 1853 01ed 0500     		.2byte	0x5
+ 1854 01ef 03       		.byte	0x3
+ 1855 01f0 00000000 		.4byte	prev_error_servo
+ 1856 01f4 00000000 		.4byte	0
+ 1857 01f8 00000000 		.4byte	0
+ 1858              	.LLST9:
+ 1859 01fc 42000000 		.4byte	.LVL33
+ 1860 0200 45000000 		.4byte	.LVL34-1
+ 1861 0204 0100     		.2byte	0x1
+ 1862 0206 50       		.byte	0x50
+ 1863 0207 45000000 		.4byte	.LVL34-1
+ 1864 020b 84000000 		.4byte	.LVL42
+ 1865 020f 0100     		.2byte	0x1
+ 1866 0211 54       		.byte	0x54
+ 1867 0212 00000000 		.4byte	0
+ 1868 0216 00000000 		.4byte	0
+ 1869              	.LLST10:
+ 1870 021a 30000000 		.4byte	.LVL29
+ 1871 021e 34000000 		.4byte	.LVL30
+ 1872 0222 0100     		.2byte	0x1
+ 1873 0224 50       		.byte	0x50
+ 1874 0225 34000000 		.4byte	.LVL30
+ 1875 0229 42000000 		.4byte	.LVL33
+ 1876 022d 0100     		.2byte	0x1
+ 1877 022f 54       		.byte	0x54
+ 1878 0230 00000000 		.4byte	0
+ 1879 0234 00000000 		.4byte	0
+ 1880              		.section	.debug_aranges,"",%progbits
+ 1881 0000 4C000000 		.4byte	0x4c
+ 1882 0004 0200     		.2byte	0x2
+ 1883 0006 00000000 		.4byte	.Ldebug_info0
+ 1884 000a 04       		.byte	0x4
+ 1885 000b 00       		.byte	0
+ 1886 000c 0000     		.2byte	0
+ 1887 000e 0000     		.2byte	0
+ 1888 0010 00000000 		.4byte	.LFB64
+ 1889 0014 38000000 		.4byte	.LFE64-.LFB64
+ 1890 0018 00000000 		.4byte	.LFB65
+ 1891 001c 1A000000 		.4byte	.LFE65-.LFB65
+ 1892 0020 00000000 		.4byte	.LFB66
+ 1893 0024 40000000 		.4byte	.LFE66-.LFB66
+ 1894 0028 00000000 		.4byte	.LFB67
+ 1895 002c 1C000000 		.4byte	.LFE67-.LFB67
+ 1896 0030 00000000 		.4byte	.LFB68
+ 1897 0034 9C000000 		.4byte	.LFE68-.LFB68
+ 1898 0038 00000000 		.4byte	.LFB69
+ 1899 003c 0C000000 		.4byte	.LFE69-.LFB69
+ 1900 0040 00000000 		.4byte	.LFB70
+ 1901 0044 68000000 		.4byte	.LFE70-.LFB70
+ 1902 0048 00000000 		.4byte	0
+ 1903 004c 00000000 		.4byte	0
+ 1904              		.section	.debug_ranges,"",%progbits
+ 1905              	.Ldebug_ranges0:
+ 1906 0000 00000000 		.4byte	.LFB64
+ 1907 0004 38000000 		.4byte	.LFE64
+ 1908 0008 00000000 		.4byte	.LFB65
+ 1909 000c 1A000000 		.4byte	.LFE65
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 38
+
+
+ 1910 0010 00000000 		.4byte	.LFB66
+ 1911 0014 40000000 		.4byte	.LFE66
+ 1912 0018 00000000 		.4byte	.LFB67
+ 1913 001c 1C000000 		.4byte	.LFE67
+ 1914 0020 00000000 		.4byte	.LFB68
+ 1915 0024 9C000000 		.4byte	.LFE68
+ 1916 0028 00000000 		.4byte	.LFB69
+ 1917 002c 0C000000 		.4byte	.LFE69
+ 1918 0030 00000000 		.4byte	.LFB70
+ 1919 0034 68000000 		.4byte	.LFE70
+ 1920 0038 00000000 		.4byte	0
+ 1921 003c 00000000 		.4byte	0
+ 1922              		.section	.debug_line,"",%progbits
+ 1923              	.Ldebug_line0:
+ 1924 0000 BD020000 		.section	.debug_str,"MS",%progbits,1
+ 1924      02001102 
+ 1924      00000201 
+ 1924      FB0E0D00 
+ 1924      01010101 
+ 1925              	.LASF57:
+ 1926 0000 6B695F73 		.ascii	"ki_servo\000"
+ 1926      6572766F 
+ 1926      00
+ 1927              	.LASF69:
+ 1928 0009 433A5C55 		.ascii	"C:\\Users\\ryant\\Documents\\Princeton\\!S20-21\\EL"
+ 1928      73657273 
+ 1928      5C727961 
+ 1928      6E745C44 
+ 1928      6F63756D 
+ 1929 0036 45333032 		.ascii	"E302\\current_code_repo\\carlab\\nav_control\\nav_c"
+ 1929      5C637572 
+ 1929      72656E74 
+ 1929      5F636F64 
+ 1929      655F7265 
+ 1930 0065 6F6E7472 		.ascii	"ontrol.cydsn\000"
+ 1930      6F6C2E63 
+ 1930      7964736E 
+ 1930      00
+ 1931              	.LASF63:
+ 1932 0072 58424545 		.ascii	"XBEE_PutString\000"
+ 1932      5F507574 
+ 1932      53747269 
+ 1932      6E6700
+ 1933              	.LASF51:
+ 1934 0081 6F757470 		.ascii	"outputBuf\000"
+ 1934      75744275 
+ 1934      6600
+ 1935              	.LASF55:
+ 1936 008b 6E756D46 		.ascii	"numFrame\000"
+ 1936      72616D65 
+ 1936      00
+ 1937              	.LASF65:
+ 1938 0094 4C696E65 		.ascii	"Line_Timer_ReadCapture\000"
+ 1938      5F54696D 
+ 1938      65725F52 
+ 1938      65616443 
+ 1938      61707475 
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 39
+
+
+ 1939              	.LASF3:
+ 1940 00ab 73686F72 		.ascii	"short int\000"
+ 1940      7420696E 
+ 1940      7400
+ 1941              	.LASF44:
+ 1942 00b5 6C696E65 		.ascii	"line_count\000"
+ 1942      5F636F75 
+ 1942      6E7400
+ 1943              	.LASF16:
+ 1944 00c0 73697A65 		.ascii	"sizetype\000"
+ 1944      74797065 
+ 1944      00
+ 1945              	.LASF40:
+ 1946 00c9 43454E54 		.ascii	"CENTER_ANGLE\000"
+ 1946      45525F41 
+ 1946      4E474C45 
+ 1946      00
+ 1947              	.LASF24:
+ 1948 00d6 645F7465 		.ascii	"d_term\000"
+ 1948      726D00
+ 1949              	.LASF48:
+ 1950 00dd 6E756D5F 		.ascii	"num_interupts\000"
+ 1950      696E7465 
+ 1950      72757074 
+ 1950      7300
+ 1951              	.LASF50:
+ 1952 00eb 61766572 		.ascii	"average_position\000"
+ 1952      6167655F 
+ 1952      706F7369 
+ 1952      74696F6E 
+ 1952      00
+ 1953              	.LASF12:
+ 1954 00fc 75696E74 		.ascii	"uint16\000"
+ 1954      313600
+ 1955              	.LASF61:
+ 1956 0103 70726576 		.ascii	"prev_angle\000"
+ 1956      5F616E67 
+ 1956      6C6500
+ 1957              	.LASF47:
+ 1958 010e 6F6C6465 		.ascii	"oldest_value\000"
+ 1958      73745F76 
+ 1958      616C7565 
+ 1958      00
+ 1959              	.LASF21:
+ 1960 011b 6C696E65 		.ascii	"linecount\000"
+ 1960      636F756E 
+ 1960      7400
+ 1961              	.LASF54:
+ 1962 0125 6C696E65 		.ascii	"line_time\000"
+ 1962      5F74696D 
+ 1962      6500
+ 1963              	.LASF46:
+ 1964 012f 72696768 		.ascii	"right_count\000"
+ 1964      745F636F 
+ 1964      756E7400 
+ 1965              	.LASF0:
+ 1966 013b 666C6F61 		.ascii	"float\000"
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 40
+
+
+ 1966      7400
+ 1967              	.LASF7:
+ 1968 0141 6C6F6E67 		.ascii	"long long int\000"
+ 1968      206C6F6E 
+ 1968      6720696E 
+ 1968      7400
+ 1969              	.LASF45:
+ 1970 014f 6C656674 		.ascii	"left_count\000"
+ 1970      5F636F75 
+ 1970      6E7400
+ 1971              	.LASF60:
+ 1972 015a 70726576 		.ascii	"prev_i_term_servo\000"
+ 1972      5F695F74 
+ 1972      65726D5F 
+ 1972      73657276 
+ 1972      6F00
+ 1973              	.LASF5:
+ 1974 016c 6C6F6E67 		.ascii	"long int\000"
+ 1974      20696E74 
+ 1974      00
+ 1975              	.LASF18:
+ 1976 0175 73747269 		.ascii	"string\000"
+ 1976      6E6700
+ 1977              	.LASF33:
+ 1978 017c 42414C4C 		.ascii	"BALLOON_STATE\000"
+ 1978      4F4F4E5F 
+ 1978      53544154 
+ 1978      4500
+ 1979              	.LASF37:
+ 1980 018a 43415054 		.ascii	"CAPTURE_FRAME\000"
+ 1980      5552455F 
+ 1980      4652414D 
+ 1980      4500
+ 1981              	.LASF35:
+ 1982 0198 53544545 		.ascii	"STEER_STATE\000"
+ 1982      525F5354 
+ 1982      41544500 
+ 1983              	.LASF15:
+ 1984 01a4 6C6F6E67 		.ascii	"long double\000"
+ 1984      20646F75 
+ 1984      626C6500 
+ 1985              	.LASF43:
+ 1986 01b0 6E756D5F 		.ascii	"num_h_pulse\000"
+ 1986      685F7075 
+ 1986      6C736500 
+ 1987              	.LASF2:
+ 1988 01bc 756E7369 		.ascii	"unsigned char\000"
+ 1988      676E6564 
+ 1988      20636861 
+ 1988      7200
+ 1989              	.LASF19:
+ 1990 01ca 53657276 		.ascii	"Servo_PWM_AngleCalc\000"
+ 1990      6F5F5057 
+ 1990      4D5F416E 
+ 1990      676C6543 
+ 1990      616C6300 
+ 1991              	.LASF39:
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 41
+
+
+ 1992 01de 4E415649 		.ascii	"NAVIGATION_LINE\000"
+ 1992      47415449 
+ 1992      4F4E5F4C 
+ 1992      494E4500 
+ 1993              	.LASF62:
+ 1994 01ee 73707269 		.ascii	"sprintf\000"
+ 1994      6E746600 
+ 1995              	.LASF59:
+ 1996 01f6 70726576 		.ascii	"prev_error_servo\000"
+ 1996      5F657272 
+ 1996      6F725F73 
+ 1996      6572766F 
+ 1996      00
+ 1997              	.LASF31:
+ 1998 0207 485F5379 		.ascii	"H_Sync_ISR\000"
+ 1998      6E635F49 
+ 1998      535200
+ 1999              	.LASF1:
+ 2000 0212 7369676E 		.ascii	"signed char\000"
+ 2000      65642063 
+ 2000      68617200 
+ 2001              	.LASF38:
+ 2002 021e 4C494E45 		.ascii	"LINE_STATE\000"
+ 2002      5F535441 
+ 2002      544500
+ 2003              	.LASF8:
+ 2004 0229 6C6F6E67 		.ascii	"long long unsigned int\000"
+ 2004      206C6F6E 
+ 2004      6720756E 
+ 2004      7369676E 
+ 2004      65642069 
+ 2005              	.LASF53:
+ 2006 0240 6672616D 		.ascii	"frameIndex\000"
+ 2006      65496E64 
+ 2006      657800
+ 2007              	.LASF9:
+ 2008 024b 756E7369 		.ascii	"unsigned int\000"
+ 2008      676E6564 
+ 2008      20696E74 
+ 2008      00
+ 2009              	.LASF27:
+ 2010 0258 7072696E 		.ascii	"print_xbee\000"
+ 2010      745F7862 
+ 2010      656500
+ 2011              	.LASF36:
+ 2012 0263 56494445 		.ascii	"VIDEO_STATE\000"
+ 2012      4F5F5354 
+ 2012      41544500 
+ 2013              	.LASF22:
+ 2014 026f 705F7465 		.ascii	"p_term\000"
+ 2014      726D00
+ 2015              	.LASF28:
+ 2016 0276 506F7263 		.ascii	"Porch_Int_ISR\000"
+ 2016      685F496E 
+ 2016      745F4953 
+ 2016      5200
+ 2017              	.LASF4:
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 42
+
+
+ 2018 0284 73686F72 		.ascii	"short unsigned int\000"
+ 2018      7420756E 
+ 2018      7369676E 
+ 2018      65642069 
+ 2018      6E7400
+ 2019              	.LASF14:
+ 2020 0297 63686172 		.ascii	"char\000"
+ 2020      00
+ 2021              	.LASF68:
+ 2022 029c 6E61765F 		.ascii	"nav_control.c\000"
+ 2022      636F6E74 
+ 2022      726F6C2E 
+ 2022      6300
+ 2023              	.LASF23:
+ 2024 02aa 695F7465 		.ascii	"i_term\000"
+ 2024      726D00
+ 2025              	.LASF11:
+ 2026 02b1 696E7433 		.ascii	"int32_t\000"
+ 2026      325F7400 
+ 2027              	.LASF52:
+ 2028 02b9 6672616D 		.ascii	"frameVal\000"
+ 2028      6556616C 
+ 2028      00
+ 2029              	.LASF66:
+ 2030 02c2 53657276 		.ascii	"Servo_PWM_WriteCompare\000"
+ 2030      6F5F5057 
+ 2030      4D5F5772 
+ 2030      69746543 
+ 2030      6F6D7061 
+ 2031              	.LASF42:
+ 2032 02d9 4652414D 		.ascii	"FRAME_PARITY\000"
+ 2032      455F5041 
+ 2032      52495459 
+ 2032      00
+ 2033              	.LASF49:
+ 2034 02e6 61766572 		.ascii	"average_buf\000"
+ 2034      6167655F 
+ 2034      62756600 
+ 2035              	.LASF6:
+ 2036 02f2 6C6F6E67 		.ascii	"long unsigned int\000"
+ 2036      20756E73 
+ 2036      69676E65 
+ 2036      6420696E 
+ 2036      7400
+ 2037              	.LASF13:
+ 2038 0304 646F7562 		.ascii	"double\000"
+ 2038      6C6500
+ 2039              	.LASF58:
+ 2040 030b 6B645F73 		.ascii	"kd_servo\000"
+ 2040      6572766F 
+ 2040      00
+ 2041              	.LASF56:
+ 2042 0314 6B705F73 		.ascii	"kp_servo\000"
+ 2042      6572766F 
+ 2042      00
+ 2043              	.LASF10:
+ 2044 031d 5F5F696E 		.ascii	"__int32_t\000"
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 43
+
+
+ 2044      7433325F 
+ 2044      7400
+ 2045              	.LASF41:
+ 2046 0327 4C494E45 		.ascii	"LINE_SEEN\000"
+ 2046      5F534545 
+ 2046      4E00
+ 2047              	.LASF17:
+ 2048 0331 616E676C 		.ascii	"angle\000"
+ 2048      6500
+ 2049              	.LASF25:
+ 2050 0337 6F757470 		.ascii	"output\000"
+ 2050      757400
+ 2051              	.LASF29:
+ 2052 033e 4C696E65 		.ascii	"Line_Int_ISR\000"
+ 2052      5F496E74 
+ 2052      5F495352 
+ 2052      00
+ 2053              	.LASF26:
+ 2054 034b 6572726F 		.ascii	"error\000"
+ 2054      7200
+ 2055              	.LASF20:
+ 2056 0351 53657276 		.ascii	"Servo_PID_Control\000"
+ 2056      6F5F5049 
+ 2056      445F436F 
+ 2056      6E74726F 
+ 2056      6C00
+ 2057              	.LASF32:
+ 2058 0363 49544D5F 		.ascii	"ITM_RxBuffer\000"
+ 2058      52784275 
+ 2058      66666572 
+ 2058      00
+ 2059              	.LASF67:
+ 2060 0370 474E5520 		.ascii	"GNU C11 5.4.1 20160609 (release) [ARM/embedded-5-br"
+ 2060      43313120 
+ 2060      352E342E 
+ 2060      31203230 
+ 2060      31363036 
+ 2061 03a3 616E6368 		.ascii	"anch revision 237715] -mcpu=cortex-m3 -mthumb -g -O"
+ 2061      20726576 
+ 2061      6973696F 
+ 2061      6E203233 
+ 2061      37373135 
+ 2062 03d6 67202D66 		.ascii	"g -ffunction-sections -ffat-lto-objects\000"
+ 2062      66756E63 
+ 2062      74696F6E 
+ 2062      2D736563 
+ 2062      74696F6E 
+ 2063              	.LASF30:
+ 2064 03fe 565F5379 		.ascii	"V_Sync_ISR\000"
+ 2064      6E635F49 
+ 2064      535200
+ 2065              	.LASF64:
+ 2066 0409 4C696E65 		.ascii	"Line_Time_Reset_Write\000"
+ 2066      5F54696D 
+ 2066      655F5265 
+ 2066      7365745F 
+ 2066      57726974 
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\cc4RVoga.s 			page 44
+
+
+ 2067              	.LASF34:
+ 2068 041f 52554E5F 		.ascii	"RUN_STATE\000"
+ 2068      53544154 
+ 2068      4500
+ 2069              		.ident	"GCC: (GNU Tools for ARM Embedded Processors) 5.4.1 20160609 (release) [ARM/embedded-5-bran

@@ -1,0 +1,6 @@
+C:\Users\ryant\Documents\Princeton\!S20-21\ELE302\current_speed_control\carlab\speed_control\speed_control.cydsn\speed_control.cyprj|2c84e313-9ac1-41f8-b7e7-977ab557da84
+C:\Program Files (x86)\Cypress\PSoC Creator\4.2\PSoC Creator\psoc\content\default\CyAnnotationLibrary\CyAnnotationLibrary.cylib\CyAnnotationLibrary.cyprj|123a77e3-e38e-4318-baeb-e5937c5545cc
+C:\Users\ryant\Documents\PSoC Creator\4.2\Downloads ( 4.2).cylib\Downloads ( 4.2).cyprj|13efafec-a77d-4e02-8f8f-0e8d1d41c865
+C:\Program Files (x86)\Cypress\PSoC Creator\4.2\PSoC Creator\psoc\content\cycomponentlibraryupdates\CyComponentLibraryUpdates.cylib\CyComponentLibraryUpdates.cyprj|fc5baa1f-e87f-4a03-b87e-4df807355292
+C:\Program Files (x86)\Cypress\PSoC Creator\4.2\PSoC Creator\psoc\content\cycomponentlibrary\CyComponentLibrary.cylib\CyComponentLibrary.cyprj|2c362c4d-73ad-4097-80c0-11f03b3eff37
+C:\Program Files (x86)\Cypress\PSoC Creator\4.2\PSoC Creator\psoc\content\cyprimitives\CyPrimitives.cylib\CyPrimitives.cyprj|36bd29c7-a8e6-471f-8375-76a8c15ae08a

@@ -1,0 +1,492 @@
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccdQ8qdr.s 			page 1
+
+
+   1              		.syntax unified
+   2              		.cpu cortex-m3
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 1
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.thumb
+  14              		.syntax unified
+  15              		.file	"balloon.c"
+  16              		.text
+  17              	.Ltext0:
+  18              		.cfi_sections	.debug_frame
+  19              		.global	BALLOON_STATE
+  20              		.comm	RUN_STATE,4,4
+  21              		.comm	CENTER_ANGLE,4,4
+  22              		.comm	STEER_STATE,4,4
+  23              		.comm	prev_i_term_servo,4,4
+  24              		.comm	prev_error_servo,4,4
+  25              		.comm	kd_servo,4,4
+  26              		.comm	ki_servo,4,4
+  27              		.comm	kp_servo,4,4
+  28              		.data
+  29              		.align	2
+  30              		.type	BALLOON_STATE, %object
+  31              		.size	BALLOON_STATE, 4
+  32              	BALLOON_STATE:
+  33 0000 01000000 		.word	1
+  34              		.text
+  35              	.Letext0:
+  36              		.file 1 "c:\\program files (x86)\\cypress\\psoc creator\\4.2\\psoc creator\\import\\gnu\\arm\\5.4.
+  37              		.file 2 "c:\\program files (x86)\\cypress\\psoc creator\\4.2\\psoc creator\\import\\gnu\\arm\\5.4.
+  38              		.file 3 "Generated_Source\\PSoC5/core_cm3.h"
+  39              		.file 4 "nav_control.h"
+  40              		.file 5 "balloon.c"
+  41              		.section	.debug_info,"",%progbits
+  42              	.Ldebug_info0:
+  43 0000 43010000 		.4byte	0x143
+  44 0004 0400     		.2byte	0x4
+  45 0006 00000000 		.4byte	.Ldebug_abbrev0
+  46 000a 04       		.byte	0x4
+  47 000b 01       		.uleb128 0x1
+  48 000c 48000000 		.4byte	.LASF26
+  49 0010 0C       		.byte	0xc
+  50 0011 79010000 		.4byte	.LASF27
+  51 0015 D6000000 		.4byte	.LASF28
+  52 0019 00000000 		.4byte	.Ldebug_line0
+  53 001d 02       		.uleb128 0x2
+  54 001e 01       		.byte	0x1
+  55 001f 06       		.byte	0x6
+  56 0020 DB010000 		.4byte	.LASF0
+  57 0024 02       		.uleb128 0x2
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccdQ8qdr.s 			page 2
+
+
+  58 0025 01       		.byte	0x1
+  59 0026 08       		.byte	0x8
+  60 0027 83010000 		.4byte	.LASF1
+  61 002b 02       		.uleb128 0x2
+  62 002c 02       		.byte	0x2
+  63 002d 05       		.byte	0x5
+  64 002e 03020000 		.4byte	.LASF2
+  65 0032 02       		.uleb128 0x2
+  66 0033 02       		.byte	0x2
+  67 0034 07       		.byte	0x7
+  68 0035 0E000000 		.4byte	.LASF3
+  69 0039 03       		.uleb128 0x3
+  70 003a F3010000 		.4byte	.LASF9
+  71 003e 01       		.byte	0x1
+  72 003f 3F       		.byte	0x3f
+  73 0040 44000000 		.4byte	0x44
+  74 0044 02       		.uleb128 0x2
+  75 0045 04       		.byte	0x4
+  76 0046 05       		.byte	0x5
+  77 0047 96010000 		.4byte	.LASF4
+  78 004b 02       		.uleb128 0x2
+  79 004c 04       		.byte	0x4
+  80 004d 07       		.byte	0x7
+  81 004e 3F010000 		.4byte	.LASF5
+  82 0052 02       		.uleb128 0x2
+  83 0053 08       		.byte	0x8
+  84 0054 05       		.byte	0x5
+  85 0055 00000000 		.4byte	.LASF6
+  86 0059 02       		.uleb128 0x2
+  87 005a 08       		.byte	0x8
+  88 005b 07       		.byte	0x7
+  89 005c 59010000 		.4byte	.LASF7
+  90 0060 04       		.uleb128 0x4
+  91 0061 04       		.byte	0x4
+  92 0062 05       		.byte	0x5
+  93 0063 696E7400 		.ascii	"int\000"
+  94 0067 02       		.uleb128 0x2
+  95 0068 04       		.byte	0x4
+  96 0069 07       		.byte	0x7
+  97 006a 21000000 		.4byte	.LASF8
+  98 006e 03       		.uleb128 0x3
+  99 006f 51010000 		.4byte	.LASF10
+ 100 0073 02       		.byte	0x2
+ 101 0074 2C       		.byte	0x2c
+ 102 0075 39000000 		.4byte	0x39
+ 103 0079 02       		.uleb128 0x2
+ 104 007a 04       		.byte	0x4
+ 105 007b 04       		.byte	0x4
+ 106 007c FD010000 		.4byte	.LASF11
+ 107 0080 02       		.uleb128 0x2
+ 108 0081 08       		.byte	0x8
+ 109 0082 04       		.byte	0x4
+ 110 0083 B5010000 		.4byte	.LASF12
+ 111 0087 02       		.uleb128 0x2
+ 112 0088 01       		.byte	0x1
+ 113 0089 08       		.byte	0x8
+ 114 008a 91010000 		.4byte	.LASF13
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccdQ8qdr.s 			page 3
+
+
+ 115 008e 02       		.uleb128 0x2
+ 116 008f 08       		.byte	0x8
+ 117 0090 04       		.byte	0x4
+ 118 0091 E7010000 		.4byte	.LASF14
+ 119 0095 02       		.uleb128 0x2
+ 120 0096 04       		.byte	0x4
+ 121 0097 07       		.byte	0x7
+ 122 0098 28020000 		.4byte	.LASF15
+ 123 009c 05       		.uleb128 0x5
+ 124 009d CE010000 		.4byte	.LASF16
+ 125 00a1 03       		.byte	0x3
+ 126 00a2 1207     		.2byte	0x712
+ 127 00a4 A8000000 		.4byte	0xa8
+ 128 00a8 06       		.uleb128 0x6
+ 129 00a9 6E000000 		.4byte	0x6e
+ 130 00ad 07       		.uleb128 0x7
+ 131 00ae 31020000 		.4byte	.LASF17
+ 132 00b2 04       		.byte	0x4
+ 133 00b3 09       		.byte	0x9
+ 134 00b4 79000000 		.4byte	0x79
+ 135 00b8 05       		.uleb128 0x5
+ 136 00b9 03       		.byte	0x3
+ 137 00ba 00000000 		.4byte	kp_servo
+ 138 00be 07       		.uleb128 0x7
+ 139 00bf 70010000 		.4byte	.LASF18
+ 140 00c3 04       		.byte	0x4
+ 141 00c4 0A       		.byte	0xa
+ 142 00c5 79000000 		.4byte	0x79
+ 143 00c9 05       		.uleb128 0x5
+ 144 00ca 03       		.byte	0x3
+ 145 00cb 00000000 		.4byte	ki_servo
+ 146 00cf 07       		.uleb128 0x7
+ 147 00d0 2E000000 		.4byte	.LASF19
+ 148 00d4 04       		.byte	0x4
+ 149 00d5 0B       		.byte	0xb
+ 150 00d6 79000000 		.4byte	0x79
+ 151 00da 05       		.uleb128 0x5
+ 152 00db 03       		.byte	0x3
+ 153 00dc 00000000 		.4byte	kd_servo
+ 154 00e0 07       		.uleb128 0x7
+ 155 00e1 37000000 		.4byte	.LASF20
+ 156 00e5 04       		.byte	0x4
+ 157 00e6 0C       		.byte	0xc
+ 158 00e7 79000000 		.4byte	0x79
+ 159 00eb 05       		.uleb128 0x5
+ 160 00ec 03       		.byte	0x3
+ 161 00ed 00000000 		.4byte	prev_error_servo
+ 162 00f1 07       		.uleb128 0x7
+ 163 00f2 BC010000 		.4byte	.LASF21
+ 164 00f6 04       		.byte	0x4
+ 165 00f7 0D       		.byte	0xd
+ 166 00f8 79000000 		.4byte	0x79
+ 167 00fc 05       		.uleb128 0x5
+ 168 00fd 03       		.byte	0x3
+ 169 00fe 00000000 		.4byte	prev_i_term_servo
+ 170 0102 07       		.uleb128 0x7
+ 171 0103 A9010000 		.4byte	.LASF22
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccdQ8qdr.s 			page 4
+
+
+ 172 0107 04       		.byte	0x4
+ 173 0108 0E       		.byte	0xe
+ 174 0109 60000000 		.4byte	0x60
+ 175 010d 05       		.uleb128 0x5
+ 176 010e 03       		.byte	0x3
+ 177 010f 00000000 		.4byte	STEER_STATE
+ 178 0113 07       		.uleb128 0x7
+ 179 0114 1B020000 		.4byte	.LASF23
+ 180 0118 04       		.byte	0x4
+ 181 0119 0F       		.byte	0xf
+ 182 011a 60000000 		.4byte	0x60
+ 183 011e 05       		.uleb128 0x5
+ 184 011f 03       		.byte	0x3
+ 185 0120 00000000 		.4byte	CENTER_ANGLE
+ 186 0124 07       		.uleb128 0x7
+ 187 0125 9F010000 		.4byte	.LASF24
+ 188 0129 04       		.byte	0x4
+ 189 012a 10       		.byte	0x10
+ 190 012b 60000000 		.4byte	0x60
+ 191 012f 05       		.uleb128 0x5
+ 192 0130 03       		.byte	0x3
+ 193 0131 00000000 		.4byte	RUN_STATE
+ 194 0135 07       		.uleb128 0x7
+ 195 0136 0D020000 		.4byte	.LASF25
+ 196 013a 05       		.byte	0x5
+ 197 013b 15       		.byte	0x15
+ 198 013c 60000000 		.4byte	0x60
+ 199 0140 05       		.uleb128 0x5
+ 200 0141 03       		.byte	0x3
+ 201 0142 00000000 		.4byte	BALLOON_STATE
+ 202 0146 00       		.byte	0
+ 203              		.section	.debug_abbrev,"",%progbits
+ 204              	.Ldebug_abbrev0:
+ 205 0000 01       		.uleb128 0x1
+ 206 0001 11       		.uleb128 0x11
+ 207 0002 01       		.byte	0x1
+ 208 0003 25       		.uleb128 0x25
+ 209 0004 0E       		.uleb128 0xe
+ 210 0005 13       		.uleb128 0x13
+ 211 0006 0B       		.uleb128 0xb
+ 212 0007 03       		.uleb128 0x3
+ 213 0008 0E       		.uleb128 0xe
+ 214 0009 1B       		.uleb128 0x1b
+ 215 000a 0E       		.uleb128 0xe
+ 216 000b 10       		.uleb128 0x10
+ 217 000c 17       		.uleb128 0x17
+ 218 000d 00       		.byte	0
+ 219 000e 00       		.byte	0
+ 220 000f 02       		.uleb128 0x2
+ 221 0010 24       		.uleb128 0x24
+ 222 0011 00       		.byte	0
+ 223 0012 0B       		.uleb128 0xb
+ 224 0013 0B       		.uleb128 0xb
+ 225 0014 3E       		.uleb128 0x3e
+ 226 0015 0B       		.uleb128 0xb
+ 227 0016 03       		.uleb128 0x3
+ 228 0017 0E       		.uleb128 0xe
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccdQ8qdr.s 			page 5
+
+
+ 229 0018 00       		.byte	0
+ 230 0019 00       		.byte	0
+ 231 001a 03       		.uleb128 0x3
+ 232 001b 16       		.uleb128 0x16
+ 233 001c 00       		.byte	0
+ 234 001d 03       		.uleb128 0x3
+ 235 001e 0E       		.uleb128 0xe
+ 236 001f 3A       		.uleb128 0x3a
+ 237 0020 0B       		.uleb128 0xb
+ 238 0021 3B       		.uleb128 0x3b
+ 239 0022 0B       		.uleb128 0xb
+ 240 0023 49       		.uleb128 0x49
+ 241 0024 13       		.uleb128 0x13
+ 242 0025 00       		.byte	0
+ 243 0026 00       		.byte	0
+ 244 0027 04       		.uleb128 0x4
+ 245 0028 24       		.uleb128 0x24
+ 246 0029 00       		.byte	0
+ 247 002a 0B       		.uleb128 0xb
+ 248 002b 0B       		.uleb128 0xb
+ 249 002c 3E       		.uleb128 0x3e
+ 250 002d 0B       		.uleb128 0xb
+ 251 002e 03       		.uleb128 0x3
+ 252 002f 08       		.uleb128 0x8
+ 253 0030 00       		.byte	0
+ 254 0031 00       		.byte	0
+ 255 0032 05       		.uleb128 0x5
+ 256 0033 34       		.uleb128 0x34
+ 257 0034 00       		.byte	0
+ 258 0035 03       		.uleb128 0x3
+ 259 0036 0E       		.uleb128 0xe
+ 260 0037 3A       		.uleb128 0x3a
+ 261 0038 0B       		.uleb128 0xb
+ 262 0039 3B       		.uleb128 0x3b
+ 263 003a 05       		.uleb128 0x5
+ 264 003b 49       		.uleb128 0x49
+ 265 003c 13       		.uleb128 0x13
+ 266 003d 3F       		.uleb128 0x3f
+ 267 003e 19       		.uleb128 0x19
+ 268 003f 3C       		.uleb128 0x3c
+ 269 0040 19       		.uleb128 0x19
+ 270 0041 00       		.byte	0
+ 271 0042 00       		.byte	0
+ 272 0043 06       		.uleb128 0x6
+ 273 0044 35       		.uleb128 0x35
+ 274 0045 00       		.byte	0
+ 275 0046 49       		.uleb128 0x49
+ 276 0047 13       		.uleb128 0x13
+ 277 0048 00       		.byte	0
+ 278 0049 00       		.byte	0
+ 279 004a 07       		.uleb128 0x7
+ 280 004b 34       		.uleb128 0x34
+ 281 004c 00       		.byte	0
+ 282 004d 03       		.uleb128 0x3
+ 283 004e 0E       		.uleb128 0xe
+ 284 004f 3A       		.uleb128 0x3a
+ 285 0050 0B       		.uleb128 0xb
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccdQ8qdr.s 			page 6
+
+
+ 286 0051 3B       		.uleb128 0x3b
+ 287 0052 0B       		.uleb128 0xb
+ 288 0053 49       		.uleb128 0x49
+ 289 0054 13       		.uleb128 0x13
+ 290 0055 3F       		.uleb128 0x3f
+ 291 0056 19       		.uleb128 0x19
+ 292 0057 02       		.uleb128 0x2
+ 293 0058 18       		.uleb128 0x18
+ 294 0059 00       		.byte	0
+ 295 005a 00       		.byte	0
+ 296 005b 00       		.byte	0
+ 297              		.section	.debug_aranges,"",%progbits
+ 298 0000 14000000 		.4byte	0x14
+ 299 0004 0200     		.2byte	0x2
+ 300 0006 00000000 		.4byte	.Ldebug_info0
+ 301 000a 04       		.byte	0x4
+ 302 000b 00       		.byte	0
+ 303 000c 0000     		.2byte	0
+ 304 000e 0000     		.2byte	0
+ 305 0010 00000000 		.4byte	0
+ 306 0014 00000000 		.4byte	0
+ 307              		.section	.debug_line,"",%progbits
+ 308              	.Ldebug_line0:
+ 309 0000 59010000 		.section	.debug_str,"MS",%progbits,1
+ 309      02005301 
+ 309      00000201 
+ 309      FB0E0D00 
+ 309      01010101 
+ 310              	.LASF6:
+ 311 0000 6C6F6E67 		.ascii	"long long int\000"
+ 311      206C6F6E 
+ 311      6720696E 
+ 311      7400
+ 312              	.LASF3:
+ 313 000e 73686F72 		.ascii	"short unsigned int\000"
+ 313      7420756E 
+ 313      7369676E 
+ 313      65642069 
+ 313      6E7400
+ 314              	.LASF8:
+ 315 0021 756E7369 		.ascii	"unsigned int\000"
+ 315      676E6564 
+ 315      20696E74 
+ 315      00
+ 316              	.LASF19:
+ 317 002e 6B645F73 		.ascii	"kd_servo\000"
+ 317      6572766F 
+ 317      00
+ 318              	.LASF20:
+ 319 0037 70726576 		.ascii	"prev_error_servo\000"
+ 319      5F657272 
+ 319      6F725F73 
+ 319      6572766F 
+ 319      00
+ 320              	.LASF26:
+ 321 0048 474E5520 		.ascii	"GNU C11 5.4.1 20160609 (release) [ARM/embedded-5-br"
+ 321      43313120 
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccdQ8qdr.s 			page 7
+
+
+ 321      352E342E 
+ 321      31203230 
+ 321      31363036 
+ 322 007b 616E6368 		.ascii	"anch revision 237715] -mcpu=cortex-m3 -mthumb -g -O"
+ 322      20726576 
+ 322      6973696F 
+ 322      6E203233 
+ 322      37373135 
+ 323 00ae 67202D66 		.ascii	"g -ffunction-sections -ffat-lto-objects\000"
+ 323      66756E63 
+ 323      74696F6E 
+ 323      2D736563 
+ 323      74696F6E 
+ 324              	.LASF28:
+ 325 00d6 433A5C55 		.ascii	"C:\\Users\\ryant\\Documents\\Princeton\\!S20-21\\EL"
+ 325      73657273 
+ 325      5C727961 
+ 325      6E745C44 
+ 325      6F63756D 
+ 326 0103 45333032 		.ascii	"E302\\current_code_repo\\carlab\\nav_control\\nav_c"
+ 326      5C637572 
+ 326      72656E74 
+ 326      5F636F64 
+ 326      655F7265 
+ 327 0132 6F6E7472 		.ascii	"ontrol.cydsn\000"
+ 327      6F6C2E63 
+ 327      7964736E 
+ 327      00
+ 328              	.LASF5:
+ 329 013f 6C6F6E67 		.ascii	"long unsigned int\000"
+ 329      20756E73 
+ 329      69676E65 
+ 329      6420696E 
+ 329      7400
+ 330              	.LASF10:
+ 331 0151 696E7433 		.ascii	"int32_t\000"
+ 331      325F7400 
+ 332              	.LASF7:
+ 333 0159 6C6F6E67 		.ascii	"long long unsigned int\000"
+ 333      206C6F6E 
+ 333      6720756E 
+ 333      7369676E 
+ 333      65642069 
+ 334              	.LASF18:
+ 335 0170 6B695F73 		.ascii	"ki_servo\000"
+ 335      6572766F 
+ 335      00
+ 336              	.LASF27:
+ 337 0179 62616C6C 		.ascii	"balloon.c\000"
+ 337      6F6F6E2E 
+ 337      6300
+ 338              	.LASF1:
+ 339 0183 756E7369 		.ascii	"unsigned char\000"
+ 339      676E6564 
+ 339      20636861 
+ 339      7200
+ 340              	.LASF13:
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccdQ8qdr.s 			page 8
+
+
+ 341 0191 63686172 		.ascii	"char\000"
+ 341      00
+ 342              	.LASF4:
+ 343 0196 6C6F6E67 		.ascii	"long int\000"
+ 343      20696E74 
+ 343      00
+ 344              	.LASF24:
+ 345 019f 52554E5F 		.ascii	"RUN_STATE\000"
+ 345      53544154 
+ 345      4500
+ 346              	.LASF22:
+ 347 01a9 53544545 		.ascii	"STEER_STATE\000"
+ 347      525F5354 
+ 347      41544500 
+ 348              	.LASF12:
+ 349 01b5 646F7562 		.ascii	"double\000"
+ 349      6C6500
+ 350              	.LASF21:
+ 351 01bc 70726576 		.ascii	"prev_i_term_servo\000"
+ 351      5F695F74 
+ 351      65726D5F 
+ 351      73657276 
+ 351      6F00
+ 352              	.LASF16:
+ 353 01ce 49544D5F 		.ascii	"ITM_RxBuffer\000"
+ 353      52784275 
+ 353      66666572 
+ 353      00
+ 354              	.LASF0:
+ 355 01db 7369676E 		.ascii	"signed char\000"
+ 355      65642063 
+ 355      68617200 
+ 356              	.LASF14:
+ 357 01e7 6C6F6E67 		.ascii	"long double\000"
+ 357      20646F75 
+ 357      626C6500 
+ 358              	.LASF9:
+ 359 01f3 5F5F696E 		.ascii	"__int32_t\000"
+ 359      7433325F 
+ 359      7400
+ 360              	.LASF11:
+ 361 01fd 666C6F61 		.ascii	"float\000"
+ 361      7400
+ 362              	.LASF2:
+ 363 0203 73686F72 		.ascii	"short int\000"
+ 363      7420696E 
+ 363      7400
+ 364              	.LASF25:
+ 365 020d 42414C4C 		.ascii	"BALLOON_STATE\000"
+ 365      4F4F4E5F 
+ 365      53544154 
+ 365      4500
+ 366              	.LASF23:
+ 367 021b 43454E54 		.ascii	"CENTER_ANGLE\000"
+ 367      45525F41 
+ 367      4E474C45 
+ 367      00
+ARM GAS  C:\Users\ryant\AppData\Local\Temp\ccdQ8qdr.s 			page 9
+
+
+ 368              	.LASF15:
+ 369 0228 73697A65 		.ascii	"sizetype\000"
+ 369      74797065 
+ 369      00
+ 370              	.LASF17:
+ 371 0231 6B705F73 		.ascii	"kp_servo\000"
+ 371      6572766F 
+ 371      00
+ 372              		.ident	"GCC: (GNU Tools for ARM Embedded Processors) 5.4.1 20160609 (release) [ARM/embedded-5-bran

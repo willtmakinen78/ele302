@@ -1,0 +1,28 @@
+--------------- Build Started: 04/28/2021 15:09:16 Project: nav_control, Configuration: ARM GCC 5.4-2016-q2-update Debug ---------------
+The code generation step is up to date.
+arm-none-eabi-gcc.exe -mcpu=cortex-m3 -mthumb -I. -IGenerated_Source\PSoC5 -Wa,-alh=.\CortexM3\ARM_GCC_541\Debug/main.lst -g -D DEBUG -D CY_CORE_ID=0 -Wall -ffunction-sections -ffat-lto-objects -Og -c main.c -o .\CortexM3\ARM_GCC_541\Debug\main.o
+main.c: In function 'inter':
+main.c:91:10: warning: unused variable 'buf' [-Wunused-variable]
+     char buf[64];
+          ^
+main.c: In function 'main':
+main.c:152:9: warning: unused variable 'newRunState' [-Wunused-variable]
+     int newRunState = 0; 
+         ^
+main.c:145:10: warning: unused variable 'arduinoChar' [-Wunused-variable]
+     char arduinoChar;
+          ^
+main.c:144:11: warning: unused variable 'readChar_ard' [-Wunused-variable]
+     uint8 readChar_ard;
+           ^
+arm-none-eabi-ar.exe -rs .\CortexM3\ARM_GCC_541\Debug\nav_control.a .\CortexM3\ARM_GCC_541\Debug\XBEE.o .\CortexM3\ARM_GCC_541\Debug\XBEE_PM.o .\CortexM3\ARM_GCC_541\Debug\XBEE_INT.o .\CortexM3\ARM_GCC_541\Debug\XBEE_BOOT.o .\CortexM3\ARM_GCC_541\Debug\LCD.o .\CortexM3\ARM_GCC_541\Debug\LCD_PM.o .\CortexM3\ARM_GCC_541\Debug\Hall.o .\CortexM3\ARM_GCC_541\Debug\Hall_Interrupt.o .\CortexM3\ARM_GCC_541\Debug\Counter.o .\CortexM3\ARM_GCC_541\Debug\Counter_PM.o .\CortexM3\ARM_GCC_541\Debug\Clock.o .\CortexM3\ARM_GCC_541\Debug\Counter_Interrupt.o .\CortexM3\ARM_GCC_541\Debug\Counter_Reset.o .\CortexM3\ARM_GCC_541\Debug\Counter_Reset_PM.o .\CortexM3\ARM_GCC_541\Debug\Reset_Clock.o .\CortexM3\ARM_GCC_541\Debug\PWM_Motor.o .\CortexM3\ARM_GCC_541\Debug\PWM_Motor_PM.o .\CortexM3\ARM_GCC_541\Debug\PWM_Output.o .\CortexM3\ARM_GCC_541\Debug\PWM_Clock.o .\CortexM3\ARM_GCC_541\Debug\LED4.o .\CortexM3\ARM_GCC_541\Debug\XBEE_IntClock.o .\CortexM3\ARM_GCC_541\Debug\LCD_LCDPort.o .\CortexM3\ARM_GCC_541\Debug\CyDmac.o .\CortexM3\ARM_GCC_541\Debug\CyFlash.o .\CortexM3\ARM_GCC_541\Debug\CyLib.o .\CortexM3\ARM_GCC_541\Debug\cyPm.o .\CortexM3\ARM_GCC_541\Debug\CySpc.o .\CortexM3\ARM_GCC_541\Debug\cyutils.o .\CortexM3\ARM_GCC_541\Debug\cy_em_eeprom.o .\CortexM3\ARM_GCC_541\Debug\Servo_Clk.o .\CortexM3\ARM_GCC_541\Debug\SERVO_output.o .\CortexM3\ARM_GCC_541\Debug\LED3.o .\CortexM3\ARM_GCC_541\Debug\Servo_PWM.o .\CortexM3\ARM_GCC_541\Debug\Servo_PWM_PM.o .\CortexM3\ARM_GCC_541\Debug\Composite.o .\CortexM3\ARM_GCC_541\Debug\H_Sync_Int.o .\CortexM3\ARM_GCC_541\Debug\H_Sync.o .\CortexM3\ARM_GCC_541\Debug\V_Sync_Int.o .\CortexM3\ARM_GCC_541\Debug\V_Sync.o .\CortexM3\ARM_GCC_541\Debug\Threshold_Comparator.o .\CortexM3\ARM_GCC_541\Debug\Threshold_Comparator_PM.o .\CortexM3\ARM_GCC_541\Debug\Vref.o .\CortexM3\ARM_GCC_541\Debug\Clock_1.o .\CortexM3\ARM_GCC_541\Debug\Line_Time_Int.o .\CortexM3\ARM_GCC_541\Debug\Line_Timer.o .\CortexM3\ARM_GCC_541\Debug\Line_Timer_PM.o .\CortexM3\ARM_GCC_541\Debug\Line_Time_Reset.o .\CortexM3\ARM_GCC_541\Debug\Line_Time_Reset_PM.o .\CortexM3\ARM_GCC_541\Debug\Out_Compare.o .\CortexM3\ARM_GCC_541\Debug\Line_Int.o .\CortexM3\ARM_GCC_541\Debug\Porch_Int.o .\CortexM3\ARM_GCC_541\Debug\Go_Again_Int.o .\CortexM3\ARM_GCC_541\Debug\To_Pi.o .\CortexM3\ARM_GCC_541\Debug\From_Pi.o .\CortexM3\ARM_GCC_541\Debug\CyBootAsmGnu.o
+arm-none-eabi-ar.exe: creating .\CortexM3\ARM_GCC_541\Debug\nav_control.a
+arm-none-eabi-gcc.exe -Wl,--start-group -o C:\Users\ryant\Documents\Princeton\!S20-21\ELE302\current_code_repo\carlab\nav_control\nav_control.cydsn\CortexM3\ARM_GCC_541\Debug\nav_control.elf .\CortexM3\ARM_GCC_541\Debug\main.o .\CortexM3\ARM_GCC_541\Debug\nav_control.o .\CortexM3\ARM_GCC_541\Debug\balloon.o .\CortexM3\ARM_GCC_541\Debug\cyfitter_cfg.o .\CortexM3\ARM_GCC_541\Debug\cymetadata.o .\CortexM3\ARM_GCC_541\Debug\Cm3Start.o .\CortexM3\ARM_GCC_541\Debug\nav_control.a "C:\Program Files (x86)\Cypress\PSoC Creator\4.2\PSoC Creator\psoc\content\cycomponentlibrary\CyComponentLibrary.cylib\CortexM3\ARM_GCC_541\Debug\CyComponentLibrary.a" -mcpu=cortex-m3 -mthumb -L Generated_Source\PSoC5 -Wl,-Map,.\CortexM3\ARM_GCC_541\Debug/nav_control.map -T Generated_Source\PSoC5\cm3gcc.ld -specs=nano.specs -Wl,--gc-sections -g -ffunction-sections -Og -ffat-lto-objects -Wl,--end-group
+cyelftool.exe -C C:\Users\ryant\Documents\Princeton\!S20-21\ELE302\current_code_repo\carlab\nav_control\nav_control.cydsn\CortexM3\ARM_GCC_541\Debug\nav_control.elf --flash_row_size 256 --flash_size 262144 --flash_offset 0x00000000
+No ELF section .cychecksum found, creating one
+Application checksum calculated and stored in ELF section .cychecksum
+Checksum calculated and stored in ELF section .cymeta
+cyelftool.exe -S C:\Users\ryant\Documents\Princeton\!S20-21\ELE302\current_code_repo\carlab\nav_control\nav_control.cydsn\CortexM3\ARM_GCC_541\Debug\nav_control.elf
+Flash used: 20312 of 262144 bytes (7.7%).
+SRAM used: 62849 of 65536 bytes (95.9%). Stack: 2048 bytes. Heap: 128 bytes.
+--------------- Build Succeeded: 04/28/2021 15:09:27 ---------------
